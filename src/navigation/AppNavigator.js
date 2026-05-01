@@ -13,6 +13,10 @@ import CustomersScreen from '../screens/CustomersScreen';
 import MoreScreen from '../screens/MoreScreen';
 import JobCardDetailScreen from '../screens/JobCardDetailScreen';
 import CreateJobCardScreen from '../screens/CreateJobCardScreen';
+import VehiclesScreen from '../screens/VehiclesScreen';
+import VehicleDetailScreen from '../screens/VehicleDetailScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import StaffScreen from '../screens/StaffScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -68,6 +72,26 @@ export default function AppNavigator() {
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="JobCardDetail" component={JobCardDetailScreen} />
             <Stack.Screen name="CreateJobCard" component={CreateJobCardScreen} />
+            <Stack.Screen
+              name="Vehicles"
+              component={VehiclesScreen}
+              options={{ headerShown: true, title: 'Vehicles', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="VehicleDetail"
+              component={VehicleDetailScreen}
+              options={{ headerShown: true, title: 'Vehicle Details', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{ headerShown: true, title: 'Settings', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="Staff"
+              component={StaffScreen}
+              options={{ headerShown: true, title: 'Staff Management', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />

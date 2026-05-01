@@ -1,192 +1,244 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { getCustomers } from '../api/customerService';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
+  ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert
+} from 'react-native';
+import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../api/customerService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { useAuth } from '../context/AuthContext';
+
+const BLANK = { name: '', phone: '', email: '', notes: '', address: { street: '', city: '', state: '', pincode: '' } };
+
+function CustomerModal({ visible, onClose, onSave, editing }) {
+  const [form, setForm] = useState(BLANK);
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setAddr = (k, v) => setForm(f => ({ ...f, address: { ...f.address, [k]: v } }));
+
+  useEffect(() => {
+    if (visible) {
+      setForm(editing ? {
+        name: editing.name || '', phone: editing.phone || '', email: editing.email || '',
+        notes: editing.notes || '',
+        address: editing.address || { street: '', city: '', state: '', pincode: '' }
+      } : BLANK);
+    }
+  }, [visible, editing]);
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.phone.trim()) {
+      Toast.show({ type: 'error', text1: 'Name and phone are required' }); return;
+    }
+    setSaving(true);
+    try {
+      await onSave(form);
+      onClose();
+    } catch (e) {
+      Toast.show({ type: 'error', text1: e?.response?.data?.message || 'Failed to save customer' });
+    } finally { setSaving(false); }
+  };
+
+  const F = ({ label, value, onChange, placeholder, keyboard, cap, multiline }) => (
+    <View style={s.field}>
+      <Text style={s.label}>{label}</Text>
+      {multiline ? (
+        <TextInput style={[s.input, { height: 72, textAlignVertical: 'top' }]} value={value} onChangeText={onChange}
+          placeholder={placeholder} placeholderTextColor="#9ca3af" multiline />
+      ) : (
+        <TextInput style={s.input} value={value} onChangeText={onChange} placeholder={placeholder}
+          placeholderTextColor="#9ca3af" keyboardType={keyboard || 'default'}
+          autoCapitalize={cap || 'sentences'} />
+      )}
+    </View>
+  );
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.overlay}>
+        <View style={s.sheet}>
+          <View style={s.handle} />
+          <View style={s.sheetHeader}>
+            <Text style={s.sheetTitle}>{editing ? 'Edit Customer' : 'Add Customer'}</Text>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+          </View>
+          <ScrollView style={s.sheetBody} keyboardShouldPersistTaps="handled">
+            <F label="Full Name *" value={form.name} onChange={v => set('name', v)} placeholder="John Doe" />
+            <F label="Phone Number *" value={form.phone} onChange={v => set('phone', v)} placeholder="9876543210" keyboard="phone-pad" cap="none" />
+            <F label="Email" value={form.email} onChange={v => set('email', v)} placeholder="customer@email.com (optional)" keyboard="email-address" cap="none" />
+            <View style={s.row}>
+              <View style={{ flex: 1 }}><F label="City" value={form.address.city} onChange={v => setAddr('city', v)} placeholder="City" /></View>
+              <View style={{ width: 12 }} />
+              <View style={{ flex: 1 }}><F label="Pincode" value={form.address.pincode} onChange={v => setAddr('pincode', v)} placeholder="560001" keyboard="numeric" cap="none" /></View>
+            </View>
+            <F label="Notes" value={form.notes} onChange={v => set('notes', v)} placeholder="Any notes..." multiline />
+          </ScrollView>
+          <View style={s.footer}>
+            <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
+              <Text style={s.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Customer'}</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
 
 export default function CustomersScreen() {
+  const { hasRole } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editing, setEditing] = useState(null);
 
-  const fetchCustomers = async (currentPage = 1, shouldRefresh = false) => {
+  const canManage = hasRole('owner', 'admin', 'service_advisor', 'receptionist');
+  const canDelete = hasRole('owner', 'admin');
+
+  const fetchCustomers = useCallback(async (currentPage = 1, refresh = false) => {
+    if (refresh) setRefreshing(true);
     try {
-      if (shouldRefresh) setRefreshing(true);
-      const { data } = await getCustomers({ 
-        search, 
-        page: currentPage, 
-        limit: 15 
-      });
-      if (currentPage === 1) {
-        setCustomers(data);
-      } else {
-        setCustomers([...customers, ...data]);
-      }
-    } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to load customers' });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCustomers(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      const { data } = await getCustomers({ search, page: currentPage, limit: 15 });
+      setCustomers(currentPage === 1 ? data : prev => [...prev, ...data]);
+    } catch { Toast.show({ type: 'error', text1: 'Failed to load customers' }); }
+    finally { setLoading(false); setRefreshing(false); }
   }, [search]);
 
-  const onRefresh = () => {
-    setPage(1);
-    fetchCustomers(1, true);
+  useEffect(() => { setPage(1); setLoading(true); fetchCustomers(1); }, [search]);
+
+  const handleSave = async (form) => {
+    if (editing) {
+      await updateCustomer(editing._id, form);
+      Toast.show({ type: 'success', text1: 'Customer updated!' });
+    } else {
+      await createCustomer(form);
+      Toast.show({ type: 'success', text1: 'Customer added!' });
+    }
+    fetchCustomers(1);
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.nameText}>{item.name}</Text>
-        <Text style={styles.spentText}>₹{(item.totalSpent || 0).toLocaleString('en-IN')}</Text>
+  const handleDelete = (c) => {
+    Alert.alert('Delete Customer', `Delete ${c.name}? This cannot be undone.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try { await deleteCustomer(c._id); Toast.show({ type: 'success', text1: 'Customer deleted' }); fetchCustomers(1); }
+          catch { Toast.show({ type: 'error', text1: 'Failed to delete' }); }
+        }
+      }
+    ]);
+  };
+
+  const renderItem = ({ item: c }) => (
+    <View style={s.card}>
+      <View style={s.cardHeader}>
+        <View style={s.avatarWrap}>
+          <Text style={s.avatarText}>{c.name?.charAt(0)?.toUpperCase()}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.customerName}>{c.name}</Text>
+          <Text style={s.customerSub}>{c.phone}{c.email ? ` · ${c.email}` : ''}</Text>
+        </View>
+        <Text style={s.spentText}>₹{(c.totalSpent || 0).toLocaleString('en-IN')}</Text>
       </View>
-      <View style={styles.cardBody}>
-        <View style={styles.row}>
-          <Ionicons name="call-outline" size={16} color="#6b7280" />
-          <Text style={styles.bodyText}>{item.phone}</Text>
-        </View>
-        <View style={styles.row}>
-          <Ionicons name="car-outline" size={16} color="#6b7280" />
-          <Text style={styles.bodyText}>{item.vehicles?.length || 0} vehicles</Text>
-        </View>
-        <View style={styles.row}>
-          <Ionicons name="location-outline" size={16} color="#6b7280" />
-          <Text style={styles.bodyText}>{item.address?.city || 'No city provided'}</Text>
-        </View>
+      <View style={s.cardFooter}>
+        <View style={s.metaChip}><Ionicons name="car-outline" size={13} color="#6b7280" /><Text style={s.metaChipText}>{c.vehicles?.length || 0} vehicles</Text></View>
+        {c.address?.city ? <View style={s.metaChip}><Ionicons name="location-outline" size={13} color="#6b7280" /><Text style={s.metaChipText}>{c.address.city}</Text></View> : null}
+        {canManage && (
+          <View style={s.actions}>
+            <TouchableOpacity style={s.actionBtn} onPress={() => { setEditing(c); setModalVisible(true); }}>
+              <Ionicons name="pencil-outline" size={15} color="#3b5ff8" />
+            </TouchableOpacity>
+            {canDelete && (
+              <TouchableOpacity style={[s.actionBtn, { backgroundColor: '#fee2e2' }]} onPress={() => handleDelete(c)}>
+                <Ionicons name="trash-outline" size={15} color="#ef4444" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by name or phone..."
-          value={search}
-          onChangeText={setSearch}
-          placeholderTextColor="#9ca3af"
-        />
+    <View style={s.container}>
+      <View style={s.searchBox}>
+        <Ionicons name="search" size={20} color="#9ca3af" style={{ marginRight: 8 }} />
+        <TextInput style={s.searchInput} placeholder="Search by name or phone..." value={search}
+          onChangeText={setSearch} placeholderTextColor="#9ca3af" />
+        {search ? <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={18} color="#9ca3af" /></TouchableOpacity> : null}
       </View>
 
-      {loading && page === 1 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b5ff8" />
-        </View>
+      {loading ? (
+        <View style={s.loading}><ActivityIndicator size="large" color="#3b5ff8" /></View>
       ) : (
-        <FlatList
-          data={customers}
-          keyExtractor={(item) => item._id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContainer}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          onEndReached={() => {
-            const nextPage = page + 1;
-            setPage(nextPage);
-            fetchCustomers(nextPage);
-          }}
+        <FlatList data={customers} keyExtractor={i => i._id} renderItem={renderItem}
+          contentContainerStyle={s.list} refreshing={refreshing}
+          onRefresh={() => { setPage(1); fetchCustomers(1, true); }}
+          onEndReached={() => { const n = page + 1; setPage(n); fetchCustomers(n); }}
           onEndReachedThreshold={0.5}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="people-outline" size={48} color="#d1d5db" />
-              <Text style={styles.emptyText}>No customers found</Text>
+            <View style={s.empty}>
+              <Ionicons name="people-outline" size={52} color="#e5e7eb" />
+              <Text style={s.emptyTitle}>No Customers Found</Text>
+              <Text style={s.emptySub}>{search ? 'Try a different search' : 'Add your first customer'}</Text>
             </View>
           }
         />
       )}
+
+      {canManage && (
+        <TouchableOpacity style={s.fab} onPress={() => { setEditing(null); setModalVisible(true); }}>
+          <Ionicons name="add" size={28} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      <CustomerModal visible={modalVisible} onClose={() => setModalVisible(false)} onSave={handleSave} editing={editing} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9fafb',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    margin: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    height: 44,
-    fontSize: 16,
-    color: '#1f2937',
-  },
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  nameText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  spentText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#10b981',
-  },
-  cardBody: {
-    gap: 6,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  bodyText: {
-    fontSize: 14,
-    color: '#4b5563',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-  },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#6b7280',
-  }
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f9fafb' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 16, marginBottom: 8, borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12 },
+  searchInput: { flex: 1, height: 44, fontSize: 15, color: '#1f2937' },
+  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 },
+  card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  avatarWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 18, fontWeight: 'bold', color: '#3b5ff8' },
+  customerName: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
+  customerSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  spentText: { fontSize: 15, fontWeight: 'bold', color: '#10b981' },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f3f4f6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 100 },
+  metaChipText: { fontSize: 12, color: '#6b7280' },
+  actions: { flexDirection: 'row', gap: 6, marginLeft: 'auto' },
+  actionBtn: { width: 30, height: 30, borderRadius: 8, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  empty: { alignItems: 'center', marginTop: 60, gap: 8 },
+  emptyTitle: { fontSize: 17, fontWeight: 'bold', color: '#374151' },
+  emptySub: { fontSize: 13, color: '#9ca3af' },
+  fab: { position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#3b5ff8', justifyContent: 'center', alignItems: 'center', shadowColor: '#3b5ff8', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  // Modal
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  sheetBody: { padding: 20 },
+  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  field: { marginBottom: 14 },
+  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
+  row: { flexDirection: 'row' },
+  cancelBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#f3f4f6', alignItems: 'center' },
+  cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
+  saveBtn: { flex: 1.5, padding: 14, borderRadius: 10, backgroundColor: '#3b5ff8', alignItems: 'center' },
+  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
 });
