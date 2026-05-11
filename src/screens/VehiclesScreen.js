@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import BottomSheetPicker from '../components/BottomSheetPicker';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../api/vehicleService';
@@ -128,18 +128,18 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }) {
               <View style={{ flex: 1 }}><F label="Color" value={form.color} onChange={v => set('color', v)} placeholder="White, Black..." /></View>
             </View>
 
-            <View style={s.field}>
-              <Text style={s.label}>Fuel Type</Text>
-              <View style={s.pickerWrap}>
-                <Picker selectedValue={form.fuelType} onValueChange={v => set('fuelType', v)} style={{ height: 44 }}>
-                  <Picker.Item label="Petrol" value="petrol" />
-                  <Picker.Item label="Diesel" value="diesel" />
-                  <Picker.Item label="CNG" value="cng" />
-                  <Picker.Item label="Electric" value="electric" />
-                  <Picker.Item label="Hybrid" value="hybrid" />
-                </Picker>
-              </View>
-            </View>
+            <BottomSheetPicker
+              label="Fuel Type"
+              options={[
+                { value: 'petrol', label: 'Petrol', color: '#ef4444' },
+                { value: 'diesel', label: 'Diesel', color: '#3b82f6' },
+                { value: 'cng', label: 'CNG', color: '#f59e0b' },
+                { value: 'electric', label: 'Electric', color: '#10b981' },
+                { value: 'hybrid', label: 'Hybrid', color: '#8b5cf6' },
+              ]}
+              selectedValue={form.fuelType}
+              onValueChange={v => set('fuelType', v)}
+            />
           </ScrollView>
           <View style={s.footer}>
             <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
@@ -322,7 +322,7 @@ const s = StyleSheet.create({
   field: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
   input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
-  pickerWrap: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' },
+
   row: { flexDirection: 'row' },
   cancelBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#f3f4f6', alignItems: 'center' },
   cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },

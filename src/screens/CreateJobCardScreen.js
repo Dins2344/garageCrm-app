@@ -3,13 +3,13 @@ import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   ActivityIndicator, Modal, KeyboardAvoidingView, Platform
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { getCustomers, createCustomer } from '../api/customerService';
 import { getVehicles, createVehicle } from '../api/vehicleService';
 import { getMechanics, getAdvisors } from '../api/userService';
 import { createJobCard } from '../api/jobCardService';
+import BottomSheetPicker from '../components/BottomSheetPicker';
 
 // ─── Search + Select Modal ────────────────────────────────────────────────────
 function SearchModal({ visible, onClose, title, items, onSelect, renderItem, searchKeys }) {
@@ -274,16 +274,18 @@ export default function CreateJobCardScreen({ navigation }) {
                       <View style={{ flex: 1 }}><F label="Year" value={newYear} onChange={setNewYear} placeholder="2024" keyboard="numeric" cap="none" /></View>
                       <View style={{ width: 12 }} />
                       <View style={{ flex: 1 }}>
-                        <Text style={s.label}>Fuel Type</Text>
-                        <View style={s.pickerWrap}>
-                          <Picker selectedValue={newFuel} onValueChange={setNewFuel} style={{ height: 44 }}>
-                            <Picker.Item label="Petrol" value="petrol" />
-                            <Picker.Item label="Diesel" value="diesel" />
-                            <Picker.Item label="CNG" value="cng" />
-                            <Picker.Item label="Electric" value="electric" />
-                            <Picker.Item label="Hybrid" value="hybrid" />
-                          </Picker>
-                        </View>
+                        <BottomSheetPicker
+                          label="Fuel Type"
+                          options={[
+                            { value: 'petrol', label: 'Petrol' },
+                            { value: 'diesel', label: 'Diesel' },
+                            { value: 'cng', label: 'CNG' },
+                            { value: 'electric', label: 'Electric' },
+                            { value: 'hybrid', label: 'Hybrid' },
+                          ]}
+                          selectedValue={newFuel}
+                          onValueChange={setNewFuel}
+                        />
                       </View>
                     </View>
                   </>
@@ -301,32 +303,38 @@ export default function CreateJobCardScreen({ navigation }) {
               <View style={s.card}>
                 <Text style={s.cardTitle}>🔧 Service Details</Text>
 
-                <Text style={s.label}>Service Type *</Text>
-                <View style={s.pickerWrap}>
-                  <Picker selectedValue={serviceType} onValueChange={setServiceType} style={{ height: 44 }}>
-                    <Picker.Item label="Periodic Service" value="service" />
-                    <Picker.Item label="General Repair" value="repair" />
-                    <Picker.Item label="Accident Repair" value="accident" />
-                  </Picker>
-                </View>
+                <BottomSheetPicker
+                  label="Service Type"
+                  required
+                  options={[
+                    { value: 'service', label: 'Periodic Service', icon: 'build-outline', color: '#3b5ff8' },
+                    { value: 'repair', label: 'General Repair', icon: 'construct-outline', color: '#f59e0b' },
+                    { value: 'accident', label: 'Accident Repair', icon: 'warning-outline', color: '#ef4444' },
+                  ]}
+                  selectedValue={serviceType}
+                  onValueChange={setServiceType}
+                />
 
                 <View style={{ height: 14 }} />
-                <Text style={s.label}>Service Advisor *</Text>
-                <View style={s.pickerWrap}>
-                  <Picker selectedValue={advisorId} onValueChange={setAdvisorId} style={{ height: 44 }}>
-                    <Picker.Item label="Select advisor..." value="" />
-                    {advisors.map(a => <Picker.Item key={a._id} label={a.name} value={a._id} />)}
-                  </Picker>
-                </View>
+                <BottomSheetPicker
+                  label="Service Advisor"
+                  required
+                  searchable
+                  placeholder="Select advisor..."
+                  options={advisors.map(a => ({ value: a._id, label: a.name, icon: 'person-outline' }))}
+                  selectedValue={advisorId}
+                  onValueChange={setAdvisorId}
+                />
 
                 <View style={{ height: 14 }} />
-                <Text style={s.label}>Assign Mechanic (Optional)</Text>
-                <View style={s.pickerWrap}>
-                  <Picker selectedValue={mechanicId} onValueChange={setMechanicId} style={{ height: 44 }}>
-                    <Picker.Item label="Unassigned" value="" />
-                    {mechanics.map(m => <Picker.Item key={m._id} label={m.name} value={m._id} />)}
-                  </Picker>
-                </View>
+                <BottomSheetPicker
+                  label="Assign Mechanic (Optional)"
+                  searchable
+                  placeholder="Unassigned"
+                  options={mechanics.map(m => ({ value: m._id, label: m.name, icon: 'hammer-outline' }))}
+                  selectedValue={mechanicId}
+                  onValueChange={setMechanicId}
+                />
 
                 <View style={{ height: 14 }} />
                 <Text style={s.label}>Primary Complaint</Text>
@@ -435,7 +443,7 @@ const s = StyleSheet.create({
   field: { marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
   input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
-  pickerWrap: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' },
+
   rowFields: { flexDirection: 'row' },
   // Summary
   summaryCard: { backgroundColor: '#f0f9ff', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#bae6fd' },

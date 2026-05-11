@@ -5,7 +5,7 @@ import {
   TextInput, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
+import BottomSheetPicker from '../components/BottomSheetPicker';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/userService';
@@ -103,17 +103,18 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }) {
               secureTextEntry
               autoCapitalize="none"
             />
-            <View style={styles.fieldWrap}>
-              <Text style={styles.fieldLabel}>Role *</Text>
-              <View style={styles.pickerWrap}>
-                <Picker selectedValue={form.role} onValueChange={v => set('role', v)} style={styles.picker}>
-                  <Picker.Item label="Mechanic" value="mechanic" />
-                  <Picker.Item label="Service Advisor" value="service_advisor" />
-                  <Picker.Item label="Receptionist" value="receptionist" />
-                  {canSetAdmin && <Picker.Item label="Admin" value="admin" />}
-                </Picker>
-              </View>
-            </View>
+            <BottomSheetPicker
+              label="Role"
+              required
+              options={[
+                { value: 'mechanic', label: 'Mechanic', icon: 'hammer-outline', color: '#f59e0b' },
+                { value: 'service_advisor', label: 'Service Advisor', icon: 'clipboard-outline', color: '#10b981' },
+                { value: 'receptionist', label: 'Receptionist', icon: 'desktop-outline', color: '#0f766e' },
+                ...(canSetAdmin ? [{ value: 'admin', label: 'Admin', icon: 'shield-outline', color: '#7c3aed' }] : []),
+              ]}
+              selectedValue={form.role}
+              onValueChange={v => set('role', v)}
+            />
           </ScrollView>
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
@@ -337,8 +338,7 @@ const styles = StyleSheet.create({
   fieldWrap: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
   input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
-  pickerWrap: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, overflow: 'hidden' },
-  picker: { height: 44 },
+
   cancelBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#f3f4f6', alignItems: 'center' },
   cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
   saveBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#3b5ff8', alignItems: 'center' },

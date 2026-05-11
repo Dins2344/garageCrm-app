@@ -24,3 +24,13 @@ export const deleteJobCard = async (id) => {
   const res = await api.delete(`/jobcards/${id}`);
   return res.data;
 };
+
+export const saveJobCardEstimation = async (id, data) => {
+  const res = await api.put(`/jobcards/${id}/estimation`, data);
+  return res.data;
+};
+
+export const approveJobCardEstimation = async (id) => {
+  const res = await api.put(`/jobcards/${id}/approve`);
+  return res.data;
+};

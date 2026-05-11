@@ -17,6 +17,8 @@ import VehiclesScreen from '../screens/VehiclesScreen';
 import VehicleDetailScreen from '../screens/VehicleDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import StaffScreen from '../screens/StaffScreen';
+import EstimationEditorScreen from '../screens/EstimationEditorScreen';
+import InvoiceViewerScreen from '../screens/InvoiceViewerScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -71,6 +73,8 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="JobCardDetail" component={JobCardDetailScreen} />
+            <Stack.Screen name="EstimationEditor" component={EstimationEditorScreen} />
+            <Stack.Screen name="InvoiceViewer" component={InvoiceViewerScreen} />
             <Stack.Screen name="CreateJobCard" component={CreateJobCardScreen} />
             <Stack.Screen
               name="Vehicles"
