@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login as authLogin, register as authRegister, getMe } from '../api/authService';
+import IdleTimer from '../components/IdleTimer';
 
 const AuthContext = createContext(null);
 
@@ -58,7 +59,9 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, hasRole }}>
-      {children}
+      <IdleTimer>
+        {children}
+      </IdleTimer>
     </AuthContext.Provider>
   );
 }
