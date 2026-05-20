@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, KeyboardAvoidingView, Platform, Alert
+  ActivityIndicator, KeyboardAvoidingView, Platform, Alert, StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { getJobCard, saveJobCardEstimation } from '../api/jobCardService';
-import { getInventoryItems } from '../api/inventoryService';
-import BottomSheetPicker from '../components/BottomSheetPicker';
 
 export default function EstimationEditorScreen({ route, navigation }) {
   const { id } = route.params;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [jobCard, setJobCard] = useState(null);
-  const [inventory, setInventory] = useState([]);
 
   const [parts, setParts] = useState([]);
   const [labor, setLabor] = useState([]);
@@ -27,13 +24,9 @@ export default function EstimationEditorScreen({ route, navigation }) {
 
   const fetchData = async () => {
     try {
-      const [jcRes, invRes] = await Promise.all([
-        getJobCard(id),
-        getInventoryItems({ limit: 1000 }).catch(() => ({ data: [] })),
-      ]);
+      const jcRes = await getJobCard(id);
       const jc = jcRes.data;
       setJobCard(jc);
-      setInventory(invRes.data || []);
 
       // Populate from existing estimation
       if (jc.estimation) {
@@ -41,7 +34,6 @@ export default function EstimationEditorScreen({ route, navigation }) {
           partName: p.partName || '',
           quantity: String(p.quantity || 1),
           unitPrice: String(p.unitPrice || 0),
-          inventoryItem: p.inventoryItem || '',
         })));
         setLabor((jc.estimation.labor || []).map(l => ({
           description: l.description || '',
@@ -52,7 +44,7 @@ export default function EstimationEditorScreen({ route, navigation }) {
         setTaxRate(String(jc.estimation.taxRate || 18));
       }
     } catch (e) {
-      Toast.show({ type: 'error', text1: 'Failed to load data' });
+      Toast.show({ type: 'error', text1: 'Failed to load job card' });
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -61,21 +53,12 @@ export default function EstimationEditorScreen({ route, navigation }) {
 
   // ── Parts handlers ──
   const addPart = () => {
-    setParts([...parts, { partName: '', quantity: '1', unitPrice: '0', inventoryItem: '' }]);
+    setParts([...parts, { partName: '', quantity: '1', unitPrice: '0' }]);
   };
 
   const updatePart = (index, field, value) => {
     const updated = [...parts];
     updated[index] = { ...updated[index], [field]: value };
-
-    // Auto-fill from inventory
-    if (field === 'inventoryItem' && value) {
-      const item = inventory.find(i => i._id === value);
-      if (item) {
-        updated[index].partName = item.partName;
-        updated[index].unitPrice = String(item.sellingPrice || item.unitPrice || 0);
-      }
-    }
     setParts(updated);
   };
 
@@ -122,7 +105,7 @@ export default function EstimationEditorScreen({ route, navigation }) {
           partName: p.partName,
           quantity: parseFloat(p.quantity) || 0,
           unitPrice: parseFloat(p.unitPrice) || 0,
-          inventoryItem: p.inventoryItem || undefined,
+          // No inventoryItem — manual entry mode
         })),
         labor: labor.map(l => ({
           description: l.description,
@@ -151,11 +134,6 @@ export default function EstimationEditorScreen({ route, navigation }) {
   }
 
   const fmt = (n) => '₹' + Math.round(n).toLocaleString('en-IN');
-
-  const inventoryOptions = inventory.map(i => ({
-    value: i._id,
-    label: `${i.partName} — ₹${i.sellingPrice || i.unitPrice} (Stock: ${i.quantity})`,
-  }));
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -195,26 +173,17 @@ export default function EstimationEditorScreen({ route, navigation }) {
 
           {parts.map((part, i) => (
             <View key={i} style={s.itemCard}>
-              {/* Inventory lookup */}
-              <BottomSheetPicker
-                label="From Inventory (optional)"
-                placeholder="Select from inventory..."
-                searchable
-                options={inventoryOptions}
-                selectedValue={part.inventoryItem}
-                onValueChange={v => updatePart(i, 'inventoryItem', v)}
-              />
-
-              <View style={{ height: 10 }} />
+              {/* Manual part name entry */}
               <View style={s.fieldRow}>
-                <View style={{ flex: 2 }}>
+                <View style={{ flex: 1 }}>
                   <Text style={s.fieldLabel}>Part Name</Text>
                   <TextInput
                     style={s.input}
                     value={part.partName}
                     onChangeText={v => updatePart(i, 'partName', v)}
-                    placeholder="Part name"
+                    placeholder="e.g. Engine Oil Filter, Brake Pad..."
                     placeholderTextColor="#9ca3af"
+                    autoCapitalize="words"
                   />
                 </View>
               </View>
@@ -426,7 +395,8 @@ const s = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 54 : 16, paddingBottom: 14, paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 54 : (StatusBar.currentHeight || 24) + 10,
+    paddingBottom: 14, paddingHorizontal: 16,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
   },
   backBtn: { padding: 4 },

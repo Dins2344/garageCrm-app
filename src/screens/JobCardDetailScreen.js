@@ -46,6 +46,14 @@ export default function JobCardDetailScreen({ route, navigation }) {
       );
       return;
     }
+    if (newStatus === 'estimation_sent') {
+      const hasParts = jobCard?.estimation?.parts?.length > 0;
+      const hasLabor = jobCard?.estimation?.labor?.length > 0;
+      if (!hasParts && !hasLabor) {
+        Toast.show({ type: 'error', text1: 'Please add at least one part or labor item.' });
+        return;
+      }
+    }
 
     if (newStatus === 'delivered' && !jobCard?.invoice) {
       Toast.show({ type: 'error', text1: 'Cannot mark as delivered', text2: 'Please generate an invoice first.' });
@@ -62,7 +70,8 @@ export default function JobCardDetailScreen({ route, navigation }) {
       Toast.show({ type: 'success', text1: 'Status updated' });
       setJobCard(prev => ({ ...prev, status: newStatus }));
     } catch (error) {
-      Toast.show({ type: 'error', text1: 'Failed to update status' });
+      console.log('Error data====>', JSON.stringify(error))
+      Toast.show({ type: 'error', text1: error?.data?.message || 'Failed to update status' });
     } finally {
       setUpdating(false);
     }
@@ -137,11 +146,11 @@ export default function JobCardDetailScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Job Card {jobCard?.jobCardNumber}</Text>
-        <View style={{width: 24}}/>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        
+
         {/* Status Pipeline */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Status</Text>
@@ -341,8 +350,8 @@ export default function JobCardDetailScreen({ route, navigation }) {
                   {!hasEstimation
                     ? 'Add an estimation first'
                     : !est?.approvedByCustomer
-                    ? 'Approve the estimation to generate invoice'
-                    : 'No invoice yet'}
+                      ? 'Approve the estimation to generate invoice'
+                      : 'No invoice yet'}
                 </Text>
               </View>
             </View>

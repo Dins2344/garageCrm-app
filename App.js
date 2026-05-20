@@ -12,7 +12,7 @@ export default function App() {
       <AuthProvider>
         <AppNavigator />
       </AuthProvider>
-      <Toast />
+      <Toast position='bottom' />
     </SafeAreaProvider>
   );
 }
