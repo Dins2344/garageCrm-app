@@ -11,6 +11,121 @@ import { getMechanics, getAdvisors } from '../api/userService';
 import { createJobCard } from '../api/jobCardService';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 
+// ─── Pure-JS Calendar Picker (no native modules — works in Expo Go) ───────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+function CalendarModal({ visible, selected, onSelect, onClose }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const initial = selected || today;
+  const [viewYear,  setViewYear]  = useState(initial.getFullYear());
+  const [viewMonth, setViewMonth] = useState(initial.getMonth());
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  // Build calendar grid
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  // Pad to full rows
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const isSelected = (d) => {
+    if (!d || !selected) return false;
+    return selected.getDate() === d && selected.getMonth() === viewMonth && selected.getFullYear() === viewYear;
+  };
+  const isPast = (d) => {
+    if (!d) return false;
+    const dt = new Date(viewYear, viewMonth, d);
+    return dt < today;
+  };
+
+  const rows = [];
+  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={cal.overlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity style={cal.card} activeOpacity={1}>
+          {/* Header */}
+          <View style={cal.header}>
+            <TouchableOpacity onPress={prevMonth} style={cal.navBtn}>
+              <Ionicons name="chevron-back" size={20} color="#374151" />
+            </TouchableOpacity>
+            <Text style={cal.monthTitle}>{MONTHS[viewMonth]} {viewYear}</Text>
+            <TouchableOpacity onPress={nextMonth} style={cal.navBtn}>
+              <Ionicons name="chevron-forward" size={20} color="#374151" />
+            </TouchableOpacity>
+          </View>
+          {/* Day labels */}
+          <View style={cal.dayRow}>
+            {DAYS.map(d => <Text key={d} style={cal.dayLabel}>{d}</Text>)}
+          </View>
+          {/* Weeks */}
+          {rows.map((row, ri) => (
+            <View key={ri} style={cal.dayRow}>
+              {row.map((d, ci) => {
+                const sel  = isSelected(d);
+                const past = isPast(d);
+                return (
+                  <TouchableOpacity
+                    key={ci}
+                    style={[cal.cell, sel && cal.cellSelected, (!d || past) && cal.cellDisabled]}
+                    onPress={() => {
+                      if (!d || past) return;
+                      onSelect(new Date(viewYear, viewMonth, d));
+                    }}
+                    disabled={!d || past}
+                  >
+                    <Text style={[cal.cellText, sel && cal.cellTextSelected, past && cal.cellTextPast]}>
+                      {d || ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
+          {/* Actions */}
+          <View style={cal.footer}>
+            <TouchableOpacity onPress={onClose} style={cal.cancelBtn}>
+              <Text style={cal.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+const cal = StyleSheet.create({
+  overlay:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
+  card:           { backgroundColor: '#fff', borderRadius: 20, padding: 20, width: 320, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
+  header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  navBtn:         { padding: 6 },
+  monthTitle:     { fontSize: 16, fontWeight: '700', color: '#111827' },
+  dayRow:         { flexDirection: 'row', marginBottom: 4 },
+  dayLabel:       { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: '#9ca3af', paddingVertical: 4 },
+  cell:           { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 8, margin: 1 },
+  cellSelected:   { backgroundColor: '#3b5ff8' },
+  cellDisabled:   { opacity: 0.3 },
+  cellText:       { fontSize: 14, color: '#111827', fontWeight: '500' },
+  cellTextSelected: { color: '#fff', fontWeight: '700' },
+  cellTextPast:   { color: '#9ca3af' },
+  footer:         { marginTop: 12, alignItems: 'flex-end' },
+  cancelBtn:      { paddingHorizontal: 16, paddingVertical: 8 },
+  cancelText:     { fontSize: 14, color: '#6b7280', fontWeight: '600' },
+});
+
 // ─── Search + Select Modal ────────────────────────────────────────────────────
 function SearchModal({ visible, onClose, title, items, onSelect, renderItem, searchKeys }) {
   const [q, setQ] = useState('');
@@ -133,7 +248,12 @@ export default function CreateJobCardScreen({ navigation }) {
   const [serviceType, setServiceType] = useState('service');
   const [advisorId, setAdvisorId] = useState('');
   const [mechanicId, setMechanicId] = useState('');
-  const [complaint, setComplaint] = useState('');
+  // Multiple complaints — same shape as the web app
+  const [complaints, setComplaints] = useState([{ description: '', priority: 'medium' }]);
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState(null); // Date object or null
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [odometerAtIntake, setOdometerAtIntake] = useState('');
+  const [internalNotes, setInternalNotes] = useState('');
 
   useEffect(() => {
     getCustomers({ limit: 500 }).then(r => setCustomers(r.data || [])).catch(() => {});
@@ -146,6 +266,26 @@ export default function CreateJobCardScreen({ navigation }) {
   const customerVehicles = selCustomer
     ? vehicles.filter(v => v.customer?._id === selCustomer._id || v.customer === selCustomer._id)
     : vehicles;
+  // ── Complaint helpers ──
+  const addComplaint = () =>
+    setComplaints(prev => [...prev, { description: '', priority: 'medium' }]);
+
+  const removeComplaint = (index) =>
+    setComplaints(prev => prev.filter((_, i) => i !== index));
+
+  const updateComplaint = (index, field, value) =>
+    setComplaints(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+
+  const PRIORITY_OPTIONS = [
+    { value: 'low',    label: 'Low',    color: '#10b981' },
+    { value: 'medium', label: 'Medium', color: '#f59e0b' },
+    { value: 'high',   label: 'High',   color: '#ef4444' },
+    { value: 'urgent', label: 'Urgent', color: '#7c3aed' },
+  ];
 
   const handleNext = () => {
     if (custTab === 0 && !selCustomer) { Toast.show({ type: 'error', text1: 'Please select a customer' }); return; }
@@ -157,6 +297,9 @@ export default function CreateJobCardScreen({ navigation }) {
 
   const handleSubmit = async () => {
     if (!advisorId) { Toast.show({ type: 'error', text1: 'Please assign a Service Advisor' }); return; }
+    const validComplaints = complaints.filter(c => c.description.trim());
+    if (validComplaints.length === 0) { Toast.show({ type: 'error', text1: 'Please add at least one complaint' }); return; }
+
     setLoading(true);
     try {
       let customerId, vehicleId;
@@ -183,7 +326,10 @@ export default function CreateJobCardScreen({ navigation }) {
         customer: customerId,
         assignedAdvisor: advisorId || undefined,
         assignedMechanic: mechanicId || undefined,
-        complaints: complaint.trim() ? [{ description: complaint.trim(), priority: 'medium' }] : [],
+        complaints: validComplaints,
+        odometerAtIntake: odometerAtIntake ? parseInt(odometerAtIntake) : undefined,
+        expectedDeliveryDate: expectedDeliveryDate ? expectedDeliveryDate.toISOString() : undefined,
+        internalNotes: internalNotes.trim() || undefined,
       });
 
       Toast.show({ type: 'success', text1: '✅ Job Card Created!' });
@@ -308,7 +454,7 @@ export default function CreateJobCardScreen({ navigation }) {
                   required
                   options={[
                     { value: 'service', label: 'Periodic Service', icon: 'build-outline', color: '#3b5ff8' },
-                    { value: 'repair', label: 'General Repair', icon: 'construct-outline', color: '#f59e0b' },
+                    { value: 'repair',  label: 'General Repair',   icon: 'construct-outline', color: '#f59e0b' },
                     { value: 'accident', label: 'Accident Repair', icon: 'warning-outline', color: '#ef4444' },
                   ]}
                   selectedValue={serviceType}
@@ -317,7 +463,7 @@ export default function CreateJobCardScreen({ navigation }) {
 
                 <View style={{ height: 14 }} />
                 <BottomSheetPicker
-                  label="Service Advisor"
+                  label="Service Advisor *"
                   required
                   searchable
                   placeholder="Select advisor..."
@@ -336,10 +482,109 @@ export default function CreateJobCardScreen({ navigation }) {
                   onValueChange={setMechanicId}
                 />
 
-                <View style={{ height: 14 }} />
-                <Text style={s.label}>Primary Complaint</Text>
-                <TextInput style={[s.input, { height: 88, textAlignVertical: 'top' }]}
-                  value={complaint} onChangeText={setComplaint} multiline placeholder="Describe the issue..." placeholderTextColor="#9ca3af" />
+                {/* Odometer + Expected Delivery Date */}
+                <View style={[s.rowFields, { marginTop: 14 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.label}>Odometer (km)</Text>
+                    <TextInput
+                      style={s.input}
+                      value={odometerAtIntake}
+                      onChangeText={setOdometerAtIntake}
+                      keyboardType="numeric"
+                      placeholder="e.g. 42000"
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+                  <View style={{ width: 12 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.label}>Expected Delivery</Text>
+                    <TouchableOpacity
+                      style={[s.input, s.dateTrigger]}
+                      onPress={() => setShowDatePicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="calendar-outline" size={16} color={expectedDeliveryDate ? '#1f2937' : '#9ca3af'} />
+                      <Text style={{ fontSize: 14, color: expectedDeliveryDate ? '#1f2937' : '#9ca3af', flex: 1 }}>
+                        {expectedDeliveryDate
+                          ? expectedDeliveryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          : 'Select date'}
+                      </Text>
+                      {expectedDeliveryDate && (
+                        <TouchableOpacity onPress={() => setExpectedDeliveryDate(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                          <Ionicons name="close-circle" size={16} color="#9ca3af" />
+                        </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* ── Custom Date Picker Modal ── */}
+              <CalendarModal
+                visible={showDatePicker}
+                selected={expectedDeliveryDate}
+                onSelect={(d) => { setExpectedDeliveryDate(d); setShowDatePicker(false); }}
+                onClose={() => setShowDatePicker(false)}
+              />
+
+              {/* ── COMPLAINTS ── */}
+              <View style={s.card}>
+                <View style={s.complaintHeader}>
+                  <Text style={s.cardTitle}>⚠️ Customer Complaints *</Text>
+                  <TouchableOpacity style={s.addComplaintBtn} onPress={addComplaint}>
+                    <Ionicons name="add" size={16} color="#3b5ff8" />
+                    <Text style={s.addComplaintText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {complaints.map((c, i) => {
+                  const cfg = PRIORITY_OPTIONS.find(p => p.value === c.priority) || PRIORITY_OPTIONS[1];
+                  return (
+                    <View key={i} style={s.complaintCard}>
+                      <View style={s.complaintTop}>
+                        <Text style={s.complaintNum}>#{i + 1}</Text>
+                        {/* Priority cycle button */}
+                        <TouchableOpacity
+                          style={[s.priorityBadge, { backgroundColor: `${cfg.color}18`, borderColor: `${cfg.color}40` }]}
+                          onPress={() => {
+                            const idx = PRIORITY_OPTIONS.findIndex(p => p.value === c.priority);
+                            const next = PRIORITY_OPTIONS[(idx + 1) % PRIORITY_OPTIONS.length];
+                            updateComplaint(i, 'priority', next.value);
+                          }}
+                        >
+                          <Text style={[s.priorityText, { color: cfg.color }]}>{cfg.label}</Text>
+                          <Ionicons name="swap-horizontal" size={12} color={cfg.color} />
+                        </TouchableOpacity>
+                        {complaints.length > 1 && (
+                          <TouchableOpacity onPress={() => removeComplaint(i)} style={s.removeComplaintBtn}>
+                            <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      <TextInput
+                        style={[s.input, { height: 72, textAlignVertical: 'top', marginTop: 8 }]}
+                        value={c.description}
+                        onChangeText={v => updateComplaint(i, 'description', v)}
+                        multiline
+                        placeholder="Describe the complaint or service needed..."
+                        placeholderTextColor="#9ca3af"
+                      />
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* ── INTERNAL NOTES ── */}
+              <View style={s.card}>
+                <Text style={s.cardTitle}>📝 Internal Notes</Text>
+                <TextInput
+                  style={[s.input, { height: 80, textAlignVertical: 'top' }]}
+                  value={internalNotes}
+                  onChangeText={setInternalNotes}
+                  multiline
+                  placeholder="Any internal instructions or notes (not visible to customer)..."
+                  placeholderTextColor="#9ca3af"
+                />
               </View>
 
               {/* Summary */}
@@ -445,6 +690,8 @@ const s = StyleSheet.create({
   input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
 
   rowFields: { flexDirection: 'row' },
+  // Date picker trigger button (looks like an input)
+  dateTrigger: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 12 },
   // Summary
   summaryCard: { backgroundColor: '#f0f9ff', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#bae6fd' },
   summaryTitle: { fontSize: 13, fontWeight: '700', color: '#0369a1', marginBottom: 8 },
@@ -456,4 +703,14 @@ const s = StyleSheet.create({
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   backBtn2: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 15, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#f3f4f6' },
   backBtn2Text: { fontSize: 15, fontWeight: '600', color: '#374151' },
+  // Complaints
+  complaintHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  addComplaintBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#3b5ff8', borderStyle: 'dashed', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  addComplaintText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
+  complaintCard: { backgroundColor: '#f9fafb', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#f3f4f6' },
+  complaintTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  complaintNum: { fontSize: 12, fontWeight: '700', color: '#9ca3af', minWidth: 20 },
+  priorityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  priorityText: { fontSize: 12, fontWeight: '700' },
+  removeComplaintBtn: { marginLeft: 'auto', padding: 4 },
 });

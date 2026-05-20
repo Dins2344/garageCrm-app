@@ -184,19 +184,47 @@ export default function JobCardDetailScreen({ route, navigation }) {
           </View>
         </View>
 
-        {/* Complaints */}
+        {/* Service Details + Complaints */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Complaints / Work Details</Text>
+          <Text style={styles.sectionTitle}>Service Details</Text>
           <View style={styles.infoCard}>
-            {jobCard?.complaints?.map((c, idx) => (
-              <View key={idx} style={styles.complaintRow}>
-                <Ionicons name="construct-outline" size={16} color="#4b5563" />
-                <Text style={styles.complaintText}>{c.description}</Text>
-              </View>
-            ))}
+            {/* Odometer + Expected Delivery */}
+            <View style={styles.detailsGrid}>
+              {jobCard?.odometerAtIntake > 0 && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Odometer</Text>
+                  <Text style={styles.detailValue}>{jobCard.odometerAtIntake?.toLocaleString('en-IN')} km</Text>
+                </View>
+              )}
+              {jobCard?.expectedDeliveryDate && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Expected Delivery</Text>
+                  <Text style={styles.detailValue}>
+                    {new Date(jobCard.expectedDeliveryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Complaints */}
+            {(jobCard?.odometerAtIntake > 0 || jobCard?.expectedDeliveryDate) && <View style={styles.divider} />}
+            <Text style={styles.subLabel}>Complaints</Text>
+            {jobCard?.complaints?.map((c, idx) => {
+              const priorityColor = c.priority === 'urgent' ? '#7c3aed' : c.priority === 'high' ? '#ef4444' : c.priority === 'medium' ? '#f59e0b' : '#10b981';
+              return (
+                <View key={idx} style={styles.complaintRow}>
+                  <View style={[styles.priorityDot, { backgroundColor: `${priorityColor}20`, borderColor: `${priorityColor}50` }]}>
+                    <Text style={[styles.priorityLabel, { color: priorityColor }]}>{(c.priority || 'medium').toUpperCase().slice(0, 3)}</Text>
+                  </View>
+                  <Text style={styles.complaintText}>{c.description}</Text>
+                </View>
+              );
+            })}
             {(!jobCard?.complaints || jobCard.complaints.length === 0) && (
               <Text style={styles.emptyText}>No complaints logged</Text>
             )}
+
+            {/* Internal Notes */}
             {jobCard?.internalNotes ? (
               <View style={styles.notesBox}>
                 <Text style={styles.notesTitle}>Internal Notes:</Text>
@@ -390,8 +418,15 @@ const styles = StyleSheet.create({
   infoTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
   infoSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 2 },
   divider: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 12 },
-  complaintRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  complaintText: { fontSize: 15, color: '#374151', marginLeft: 8, flex: 1 },
+  complaintRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10, gap: 8 },
+  priorityDot: { borderRadius: 4, borderWidth: 1, paddingHorizontal: 5, paddingVertical: 2, minWidth: 36, alignItems: 'center' },
+  priorityLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  complaintText: { fontSize: 14, color: '#374151', flex: 1 },
+  subLabel: { fontSize: 11, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  detailsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 4 },
+  detailItem: { flex: 1, minWidth: '45%' },
+  detailLabel: { fontSize: 11, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 2 },
+  detailValue: { fontSize: 14, fontWeight: '600', color: '#111827' },
   emptyText: { fontSize: 14, color: '#9ca3af', fontStyle: 'italic' },
   notesBox: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
   notesTitle: { fontSize: 12, fontWeight: 'bold', color: '#6b7280', marginBottom: 4 },
