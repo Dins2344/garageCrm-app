@@ -12,7 +12,6 @@ const IdleTimer = ({ children }) => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
-
     if (user) {
       timerRef.current = setTimeout(() => {
         logout();
@@ -20,15 +19,26 @@ const IdleTimer = ({ children }) => {
     }
   }, [user, logout]);
 
-  // Use PanResponder to detect any touch on the screen
+  // Always keep a ref to the latest resetTimer.
+  // PanResponder is created once — without this ref it would hold
+  // a stale closure and never actually reset the timer on touches.
+  const resetTimerRef = useRef(resetTimer);
+  useEffect(() => {
+    resetTimerRef.current = resetTimer;
+  }, [resetTimer]);
+
+  // PanResponder created once; reads from resetTimerRef so it always
+  // calls the current version regardless of re-renders.
+  // Uses the correct PanResponder callback names (not the Responder API).
+  // Returning false lets touches pass through to child components normally.
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetResponderCapture: () => {
-        resetTimer();
-        return false; // Don't capture, just observe
+      onStartShouldSetPanResponder: () => {
+        resetTimerRef.current?.();
+        return false;
       },
-      onMoveShouldSetResponderCapture: () => {
-        resetTimer();
+      onMoveShouldSetPanResponder: () => {
+        resetTimerRef.current?.();
         return false;
       },
     })
@@ -36,7 +46,13 @@ const IdleTimer = ({ children }) => {
 
   useEffect(() => {
     if (user) {
-      resetTimer();
+      resetTimer(); // Start timer on login
+    } else {
+      // Clear timer on logout so it doesn't fire after user is gone
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     }
     return () => {
       if (timerRef.current) {
