@@ -19,6 +19,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import StaffScreen from '../screens/StaffScreen';
 import EstimationEditorScreen from '../screens/EstimationEditorScreen';
 import InvoiceViewerScreen from '../screens/InvoiceViewerScreen';
+import InvoicesScreen from '../screens/InvoicesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -85,6 +86,11 @@ export default function AppNavigator() {
               name="VehicleDetail"
               component={VehicleDetailScreen}
               options={{ headerShown: true, title: 'Vehicle Details', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="Invoices"
+              component={InvoicesScreen}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="Settings"

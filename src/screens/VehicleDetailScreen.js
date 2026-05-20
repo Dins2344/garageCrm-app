@@ -5,8 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { getVehicle } from '../api/vehicleService';
-import { getJobCards } from '../api/jobCardService';
+import { getVehicle, getVehicleHistory } from '../api/vehicleService';
 
 const FUEL_COLOR = { petrol: '#ef4444', diesel: '#3b82f6', electric: '#10b981', hybrid: '#8b5cf6' };
 
@@ -44,12 +43,12 @@ export default function VehicleDetailScreen({ route, navigation }) {
 
   const fetchData = async () => {
     try {
-      const [vehicleRes, jobCardsRes] = await Promise.all([
+      const [vehicleRes, historyRes] = await Promise.all([
         getVehicle(id),
-        getJobCards({ vehicle: id, limit: 20 }).catch(() => ({ data: [] })),
+        getVehicleHistory(id, { limit: 50 }).catch(() => ({ data: [] })),
       ]);
       setVehicle(vehicleRes.data);
-      setJobCards(jobCardsRes.data || []);
+      setJobCards(historyRes.data || []);
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Failed to load vehicle details' });
       navigation.goBack();

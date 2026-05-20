@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Platform
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Platform, StatusBar, SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -132,23 +132,45 @@ export default function InvoiceViewerScreen({ route, navigation }) {
 
   return (
     <View style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={s.headerTitle}>{invoice.invoiceNumber}</Text>
-          <Text style={s.headerSub}>Invoice</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      {/* Header — uses SafeAreaView on iOS, manual status bar offset on Android */}
+      {Platform.OS === 'ios' ? (
+        <SafeAreaView style={s.safeHeader}>
+          <View style={s.headerInner}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+              <Ionicons name="arrow-back" size={24} color="#111827" />
+            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Text style={s.headerTitle}>{invoice.invoiceNumber}</Text>
+              <Text style={s.headerSub}>Invoice</Text>
+            </View>
+            <TouchableOpacity onPress={handleDownload} disabled={downloading} style={s.downloadBtn}>
+              {downloading ? (
+                <ActivityIndicator size="small" color="#3b5ff8" />
+              ) : (
+                <Ionicons name="download-outline" size={22} color="#3b5ff8" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      ) : (
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#111827" />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={s.headerTitle}>{invoice.invoiceNumber}</Text>
+            <Text style={s.headerSub}>Invoice</Text>
+          </View>
+          <TouchableOpacity onPress={handleDownload} disabled={downloading} style={s.downloadBtn}>
+            {downloading ? (
+              <ActivityIndicator size="small" color="#3b5ff8" />
+            ) : (
+              <Ionicons name="download-outline" size={22} color="#3b5ff8" />
+            )}
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleDownload} disabled={downloading} style={s.downloadBtn}>
-          {downloading ? (
-            <ActivityIndicator size="small" color="#3b5ff8" />
-          ) : (
-            <Ionicons name="download-outline" size={22} color="#3b5ff8" />
-          )}
-        </TouchableOpacity>
-      </View>
+      )}
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
 
@@ -377,10 +399,20 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  // Header
+  // Header — iOS uses SafeAreaView, Android uses manual StatusBar offset
+  safeHeader: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  headerInner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingBottom: 14, paddingHorizontal: 16, paddingTop: 4,
+  },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 54 : 16, paddingBottom: 14, paddingHorizontal: 16,
+    paddingTop: (StatusBar.currentHeight || 24) + 10,
+    paddingBottom: 14, paddingHorizontal: 16,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
   },
   backBtn: { padding: 4 },
