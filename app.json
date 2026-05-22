@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "GarageFlow",
-    "slug": "garageflow",
+    "name": "GaragePulse",
+    "slug": "garagepulse",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.garageflow.app"
+      "bundleIdentifier": "com.garagepulse.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +22,7 @@
         "backgroundColor": "#1a237e"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.garageflow.app",
+      "package": "com.garagepulse.app",
       "versionCode": 1,
       "permissions": [
         "INTERNET",

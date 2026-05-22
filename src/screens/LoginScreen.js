@@ -133,7 +133,7 @@ export default function LoginScreen() {
           <View style={styles.bannerCircle1} />
           <View style={styles.bannerCircle2} />
           <Logo size={56} />
-          <Text style={styles.bannerTitle}>GarageFlow</Text>
+          <Text style={styles.bannerTitle}>GaragePulse</Text>
           <Text style={styles.bannerSub}>
             {mode === 'login' ? 'Sign in to manage your workshop' : 'Register your garage & go digital'}
           </Text>
@@ -270,7 +270,7 @@ export default function LoginScreen() {
           )}
         </View>
 
-        <Text style={styles.footer}>© 2026 GarageFlow. All rights reserved.</Text>
+        <Text style={styles.footer}>© 2026 GaragePulse. All rights reserved.</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );

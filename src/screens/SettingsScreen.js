@@ -288,7 +288,7 @@ export default function SettingsScreen({ navigation }) {
 
         {/* ── APP INFO ── */}
         <SectionCard title="App Info" icon="information-circle-outline">
-          <InfoRow label="App" value="GarageFlow" />
+          <InfoRow label="App" value="GaragePulse" />
           <InfoRow label="Version" value="1.0.0" />
           <InfoRow label="Platform" value={Platform.OS === 'ios' ? 'iOS' : 'Android'} last />
         </SectionCard>

@@ -14,7 +14,7 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem('garageflow_token');
+      const token = await AsyncStorage.getItem('garagepulse_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -30,8 +30,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      await AsyncStorage.removeItem('garageflow_token');
-      await AsyncStorage.removeItem('garageflow_user');
+      await AsyncStorage.removeItem('garagepulse_token');
+      await AsyncStorage.removeItem('garagepulse_user');
       // Navigation dispatch needs to be handled outside interceptor ideally,
       // but Context should pick up the token removal if subscribed,
       // or we handle logout logic cleanly in AuthContext.
