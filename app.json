@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "GaragePulse",
-    "slug": "garagepulse",
-    "version": "1.0.1",
+    "name": "Garage Pulse",
+    "slug": "garage-pulse",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/transFavi.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1a237e"
+      "backgroundColor": "#FAFAFA"
     },
     "ios": {
       "supportsTablet": true,
@@ -18,8 +18,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a237e"
+        "foregroundImage": "./assets/transFavi.png",
+        "backgroundColor": "#FAFAFA"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.garagepulse.app",
@@ -30,21 +30,16 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/GPfavi.png"
     },
     "plugins": [
       [
-        "expo-build-properties",
-        {
-          "android": {
-            "usesCleartextTraffic": true
-          }
-        }
+        "expo-build-properties"
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "032cdbac-d6db-4438-8404-4791d4c2317f"
+        "projectId": "db68f503-aa06-4de1-b4ed-78090ec866f0"
       }
     },
     "owner": "dinsoncd"
