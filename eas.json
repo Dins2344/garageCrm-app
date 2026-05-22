@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://10.0.2.2:5000/api"
+        "EXPO_PUBLIC_API_URL": "https://dctech.space/api"
       }
     },
     "preview": {
@@ -17,13 +17,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://174.129.133.243/api"
+        "EXPO_PUBLIC_API_URL": "https://dctech.space/api"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://174.129.133.243/api"
+        "EXPO_PUBLIC_API_URL": "https://dctech.space/api"
       }
     }
   },
