@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, Alert, Modal, ScrollView,
-  TextInput, KeyboardAvoidingView, Platform
+  TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheetPicker from '../components/BottomSheetPicker';
@@ -141,6 +141,18 @@ export default function StaffScreen() {
   const canManage = hasRole('owner', 'admin');
   const canSetAdmin = hasRole('owner');
 
+  const [staffSearch, setStaffSearch] = useState('');
+  const [staffRoleFilter, setStaffRoleFilter] = useState('all');
+
+  const ROLE_FILTERS = [
+    { key: 'all', label: 'All' },
+    { key: 'mechanic', label: 'Mechanic' },
+    { key: 'service_advisor', label: 'Advisor' },
+    { key: 'receptionist', label: 'Reception' },
+    { key: 'admin', label: 'Admin' },
+    { key: 'owner', label: 'Owner' },
+  ];
+
   const fetchStaff = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true);
     try {
@@ -153,6 +165,22 @@ export default function StaffScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  const filteredStaff = useMemo(() => {
+    let list = staff;
+    if (staffRoleFilter !== 'all') {
+      list = list.filter(u => u.role === staffRoleFilter);
+    }
+    if (staffSearch.trim()) {
+      const q = staffSearch.trim().toLowerCase();
+      list = list.filter(u =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.phone?.includes(q)
+      );
+    }
+    return list;
+  }, [staff, staffSearch, staffRoleFilter]);
 
   useEffect(() => { fetchStaff(); }, []);
 
@@ -259,21 +287,96 @@ export default function StaffScreen() {
         <View style={styles.loading}><ActivityIndicator size="large" color="#3b5ff8" /></View>
       ) : (
         <FlatList
-          data={staff}
+          data={filteredStaff}
           keyExtractor={i => i._id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           refreshing={refreshing}
           onRefresh={() => fetchStaff(true)}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="people-outline" size={48} color="#e5e7eb" />
-              <Text style={styles.emptyText}>No staff members found</Text>
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View>
+              {/* Search bar */}
+              <View style={styles.searchRow}>
+                <Ionicons name="search-outline" size={18} color="#9ca3af" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  value={staffSearch}
+                  onChangeText={setStaffSearch}
+                  placeholder="Search by name, email or phone..."
+                  placeholderTextColor="#9ca3af"
+                  returnKeyType="search"
+                  clearButtonMode="while-editing"
+                />
+                {staffSearch.length > 0 && (
+                  <TouchableOpacity onPress={() => setStaffSearch('')} style={styles.searchClear}>
+                    <Ionicons name="close-circle" size={18} color="#9ca3af" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Role filter chips */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.chipScroll}
+                contentContainerStyle={styles.chipContainer}
+              >
+                {ROLE_FILTERS.map(f => (
+                  <TouchableOpacity
+                    key={f.key}
+                    onPress={() => setStaffRoleFilter(f.key)}
+                    style={[
+                      styles.chip,
+                      staffRoleFilter === f.key && styles.chipActive,
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.chipText,
+                      staffRoleFilter === f.key && styles.chipTextActive,
+                    ]}>{f.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Count summary */}
+              <View style={styles.summary}>
+                <Text style={styles.summaryText}>
+                  {staffSearch || staffRoleFilter !== 'all'
+                    ? `${filteredStaff.length} of ${staff.length} staff shown`
+                    : `${staff.length} staff · ${staff.filter(s => s.isActive).length} active`
+                  }
+                </Text>
+                {(staffSearch || staffRoleFilter !== 'all') && (
+                  <TouchableOpacity onPress={() => { setStaffSearch(''); setStaffRoleFilter('all'); }}>
+                    <Text style={styles.clearText}>Clear</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           }
-          ListHeaderComponent={
-            <View style={styles.summary}>
-              <Text style={styles.summaryText}>{staff.length} staff · {staff.filter(s => s.isActive).length} active</Text>
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons
+                name={staff.length === 0 ? 'people-outline' : 'search-outline'}
+                size={48}
+                color="#e5e7eb"
+              />
+              <Text style={styles.emptyText}>
+                {staff.length === 0
+                  ? 'No staff members yet'
+                  : 'No staff match your search'
+                }
+              </Text>
+              {(staffSearch || staffRoleFilter !== 'all') && (
+                <TouchableOpacity
+                  onPress={() => { setStaffSearch(''); setStaffRoleFilter('all'); }}
+                  style={styles.clearBtn}
+                >
+                  <Text style={styles.clearBtnText}>Clear filters</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -300,8 +403,33 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 16, paddingBottom: 100 },
-  summary: { marginBottom: 12 },
+
+  // Search
+  searchRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb',
+    borderRadius: 12, marginBottom: 10, paddingHorizontal: 10,
+    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1,
+  },
+  searchIcon: { marginRight: 6 },
+  searchInput: { flex: 1, height: 44, fontSize: 14, color: '#1f2937' },
+  searchClear: { padding: 4 },
+
+  // Role chips
+  chipScroll: { marginBottom: 10 },
+  chipContainer: { gap: 6, paddingRight: 4 },
+  chip: {
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+    backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#e5e7eb',
+  },
+  chipActive: { backgroundColor: '#3b5ff8', borderColor: '#3b5ff8' },
+  chipText: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
+  chipTextActive: { color: '#fff' },
+
+  // Summary row
+  summary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   summaryText: { fontSize: 13, color: '#9ca3af', fontWeight: '500' },
+  clearText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
   card: {
     backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
@@ -322,6 +450,8 @@ const styles = StyleSheet.create({
   actionText: { fontSize: 13, fontWeight: '600' },
   empty: { alignItems: 'center', marginTop: 60, gap: 8 },
   emptyText: { fontSize: 16, color: '#9ca3af' },
+  clearBtn: { marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: '#eff2ff' },
+  clearBtnText: { fontSize: 14, fontWeight: '700', color: '#3b5ff8' },
   fab: {
     position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28,
     backgroundColor: '#3b5ff8', justifyContent: 'center', alignItems: 'center',
