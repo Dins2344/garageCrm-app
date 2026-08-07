@@ -109,13 +109,13 @@ function CalendarModal({ visible, selected, onSelect, onClose }) {
 
 const cal = StyleSheet.create({
   overlay:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
-  card:           { backgroundColor: '#fff', borderRadius: 20, padding: 20, width: 320, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
+  card:           { backgroundColor: '#fff', borderRadius: 20, padding: 20, width: 320, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   navBtn:         { padding: 6 },
   monthTitle:     { fontSize: 16, fontWeight: '700', color: '#111827' },
   dayRow:         { flexDirection: 'row', marginBottom: 4 },
   dayLabel:       { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: '#9ca3af', paddingVertical: 4 },
-  cell:           { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 8, margin: 1 },
+  cell:           { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 16, margin: 1 },
   cellSelected:   { backgroundColor: '#3b5ff8' },
   cellDisabled:   { opacity: 0.3 },
   cellText:       { fontSize: 14, color: '#111827', fontWeight: '500' },
@@ -163,7 +163,7 @@ const ms = StyleSheet.create({
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   title: { fontSize: 17, fontWeight: 'bold', color: '#111827' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, height: 44 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12, height: 44 },
   searchInput: { flex: 1, fontSize: 15, color: '#1f2937' },
   list: { paddingHorizontal: 16, paddingBottom: 32 },
   option: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f9fafb' },
@@ -649,7 +649,7 @@ export default function CreateJobCardScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: { flex: 1, backgroundColor: '#fdfcfb' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Platform.OS === 'ios' ? 54 : 16, paddingBottom: 14, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
@@ -667,47 +667,47 @@ const s = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
   // Card
-  card: { backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 14 },
   // Tabs
-  tabs: { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 10, padding: 3, marginBottom: 14 },
-  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  tabActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 },
+  tabs: { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 16, padding: 3, marginBottom: 14 },
+  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 16 },
+  tabActive: { backgroundColor: '#fff', shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   tabText: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
   tabTextActive: { color: '#3b5ff8' },
   // Select button
-  selectBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: '#3b5ff8', borderStyle: 'dashed', borderRadius: 10, padding: 14 },
+  selectBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: '#3b5ff8', borderStyle: 'dashed', borderRadius: 16, padding: 14 },
   selectBtnText: { fontSize: 14, color: '#3b5ff8', fontWeight: '500' },
   // Selected card
-  selectedCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 10, padding: 12 },
-  selectedIcon: { width: 38, height: 38, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  selectedCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 16, padding: 12 },
+  selectedIcon: { width: 38, height: 38, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   selectedTitle: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
   selectedSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   clearBtn: { padding: 4 },
   // Form
   field: { marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
+  input: { backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
 
   rowFields: { flexDirection: 'row' },
   // Date picker trigger button (looks like an input)
   dateTrigger: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 12 },
   // Summary
-  summaryCard: { backgroundColor: '#f0f9ff', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#bae6fd' },
+  summaryCard: { backgroundColor: '#f0f9ff', borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#bae6fd' },
   summaryTitle: { fontSize: 13, fontWeight: '700', color: '#0369a1', marginBottom: 8 },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   summaryText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   // Buttons
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#3b5ff8', borderRadius: 12, paddingVertical: 15, marginTop: 4, shadowColor: '#3b5ff8', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 15, marginTop: 4, shadowColor: '#3b5ff8', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
   primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  backBtn2: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 15, paddingHorizontal: 16, borderRadius: 12, backgroundColor: '#f3f4f6' },
+  backBtn2: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 15, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#f3f4f6' },
   backBtn2Text: { fontSize: 15, fontWeight: '600', color: '#374151' },
   // Complaints
   complaintHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  addComplaintBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#3b5ff8', borderStyle: 'dashed', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  addComplaintBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#3b5ff8', borderStyle: 'dashed', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5 },
   addComplaintText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
-  complaintCard: { backgroundColor: '#f9fafb', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#f3f4f6' },
+  complaintCard: { backgroundColor: '#fdfcfb', borderRadius: 16, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#f3f4f6' },
   complaintTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   complaintNum: { fontSize: 12, fontWeight: '700', color: '#9ca3af', minWidth: 20 },
   priorityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },

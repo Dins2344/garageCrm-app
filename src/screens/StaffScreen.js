@@ -400,7 +400,7 @@ export default function StaffScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: { flex: 1, backgroundColor: '#fdfcfb' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 16, paddingBottom: 100 },
 
@@ -408,8 +408,8 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb',
-    borderRadius: 12, marginBottom: 10, paddingHorizontal: 10,
-    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1,
+    borderRadius: 16, marginBottom: 10, paddingHorizontal: 10,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, height: 44, fontSize: 14, color: '#1f2937' },
@@ -431,11 +431,11 @@ const styles = StyleSheet.create({
   summaryText: { fontSize: 13, color: '#9ca3af', fontWeight: '500' },
   clearText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
   card: {
-    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   cardTop: { flexDirection: 'row', gap: 12 },
-  avatar: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   avatarText: { fontSize: 20, fontWeight: 'bold' },
   cardInfo: { flex: 1, gap: 3 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -443,14 +443,14 @@ const styles = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   staffEmail: { fontSize: 13, color: '#6b7280' },
   staffPhone: { fontSize: 13, color: '#6b7280' },
-  roleBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 100, marginTop: 4 },
+  roleBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 160, marginTop: 4 },
   roleBadgeText: { fontSize: 11, fontWeight: '700' },
   cardActions: { flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#f9fafb' },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: '#fdfcfb' },
   actionText: { fontSize: 13, fontWeight: '600' },
   empty: { alignItems: 'center', marginTop: 60, gap: 8 },
   emptyText: { fontSize: 16, color: '#9ca3af' },
-  clearBtn: { marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: '#eff2ff' },
+  clearBtn: { marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: '#eff2ff' },
   clearBtnText: { fontSize: 14, fontWeight: '700', color: '#3b5ff8' },
   fab: {
     position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28,
@@ -467,10 +467,10 @@ const styles = StyleSheet.create({
   modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
   fieldWrap: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
+  input: { backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
 
-  cancelBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#f3f4f6', alignItems: 'center' },
+  cancelBtn: { flex: 1, padding: 14, borderRadius: 16, backgroundColor: '#f3f4f6', alignItems: 'center' },
   cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
-  saveBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#3b5ff8', alignItems: 'center' },
+  saveBtn: { flex: 1, padding: 14, borderRadius: 16, backgroundColor: '#3b5ff8', alignItems: 'center' },
   saveBtnText: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
 });

@@ -263,7 +263,7 @@ export default function InvoicesScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: { flex: 1, backgroundColor: '#fdfcfb' },
 
   header: {
     flexDirection: 'row',
@@ -289,9 +289,9 @@ const s = StyleSheet.create({
   // Search
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
     borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   searchInput: { flex: 1, fontSize: 14, color: '#111827', paddingVertical: 0 },
 
@@ -309,9 +309,9 @@ const s = StyleSheet.create({
 
   // Invoice Card
   card: {
-    backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 12,
+    backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12,
     borderWidth: 1, borderColor: '#f3f4f6',
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
   cardTopLeft: {},
@@ -333,7 +333,7 @@ const s = StyleSheet.create({
 
   amountRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#f9fafb', padding: 10, borderRadius: 10,
+    backgroundColor: '#fdfcfb', padding: 10, borderRadius: 16,
   },
   amountLabel: { fontSize: 11, color: '#9ca3af', marginBottom: 2 },
   amountValue: { fontSize: 16, fontWeight: 'bold', color: '#111827' },

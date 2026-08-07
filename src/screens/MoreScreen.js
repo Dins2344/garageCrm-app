@@ -142,7 +142,7 @@ export default function MoreScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#fdfcfb',
   },
   content: {
     padding: 16,
@@ -155,11 +155,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   avatar: {
     width: 56,
@@ -192,7 +188,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff2ff',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 100,
+    borderRadius: 160,
     alignSelf: 'flex-start',
     marginTop: 6,
   },
@@ -204,7 +200,7 @@ const styles = StyleSheet.create({
   editBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 16,
     backgroundColor: '#eff2ff',
     justifyContent: 'center',
     alignItems: 'center',
@@ -214,11 +210,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   menuItem: {
     flexDirection: 'row',
@@ -237,7 +229,7 @@ const styles = StyleSheet.create({
   menuIconContainer: {
     width: 42,
     height: 42,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -261,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fef3c7',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 100,
+    borderRadius: 160,
   },
   comingSoonText: {
     color: '#d97706',
@@ -274,7 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#fee2e2',
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 16,
     gap: 8,
   },
   logoutText: {

@@ -396,7 +396,7 @@ export default function InvoiceViewerScreen({ route, navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: { flex: 1, backgroundColor: '#fdfcfb' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   // Header — iOS uses SafeAreaView, Android uses manual StatusBar offset
@@ -425,7 +425,7 @@ const s = StyleSheet.create({
 
   // Status banner
   statusBanner: {
-    flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16,
     borderWidth: 1, marginBottom: 16,
   },
   statusTitle: { fontSize: 15, fontWeight: 'bold' },
@@ -434,9 +434,8 @@ const s = StyleSheet.create({
 
   // Cards
   card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
-    elevation: 1, borderWidth: 1, borderColor: '#f3f4f6',
+    backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4, borderWidth: 1, borderColor: '#f3f4f6',
   },
   cardLabel: { fontSize: 10, fontWeight: '800', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 6 },
   cardTitle: { fontSize: 15, fontWeight: 'bold', color: '#111827', marginBottom: 3 },
@@ -462,7 +461,7 @@ const s = StyleSheet.create({
 
   // Totals
   totalsCard: {
-    backgroundColor: '#f9fafb', borderRadius: 14, padding: 16, marginBottom: 16,
+    backgroundColor: '#fdfcfb', borderRadius: 16, padding: 16, marginBottom: 16,
     borderWidth: 1, borderColor: '#e5e7eb',
   },
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
@@ -474,7 +473,7 @@ const s = StyleSheet.create({
 
   // Notes
   notesCard: {
-    backgroundColor: '#fefce8', borderRadius: 12, padding: 14, marginBottom: 16,
+    backgroundColor: '#fefce8', borderRadius: 16, padding: 14, marginBottom: 16,
     borderWidth: 1, borderColor: '#fde68a',
   },
   notesLabel: { fontSize: 10, fontWeight: '800', color: '#a16207', letterSpacing: 0.8, marginBottom: 4 },
@@ -484,19 +483,19 @@ const s = StyleSheet.create({
   actions: { gap: 10, marginTop: 8, marginBottom: 16 },
   paidBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 14,
+    backgroundColor: '#10b981', borderRadius: 16, paddingVertical: 14,
     shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
   paidBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   downloadActionBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#eef2ff', borderRadius: 12, paddingVertical: 14,
+    backgroundColor: '#eef2ff', borderRadius: 16, paddingVertical: 14,
     borderWidth: 1, borderColor: '#c7d2fe',
   },
   downloadActionText: { color: '#3b5ff8', fontSize: 15, fontWeight: '600' },
   cancelBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    paddingVertical: 12, borderRadius: 10,
+    paddingVertical: 12, borderRadius: 16,
     borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fff5f5',
   },
   cancelBtnText: { fontSize: 13, fontWeight: '600', color: '#ef4444' },
@@ -524,11 +523,11 @@ const s = StyleSheet.create({
   payAmount: { fontSize: 14, color: '#6b7280', marginBottom: 16 },
   payActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
   payCancelBtn: {
-    flex: 1, padding: 14, borderRadius: 10, backgroundColor: '#f3f4f6', alignItems: 'center',
+    flex: 1, padding: 14, borderRadius: 16, backgroundColor: '#f3f4f6', alignItems: 'center',
   },
   payCancelText: { fontSize: 15, fontWeight: '600', color: '#374151' },
   payConfirmBtn: {
-    flex: 1.5, padding: 14, borderRadius: 10, backgroundColor: '#10b981', alignItems: 'center',
+    flex: 1.5, padding: 14, borderRadius: 16, backgroundColor: '#10b981', alignItems: 'center',
   },
   payConfirmText: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
 });

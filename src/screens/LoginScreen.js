@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)', top: -80, right: -60,
   },
   bannerCircle2: {
-    position: 'absolute', width: 200, height: 200, borderRadius: 100,
+    position: 'absolute', width: 200, height: 200, borderRadius: 160,
     backgroundColor: 'rgba(255,255,255,0.06)', bottom: 0, left: -40,
   },
   logoWrap: {
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
     borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
     marginHorizontal: 16, padding: 24,
-    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   cardTitle: { fontSize: 22, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
   cardSub: { fontSize: 14, color: '#6b7280', marginBottom: 24 },
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   progressRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   stepWrap: { alignItems: 'center', gap: 4 },
   stepDot: {
-    width: 28, height: 28, borderRadius: 14, backgroundColor: '#e5e7eb',
+    width: 28, height: 28, borderRadius: 16, backgroundColor: '#e5e7eb',
     justifyContent: 'center', alignItems: 'center',
   },
   stepDotActive: { backgroundColor: '#3b5ff8' },
@@ -328,22 +328,22 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f9fafb', borderWidth: 1.5, borderColor: '#e5e7eb',
-    borderRadius: 12, paddingHorizontal: 14, height: 50,
+    backgroundColor: '#fdfcfb', borderWidth: 1.5, borderColor: '#e5e7eb',
+    borderRadius: 16, paddingHorizontal: 14, height: 50,
   },
   inputField: { flex: 1, fontSize: 15, color: '#1f2937' },
 
   // Buttons
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#3b5ff8', borderRadius: 12, paddingVertical: 15, marginTop: 8,
+    backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 15, marginTop: 8,
     shadowColor: '#3b5ff8', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 5,
   },
   primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   stepBtns: { flexDirection: 'row', gap: 10, marginTop: 8 },
   backBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingVertical: 15, paddingHorizontal: 16, borderRadius: 12,
+    paddingVertical: 15, paddingHorizontal: 16, borderRadius: 16,
     backgroundColor: '#f3f4f6',
   },
   backBtnText: { fontSize: 15, fontWeight: '600', color: '#6b7280' },
@@ -354,10 +354,10 @@ const styles = StyleSheet.create({
   switchLink: { fontSize: 14, fontWeight: 'bold', color: '#3b5ff8' },
 
   // Features
-  featuresWrap: { backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginVertical: 16 },
+  featuresWrap: { backgroundColor: '#fdfcfb', borderRadius: 16, padding: 16, marginVertical: 16 },
   featuresLabel: { fontSize: 12, fontWeight: '700', color: '#9ca3af', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  featurePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', borderRadius: 100, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#e5e7eb' },
+  featurePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', borderRadius: 160, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#e5e7eb' },
   featureEmoji: { fontSize: 14 },
   featureText: { fontSize: 12, fontWeight: '600', color: '#374151' },
 

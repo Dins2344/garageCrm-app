@@ -70,8 +70,7 @@ export default function JobCardDetailScreen({ route, navigation }) {
       Toast.show({ type: 'success', text1: 'Status updated' });
       setJobCard(prev => ({ ...prev, status: newStatus }));
     } catch (error) {
-      console.log('Error data====>', JSON.stringify(error))
-      Toast.show({ type: 'error', text1: error?.data?.message || 'Failed to update status' });
+      Toast.show({ type: 'error', text1: error?.response?.data?.message || 'Failed to update status' });
     } finally {
       setUpdating(false);
     }
@@ -392,7 +391,7 @@ export default function JobCardDetailScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: { flex: 1, backgroundColor: '#fdfcfb' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -409,9 +408,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.5,
   },
   infoCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 16, padding: 16,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   infoRow: { flexDirection: 'row', alignItems: 'center' },
   infoTextContainer: { marginLeft: 12 },
@@ -436,7 +434,7 @@ const styles = StyleSheet.create({
   estHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   editEstBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#eef2ff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: '#eef2ff', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5,
   },
   editEstText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
 
@@ -463,7 +461,7 @@ const styles = StyleSheet.create({
   // Approved
   approvedBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 12, paddingVertical: 10, borderRadius: 10,
+    marginTop: 12, paddingVertical: 10, borderRadius: 16,
     backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#bbf7d0',
   },
   approvedText: { fontSize: 14, fontWeight: '700', color: '#10b981' },
@@ -471,7 +469,7 @@ const styles = StyleSheet.create({
   // Approve button
   approveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 12, paddingVertical: 12, borderRadius: 10,
+    marginTop: 12, paddingVertical: 12, borderRadius: 16,
     backgroundColor: '#10b981',
     shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
@@ -483,27 +481,26 @@ const styles = StyleSheet.create({
   addEstBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4,
     borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#3b5ff8',
-    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8,
   },
   addEstBtnText: { fontSize: 14, color: '#3b5ff8', fontWeight: '600' },
 
   // Invoice
   invoiceCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 16, padding: 16,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
     borderWidth: 1, borderColor: '#eef2ff',
   },
   invoiceIcon: {
-    width: 44, height: 44, borderRadius: 12, backgroundColor: '#eef2ff',
+    width: 44, height: 44, borderRadius: 16, backgroundColor: '#eef2ff',
     justifyContent: 'center', alignItems: 'center',
   },
   invoiceNumber: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
   invoiceSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   generateBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#f59e0b', borderRadius: 12, paddingVertical: 14,
+    backgroundColor: '#f59e0b', borderRadius: 16, paddingVertical: 14,
     shadowColor: '#f59e0b', shadowOpacity: 0.3, shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },

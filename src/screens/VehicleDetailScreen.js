@@ -186,7 +186,7 @@ export default function VehicleDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#fdfcfb',
   },
   contentContainer: {
     paddingBottom: 40,
@@ -207,11 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   heroIcon: {
     width: 72,
@@ -247,7 +243,7 @@ const styles = StyleSheet.create({
   fuelBadge: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 100,
+    borderRadius: 160,
     marginTop: 10,
   },
   fuelText: {
@@ -258,13 +254,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   sectionTitle: {
     fontSize: 16,
@@ -342,7 +334,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 100,
+    borderRadius: 160,
   },
   statusText: {
     fontSize: 10,

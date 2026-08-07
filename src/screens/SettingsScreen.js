@@ -306,7 +306,7 @@ export default function SettingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: { flex: 1, backgroundColor: '#fdfcfb' },
   content: { padding: 16 },
 
   // Hero
@@ -325,20 +325,20 @@ const styles = StyleSheet.create({
   heroEmail: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
   heroRoleBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 100, alignSelf: 'flex-start', marginTop: 5,
+    borderRadius: 160, alignSelf: 'flex-start', marginTop: 5,
   },
   heroRoleText: { color: '#fff', fontSize: 11, fontWeight: '600' },
   garageChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 5,
-    borderRadius: 8, maxWidth: 90,
+    borderRadius: 16, maxWidth: 90,
   },
   garageChipText: { fontSize: 10, fontWeight: '700', color: '#3b5ff8' },
 
   // Card
   card: {
-    backgroundColor: '#fff', borderRadius: 14, marginBottom: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 16, marginBottom: 16,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
     overflow: 'hidden',
   },
   cardHeader: {
@@ -346,21 +346,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
   },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cardIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
+  cardIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
   cardTitle: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
   cardBody: { padding: 16 },
 
-  editToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#eff2ff' },
+  editToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: '#eff2ff' },
   editToggleText: { fontSize: 13, fontWeight: '600', color: '#3b5ff8' },
 
   // Staff shortcut
   staffShortcut: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   staffShortcutLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  staffShortcutIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
+  staffShortcutIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
   staffShortcutTitle: { fontSize: 15, fontWeight: '600', color: '#111827' },
   staffShortcutSub: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
 
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10, paddingHorizontal: 12,
+    backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12,
   },
   inputDimmed: { opacity: 0.55 },
   inputField: { flex: 1, height: 44, fontSize: 15, color: '#1f2937' },
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
 
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#3b5ff8', borderRadius: 10, paddingVertical: 13, marginTop: 6,
+    backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 13, marginTop: 6,
   },
   primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
 
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   // Logout
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#fee2e2', borderRadius: 12, padding: 16, marginTop: 4,
+    backgroundColor: '#fee2e2', borderRadius: 16, padding: 16, marginTop: 4,
   },
   logoutText: { color: '#ef4444', fontSize: 16, fontWeight: 'bold' },
 });

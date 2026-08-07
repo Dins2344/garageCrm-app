@@ -19,7 +19,7 @@ api.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (e) {
-      console.log('Error reading token', e);
+      // Token read failed — request will proceed without auth header
     }
     return config;
   },

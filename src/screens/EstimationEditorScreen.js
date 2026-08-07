@@ -390,7 +390,7 @@ export default function EstimationEditorScreen({ route, navigation }) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: { flex: 1, backgroundColor: '#fdfcfb' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   header: {
@@ -403,7 +403,7 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: 'bold', color: '#111827' },
   headerSub: { fontSize: 12, color: '#6b7280', marginTop: 1 },
   saveHeaderBtn: {
-    backgroundColor: '#3b5ff8', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7,
+    backgroundColor: '#3b5ff8', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7,
   },
   saveHeaderText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
 
@@ -417,25 +417,24 @@ const s = StyleSheet.create({
   sectionTitle: { flex: 1, fontSize: 14, fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5 },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderWidth: 1, borderColor: '#3b5ff8', borderRadius: 8,
+    borderWidth: 1, borderColor: '#3b5ff8', borderRadius: 16,
     paddingHorizontal: 10, paddingVertical: 5, borderStyle: 'dashed',
   },
   addBtnText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
 
   // Item cards
   itemCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
-    elevation: 1, borderWidth: 1, borderColor: '#f3f4f6',
+    backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4, borderWidth: 1, borderColor: '#f3f4f6',
   },
   fieldRow: { flexDirection: 'row', marginBottom: 8 },
   fieldLabel: { fontSize: 11, fontWeight: '600', color: '#6b7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
   input: {
-    backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8,
+    backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16,
     paddingHorizontal: 10, height: 40, fontSize: 14, color: '#1f2937',
   },
   totalBox: {
-    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd', borderRadius: 8,
+    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd', borderRadius: 16,
     height: 40, justifyContent: 'center', paddingHorizontal: 10,
   },
   totalText: { fontSize: 14, fontWeight: 'bold', color: '#0369a1' },
@@ -449,14 +448,14 @@ const s = StyleSheet.create({
   // Empty
   emptyState: {
     alignItems: 'center', paddingVertical: 24, gap: 8,
-    backgroundColor: '#fff', borderRadius: 12, marginBottom: 10,
+    backgroundColor: '#fff', borderRadius: 16, marginBottom: 10,
     borderWidth: 1, borderColor: '#f3f4f6', borderStyle: 'dashed',
   },
   emptyText: { fontSize: 13, color: '#9ca3af' },
 
   // Totals
   totalsCard: {
-    backgroundColor: '#eef2ff', borderRadius: 14, padding: 16, marginTop: 24,
+    backgroundColor: '#eef2ff', borderRadius: 16, padding: 16, marginTop: 24,
     borderWidth: 1, borderColor: '#c7d2fe',
   },
   totalsTitle: { fontSize: 11, fontWeight: '800', color: '#4338ca', letterSpacing: 1, marginBottom: 12 },
@@ -470,7 +469,7 @@ const s = StyleSheet.create({
   // Save button
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#3b5ff8', borderRadius: 12, paddingVertical: 16, marginTop: 20,
+    backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 16, marginTop: 20,
     shadowColor: '#3b5ff8', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },

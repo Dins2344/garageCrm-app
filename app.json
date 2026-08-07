@@ -4,7 +4,7 @@
     "slug": "garage-pulse",
     "version": "1.0.3",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/transFavi.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
