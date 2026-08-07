@@ -10,6 +10,11 @@ export const getVehicle = async (id) => {
   return res.data;
 };
 
+export const getVehicleHistory = async (id, params) => {
+  const res = await api.get(`/vehicles/${id}/history`, { params });
+  return res.data;
+};
+
 export const createVehicle = async (data) => {
   const res = await api.post('/vehicles', data);
   return res.data;

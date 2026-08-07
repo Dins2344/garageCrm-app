@@ -1,45 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { getJobCards } from '../api/jobCardService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
+const PAGE_LIMIT = 10;
+
 export default function JobCardsScreen({ navigation }) {
   const [jobCards, setJobCards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [refreshing, setRefreshing] = useState(false);
+  const isFetchingMore = useRef(false);
 
-  const fetchJobCards = async (currentPage = 1, shouldRefresh = false) => {
+  const fetchJobCards = async (currentPage = 1, isRefresh = false) => {
+    if (currentPage > 1 && isFetchingMore.current) return;
+
+    if (currentPage > 1) {
+      isFetchingMore.current = true;
+      setLoadingMore(true);
+    } else if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      if (shouldRefresh) setRefreshing(true);
-      const { data } = await getJobCards({ 
-        search, 
-        page: currentPage, 
-        limit: 15 
-      });
+      const { data } = await getJobCards({ search, page: currentPage, limit: PAGE_LIMIT });
+
+      setHasMore(data.length === PAGE_LIMIT);
+
       if (currentPage === 1) {
         setJobCards(data);
       } else {
-        setJobCards([...jobCards, ...data]);
+        setJobCards(prev => [...prev, ...data]);
       }
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Failed to load job cards' });
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
+      isFetchingMore.current = false;
     }
   };
 
-  useEffect(() => {
-    fetchJobCards(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  useFocusEffect(
+    useCallback(() => {
+      setPage(1);
+      setHasMore(true);
+      fetchJobCards(1);
+    }, [search])
+  );
 
   const onRefresh = () => {
     setPage(1);
+    setHasMore(true);
     fetchJobCards(1, true);
+  };
+
+  const handleLoadMore = () => {
+    if (!hasMore || isFetchingMore.current || loadingMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchJobCards(nextPage);
   };
 
   const getStatusColor = (status) => {
@@ -56,8 +84,8 @@ export default function JobCardsScreen({ navigation }) {
   };
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.card} 
+    <TouchableOpacity
+      style={styles.card}
       onPress={() => navigation.navigate('JobCardDetail', { id: item._id })}
     >
       <View style={styles.cardHeader}>
@@ -78,9 +106,9 @@ export default function JobCardsScreen({ navigation }) {
           <Text style={styles.bodyText}>{item.customer?.name} - {item.customer?.phone}</Text>
         </View>
         <View style={[styles.row, { marginTop: 8 }]}>
-           <Text style={styles.priceText}>
-              Est: {item.estimation?.grandTotal ? `₹${item.estimation.grandTotal.toLocaleString('en-IN')}` : 'Pending'}
-           </Text>
+          <Text style={styles.priceText}>
+            Est: {item.estimation?.grandTotal ? `₹${item.estimation.grandTotal.toLocaleString('en-IN')}` : 'Pending'}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -111,12 +139,9 @@ export default function JobCardsScreen({ navigation }) {
           contentContainerStyle={styles.listContainer}
           refreshing={refreshing}
           onRefresh={onRefresh}
-          onEndReached={() => {
-            const nextPage = page + 1;
-            setPage(nextPage);
-            fetchJobCards(nextPage);
-          }}
+          onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
+          ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: 20 }} color="#3b5ff8" /> : null}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="clipboard-outline" size={48} color="#d1d5db" />
@@ -125,10 +150,10 @@ export default function JobCardsScreen({ navigation }) {
           }
         />
       )}
-      
-      <TouchableOpacity 
-         style={styles.fab}
-         onPress={() => navigation.navigate('CreateJobCard')}
+
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => navigation.navigate('CreateJobCard')}
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
@@ -139,14 +164,14 @@ export default function JobCardsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#fdfcfb',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     margin: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e5e7eb',
     paddingHorizontal: 12,
@@ -166,14 +191,10 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -189,7 +210,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 100,
+    borderRadius: 160,
   },
   badgeText: {
     fontSize: 10,

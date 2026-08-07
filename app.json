@@ -1,29 +1,47 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
-    "version": "1.0.0",
+    "name": "Garage Pulse",
+    "slug": "garage-pulse",
+    "version": "1.0.3",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/transFavi.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/transFavi.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FAFAFA"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.garagepulse.app"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/transFavi.png",
+        "backgroundColor": "#FAFAFA"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.garagepulse.app",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "CAMERA"
+      ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/GPfavi.png"
+    },
+    "plugins": [
+      [
+        "expo-build-properties"
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "db68f503-aa06-4de1-b4ed-78090ec866f0"
+      }
+    },
+    "owner": "dinsoncd"
   }
 }
