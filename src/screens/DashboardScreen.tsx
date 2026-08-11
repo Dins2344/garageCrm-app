@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { getDashboardStats, DashboardStats } from '../api/dashboardService';
 import { useAuth } from '../context/AuthContext';
+import { useGarage } from '../context/GarageContext';
 import Toast from 'react-native-toast-message';
 import WebAppBanner from '../components/WebAppBanner';
 import ResponsiveScreen from '../components/ResponsiveScreen';
@@ -14,6 +15,7 @@ export default function DashboardScreen(_props: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
+  const { activeGarageId } = useGarage();
 
   const fetchDashboard = async () => {
     try {
@@ -29,7 +31,8 @@ export default function DashboardScreen(_props: Props) {
 
   useEffect(() => {
     fetchDashboard();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeGarageId]);
 
   const onRefresh = () => {
     setRefreshing(true);

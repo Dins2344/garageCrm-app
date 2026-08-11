@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import StatusStepper from '../components/StatusStepper';
 import { useAuth } from '../context/AuthContext';
+import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { JobCard } from '../types/models';
@@ -17,6 +18,7 @@ type Props = RootStackScreenProps<'JobCardDetail'>;
 export default function JobCardDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const { hasRole } = useAuth();
+  const { activeGarageId } = useGarage();
   const [jobCard, setJobCard] = useState<JobCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -38,7 +40,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
     useCallback(() => {
       fetchData();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id])
+    }, [id, activeGarageId])
   );
 
   const handleStatusChange = async (newStatus: string) => {

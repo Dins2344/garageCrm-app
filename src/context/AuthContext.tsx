@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await AsyncStorage.removeItem('garagepulse_token');
     await AsyncStorage.removeItem('garagepulse_user');
+    await AsyncStorage.removeItem('garagepulse_active_garage');
     setUser(null);
   };
 

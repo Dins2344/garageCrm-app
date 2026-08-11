@@ -8,6 +8,7 @@ import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '..
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
+import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Customer, Address } from '../types/models';
@@ -128,6 +129,7 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
 
 export default function CustomersScreen(_props: Props) {
   const { hasRole } = useAuth();
+  const { activeGarageId } = useGarage();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -148,7 +150,7 @@ export default function CustomersScreen(_props: Props) {
     finally { setLoading(false); setRefreshing(false); }
   }, [search]);
 
-  useEffect(() => { setPage(1); setLoading(true); fetchCustomers(1); }, [search]);
+  useEffect(() => { setPage(1); setLoading(true); fetchCustomers(1); }, [search, activeGarageId]);
 
   const handleSave = async (form: CustomerForm) => {
     if (editing) {

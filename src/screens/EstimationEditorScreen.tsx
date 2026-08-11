@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { getJobCard, saveJobCardEstimation } from '../api/jobCardService';
+import { getGarage } from '../api/garageService';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { JobCard } from '../types/models';
@@ -42,6 +43,19 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
       const jc = jcRes.data;
       setJobCard(jc);
 
+      // The estimation subdocument's taxRate always defaults to 18 in the
+      // schema, so it can't distinguish "never filled in" from "actually
+      // 18" — treat an estimation with no parts/labor yet as new and seed
+      // its tax rate from the garage's configured default instead.
+      const isNewEstimation = !jc.estimation?.parts?.length && !jc.estimation?.labor?.length;
+      let defaultTaxRate = 18;
+      if (isNewEstimation) {
+        try {
+          const garageRes = await getGarage();
+          defaultTaxRate = garageRes.data.settings?.taxRate ?? 18;
+        } catch { /* fall back to 18 */ }
+      }
+
       // Populate from existing estimation
       if (jc.estimation) {
         setParts((jc.estimation.parts || []).map(p => ({
@@ -55,7 +69,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
           ratePerHour: String(l.ratePerHour || 500),
         })));
         setDiscount(String(jc.estimation.discount || 0));
-        setTaxRate(String(jc.estimation.taxRate || 18));
+        setTaxRate(String(isNewEstimation ? defaultTaxRate : (jc.estimation.taxRate ?? defaultTaxRate)));
       }
     } catch {
       Toast.show({ type: 'error', text1: 'Failed to load job card' });

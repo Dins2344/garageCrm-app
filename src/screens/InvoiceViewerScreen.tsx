@@ -88,15 +88,22 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
     if (!invoice) return;
     setDownloading(true);
     try {
-      const token = await AsyncStorage.getItem('garagepulse_token');
+      const [token, garageId] = await Promise.all([
+        AsyncStorage.getItem('garagepulse_token'),
+        AsyncStorage.getItem('garagepulse_active_garage'),
+      ]);
       const fileUri = FileSystem.documentDirectory + `Invoice-${invoice?.invoiceNumber || 'download'}.pdf`;
 
-      // Downloaded natively straight to disk (with the auth header attached)
-      // rather than fetched through axios as an arraybuffer — RN's JS engine
-      // has no `btoa`/`atob` global, so converting the response to base64
-      // manually threw at runtime on every attempt.
+      // Downloaded natively straight to disk (with the auth + garage headers
+      // attached) rather than fetched through axios as an arraybuffer — RN's
+      // JS engine has no `btoa`/`atob` global, so converting the response to
+      // base64 manually threw at runtime on every attempt. This bypasses the
+      // shared axios interceptor, so both headers are attached manually here.
       await FileSystem.downloadAsync(getInvoicePdfUrl(invoiceId), fileUri, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(garageId ? { 'X-Garage-Id': garageId } : {}),
+        },
       });
 
       if (await Sharing.isAvailableAsync()) {

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, KeyboardTypeOptions
+  TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, KeyboardTypeOptions, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
+import { useGarage } from '../context/GarageContext';
 import { updateProfile, changePassword } from '../api/authService';
 import { getGarage, updateGarage } from '../api/garageService';
-import ResponsiveScreen from '../components/ResponsiveScreen';
+import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Garage, Role } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -111,11 +112,89 @@ function InfoRow({ label, value, last }: InfoRowProps) {
   );
 }
 
+interface AddBranchModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (data: { name: string; phone: string }) => Promise<void>;
+}
+
+// Defined at module scope — see the identical note on StaffScreen's `Field`:
+// a component defined inside another component's render body loses focus/text
+// on every keystroke because React treats it as a brand-new type each render.
+function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible) { setName(''); setPhone(''); }
+  }, [visible]);
+
+  const handleSave = async () => {
+    if (!name.trim() || !phone.trim()) {
+      Toast.show({ type: 'error', text1: 'Branch name and phone are required' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave({ name: name.trim(), phone: phone.trim() });
+      onClose();
+    } catch (e) {
+      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to add branch') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={branchModalStyles.overlay}>
+        <View style={branchModalStyles.sheet}>
+          <View style={branchModalStyles.handle} />
+          <View style={branchModalStyles.header}>
+            <Text style={branchModalStyles.title}>Add Branch</Text>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+          </View>
+          <ScrollView style={branchModalStyles.body} keyboardShouldPersistTaps="handled">
+            <Field label="Branch Name *" value={name} onChangeText={setName} placeholder="e.g. Downtown Branch" />
+            <Field label="Phone *" value={phone} onChangeText={setPhone} placeholder="10-digit phone number" keyboardType="phone-pad" autoCapitalize="none" />
+          </ScrollView>
+          <View style={branchModalStyles.footer}>
+            <TouchableOpacity style={branchModalStyles.cancelBtn} onPress={onClose}>
+              <Text style={branchModalStyles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[branchModalStyles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={branchModalStyles.saveBtnText}>Add Branch</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+const branchModalStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  title: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  body: { padding: 20 },
+  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#f3f4f6' },
+  cancelBtnText: { color: '#374151', fontWeight: '600' },
+  saveBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#3b5ff8' },
+  saveBtnText: { color: '#fff', fontWeight: '700' },
+});
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen({ navigation }: Props) {
   const { user, logout, hasRole } = useAuth();
+  const { garages, activeGarageId, switchGarage, addBranch } = useGarage();
   const canEditGarage = hasRole('owner', 'admin');
+  const isOwner = hasRole('owner');
+  const [addBranchVisible, setAddBranchVisible] = useState(false);
 
   // Garage state
   const [garage, setGarage] = useState<Garage | null>(null);
@@ -169,7 +248,7 @@ export default function SettingsScreen({ navigation }: Props) {
   useEffect(() => {
     fetchGarage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [activeGarageId]);
 
   const handleSaveGarage = async () => {
     if (!garageName.trim()) { Toast.show({ type: 'error', text1: 'Garage name is required' }); return; }
@@ -303,6 +382,34 @@ export default function SettingsScreen({ navigation }: Props) {
           )}
         </SectionCard>
 
+        {/* ── MY BRANCHES (owners only) ── */}
+        {isOwner && (
+          <SectionCard title="My Branches" icon="git-branch-outline">
+            {garages.map(g => (
+              <TouchableOpacity
+                key={g._id}
+                style={styles.branchRow}
+                activeOpacity={0.7}
+                onPress={() => switchGarage(g._id)}
+              >
+                <View style={styles.branchRowLeft}>
+                  <Ionicons
+                    name={g._id === activeGarageId ? 'radio-button-on' : 'radio-button-off'}
+                    size={20}
+                    color={g._id === activeGarageId ? '#3b5ff8' : '#9ca3af'}
+                  />
+                  <Text style={styles.branchRowText}>{g.name}</Text>
+                </View>
+                {g._id === activeGarageId && <Text style={styles.branchActiveLabel}>Active</Text>}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.addBranchRow} onPress={() => setAddBranchVisible(true)}>
+              <Ionicons name="add-circle-outline" size={20} color="#3b5ff8" />
+              <Text style={styles.addBranchRowText}>Add Branch</Text>
+            </TouchableOpacity>
+          </SectionCard>
+        )}
+
         {/* ── STAFF MANAGEMENT SHORTCUT ── */}
         <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('Staff')}>
           <View style={styles.staffShortcutLeft}>
@@ -347,6 +454,15 @@ export default function SettingsScreen({ navigation }: Props) {
         <View style={{ height: 40 }} />
       </ScrollView>
       </ResponsiveScreen>
+
+      <AddBranchModal
+        visible={addBranchVisible}
+        onClose={() => setAddBranchVisible(false)}
+        onSave={async (data) => {
+          await addBranch(data);
+          Toast.show({ type: 'success', text1: 'Branch added!' });
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -398,6 +514,17 @@ const styles = StyleSheet.create({
 
   editToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: '#eff2ff' },
   editToggleText: { fontSize: 13, fontWeight: '600', color: '#3b5ff8' },
+
+  // Branches
+  branchRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+  },
+  branchRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  branchRowText: { fontSize: 15, color: '#111827', fontWeight: '500' },
+  branchActiveLabel: { fontSize: 12, fontWeight: '600', color: '#3b5ff8' },
+  addBranchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
+  addBranchRowText: { fontSize: 15, fontWeight: '600', color: '#3b5ff8' },
 
   // Staff shortcut
   staffShortcut: {

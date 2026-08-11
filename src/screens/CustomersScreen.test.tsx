@@ -18,6 +18,10 @@ jest.mock('../context/AuthContext', () => ({
   useAuth: () => ({ hasRole: () => true, user: { _id: 'u1', role: 'owner' }, loading: false }),
 }));
 
+jest.mock('../context/GarageContext', () => ({
+  useGarage: () => ({ garages: [], activeGarageId: 'g1', switchGarage: jest.fn(), addBranch: jest.fn() }),
+}));
+
 const sampleCustomer: Customer = {
   _id: 'c1',
   name: 'Rahul Sharma',

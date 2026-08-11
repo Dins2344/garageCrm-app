@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getJobCards } from '../api/jobCardService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { JobCard, JobStatus } from '../types/models';
@@ -23,6 +24,7 @@ const STATUS_COLORS: Partial<Record<JobStatus, string>> = {
 };
 
 export default function JobCardsScreen({ navigation }: Props) {
+  const { activeGarageId } = useGarage();
   const [jobCards, setJobCards] = useState<JobCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,7 +72,7 @@ export default function JobCardsScreen({ navigation }: Props) {
       setHasMore(true);
       fetchJobCards(1);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search])
+    }, [search, activeGarageId])
   );
 
   const onRefresh = () => {

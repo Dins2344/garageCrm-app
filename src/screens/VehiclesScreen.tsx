@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../api/vehicleService';
 import { getCustomers } from '../api/customerService';
 import { useAuth } from '../context/AuthContext';
+import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer, Vehicle, FuelType } from '../types/models';
@@ -208,6 +209,7 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function VehiclesScreen({ navigation }: Props) {
   const { hasRole } = useAuth();
+  const { activeGarageId } = useGarage();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -229,11 +231,11 @@ export default function VehiclesScreen({ navigation }: Props) {
     finally { setLoading(false); setRefreshing(false); }
   }, [search]);
 
-  useEffect(() => { setPage(1); setLoading(true); fetchVehicles(1); }, [search]);
+  useEffect(() => { setPage(1); setLoading(true); fetchVehicles(1); }, [search, activeGarageId]);
 
   useEffect(() => {
     getCustomers({ limit: 500 }).then(r => setCustomers(r.data || [])).catch(() => {});
-  }, []);
+  }, [activeGarageId]);
 
   const handleSave = async (payload: Partial<Vehicle> & { customer: string }) => {
     if (editing) {

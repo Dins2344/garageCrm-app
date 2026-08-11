@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
+import { useGarage } from '../context/GarageContext';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/userService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
@@ -171,6 +172,7 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
 
 export default function StaffScreen(_props: Props) {
   const { user, hasRole } = useAuth();
+  const { activeGarageId } = useGarage();
   const [staff, setStaff] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -221,7 +223,7 @@ export default function StaffScreen(_props: Props) {
     return list;
   }, [staff, staffSearch, staffRoleFilter]);
 
-  useEffect(() => { fetchStaff(); }, [fetchStaff]);
+  useEffect(() => { fetchStaff(); }, [fetchStaff, activeGarageId]);
 
   const openAdd = () => { setEditingUser(null); setModalVisible(true); };
   const openEdit = (u: User) => { setEditingUser(u); setModalVisible(true); };

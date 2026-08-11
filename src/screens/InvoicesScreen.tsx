@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { getInvoices } from '../api/invoiceService';
 import Toast from 'react-native-toast-message';
+import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Invoice, PaymentStatus } from '../types/models';
@@ -22,6 +23,7 @@ const PAYMENT_CONFIG: Record<PaymentStatus, { label: string; bg: string; text: s
 const LIMIT = 20;
 
 export default function InvoicesScreen({ navigation }: Props) {
+  const { activeGarageId } = useGarage();
   const [invoices, setInvoices]     = useState<Invoice[]>([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -74,7 +76,7 @@ export default function InvoicesScreen({ navigation }: Props) {
       setHasMore(true);
       fetchInvoices(true);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, filter])
+    }, [search, filter, activeGarageId])
   );
 
   const onRefresh = () => {

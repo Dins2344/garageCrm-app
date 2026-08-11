@@ -18,8 +18,12 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      const garageId = await AsyncStorage.getItem('garagepulse_active_garage');
+      if (garageId) {
+        config.headers['X-Garage-Id'] = garageId;
+      }
     } catch {
-      // Token read failed — request will proceed without auth header
+      // Token/garage read failed — request will proceed without those headers
     }
     return config;
   },
@@ -32,6 +36,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       await AsyncStorage.removeItem('garagepulse_token');
       await AsyncStorage.removeItem('garagepulse_user');
+      await AsyncStorage.removeItem('garagepulse_active_garage');
       // Navigation dispatch needs to be handled outside interceptor ideally,
       // but Context should pick up the token removal if subscribed,
       // or we handle logout logic cleanly in AuthContext.
