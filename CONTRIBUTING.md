@@ -1,7 +1,7 @@
 # GaragePulse Mobile App — Contributing & Code Standards
 
 > **Last Updated:** August 2026
-> **Stack:** React Native 0.81 · Expo 54 · React Navigation 7 · Axios · AsyncStorage
+> **Stack:** React Native 0.81 · Expo 54 · TypeScript · React Navigation 7 · Axios · AsyncStorage · Jest · React Native Testing Library
 
 ---
 
@@ -12,30 +12,46 @@ mobile/
 ├── assets/                    # App icons, splash screen, images
 ├── src/
 │   ├── api/                   # HTTP layer
-│   │   ├── apiInterceptor.js  # Shared Axios instance (auth, base URL, 401 handling)
-│   │   ├── authService.js     # /api/auth endpoints
-│   │   ├── customerService.js # /api/customers endpoints
-│   │   ├── jobCardService.js  # /api/jobcards endpoints
+│   │   ├── apiInterceptor.ts  # Shared Axios instance (auth, base URL, 401 handling)
+│   │   ├── authService.ts     # /api/auth endpoints
+│   │   ├── customerService.ts # /api/customers endpoints
+│   │   ├── customerService.test.ts
+│   │   ├── jobCardService.ts  # /api/jobcards endpoints
 │   │   └── ...
 │   ├── components/            # Reusable UI components
-│   │   ├── BottomSheetPicker.js
-│   │   ├── IdleTimer.js
-│   │   └── StatusStepper.js
+│   │   ├── BottomSheetPicker.tsx
+│   │   ├── IdleTimer.tsx
+│   │   ├── StatusStepper.tsx
+│   │   └── StatusStepper.test.tsx
 │   ├── context/               # React Context providers
-│   │   └── AuthContext.js     # Authentication state & session management
+│   │   ├── AuthContext.tsx    # Authentication state & session management
+│   │   └── AuthContext.test.tsx
 │   ├── navigation/            # React Navigation setup
-│   │   └── AppNavigator.js    # Tab navigator + stack screens
-│   └── screens/               # Screen-level components (one per route)
-│       ├── DashboardScreen.js
-│       ├── JobCardsScreen.js
-│       ├── CustomersScreen.js
-│       └── ...
-├── App.js                     # Root component (providers + navigator)
-├── index.js                   # Expo entry point
+│   │   └── AppNavigator.tsx   # Tab navigator + stack screens
+│   ├── screens/                # Screen-level components (one per route)
+│   │   ├── DashboardScreen.tsx
+│   │   ├── JobCardsScreen.tsx
+│   │   ├── CustomersScreen.tsx
+│   │   ├── CustomersScreen.test.tsx
+│   │   └── ...
+│   ├── types/
+│   │   ├── models.ts          # Shared domain interfaces (User, Customer, JobCard, ...)
+│   │   ├── api.ts             # Generic API response envelope types
+│   │   └── navigation.ts      # RootStackParamList / MainTabParamList — typed routes & params
+│   └── utils/
+│       └── errors.ts          # getErrorMessage() — typed Axios error extraction (no `any`)
+├── App.tsx                    # Root component (providers + navigator)
+├── index.ts                   # Expo entry point
+├── tsconfig.json              # TypeScript compiler config (extends expo/tsconfig.base, strict)
+├── eslint.config.js           # ESLint flat config (typescript-eslint)
+├── jest.config.js             # Jest config (preset: jest-expo)
+├── jest.setup.ts              # Global test mocks (AsyncStorage, @expo/vector-icons)
 ├── app.json                   # Expo configuration
 ├── eas.json                   # EAS Build configuration
 └── package.json
 ```
+
+Every `.tsx`/`.ts` file may have a colocated `*.test.tsx`/`*.test.ts` sibling — see **Testing Conventions** below.
 
 ### Where Does New Code Go?
 
@@ -45,7 +61,8 @@ mobile/
 | Build a reusable component              | `src/components/`    |
 | Add API calls for a resource            | `src/api/`           |
 | Add shared application state            | `src/context/`       |
-| Add a new navigation route              | `src/navigation/`    |
+| Add a new navigation route              | `src/navigation/` (register in `src/types/navigation.ts` too) |
+| Add a shared domain type/interface      | `src/types/models.ts` |
 | Add static images or assets             | `assets/`            |
 
 ---
@@ -55,8 +72,8 @@ mobile/
 ### Layer Separation
 
 ```
-App.js (providers: AuthProvider, SafeAreaProvider, Toast)
-  └── AppNavigator.js (navigation structure)
+App.tsx (providers: AuthProvider, SafeAreaProvider, Toast)
+  └── AppNavigator.tsx (navigation structure)
         ├── MainTabs (BottomTabNavigator)
         │   ├── DashboardScreen
         │   ├── JobCardsScreen
@@ -82,7 +99,7 @@ App.js (providers: AuthProvider, SafeAreaProvider, Toast)
 
 3. **API Services** handle all HTTP communication. They:
    - Live in `src/api/`
-   - Import and use the shared `apiInterceptor.js` Axios instance
+   - Import and use the shared `apiInterceptor.ts` Axios instance
    - Export named functions returning Axios promises
    - **Never** handle UI state, toasts, or navigation
 
@@ -97,11 +114,14 @@ App.js (providers: AuthProvider, SafeAreaProvider, Toast)
 
 | Type           | Convention                  | Example                    |
 | -------------- | --------------------------- | -------------------------- |
-| Screen         | `PascalCaseScreen.js`       | `DashboardScreen.js`       |
-| Component      | `PascalCase.js`             | `StatusStepper.js`         |
-| API Service    | `camelCaseService.js`       | `jobCardService.js`        |
-| Context        | `PascalCaseContext.js`      | `AuthContext.js`           |
-| Navigator      | `PascalCase.js`             | `AppNavigator.js`          |
+| Screen         | `PascalCaseScreen.tsx`      | `DashboardScreen.tsx`      |
+| Component      | `PascalCase.tsx`            | `StatusStepper.tsx`        |
+| API Service    | `camelCaseService.ts`       | `jobCardService.ts`        |
+| Context        | `PascalCaseContext.tsx`     | `AuthContext.tsx`          |
+| Navigator      | `PascalCase.tsx`            | `AppNavigator.tsx`         |
+| Test           | `<subject>.test.tsx` / `.test.ts`, colocated | `StatusStepper.test.tsx` |
+
+`.jsx`/`.js` files are no longer added anywhere in `mobile/src/` — see **TypeScript Conventions** below.
 
 ### Functions & Variables
 
@@ -130,18 +150,20 @@ navigation.navigate('JobCardDetail', { id: jobCard._id });
 
 | Route Name           | Screen File                  |
 | -------------------- | ---------------------------- |
-| `Dashboard`          | `DashboardScreen.js`         |
-| `JobCards`           | `JobCardsScreen.js`          |
-| `JobCardDetail`      | `JobCardDetailScreen.js`     |
-| `CreateJobCard`      | `CreateJobCardScreen.js`     |
-| `Customers`          | `CustomersScreen.js`         |
-| `Vehicles`           | `VehiclesScreen.js`          |
-| `VehicleDetail`      | `VehicleDetailScreen.js`     |
-| `Settings`           | `SettingsScreen.js`          |
-| `Staff`              | `StaffScreen.js`             |
-| `Invoices`           | `InvoicesScreen.js`          |
-| `InvoiceViewer`      | `InvoiceViewerScreen.js`     |
-| `EstimationEditor`   | `EstimationEditorScreen.js`  |
+| `Dashboard`          | `DashboardScreen.tsx`        |
+| `JobCards`           | `JobCardsScreen.tsx`         |
+| `JobCardDetail`      | `JobCardDetailScreen.tsx`    |
+| `CreateJobCard`      | `CreateJobCardScreen.tsx`    |
+| `Customers`          | `CustomersScreen.tsx`        |
+| `Vehicles`           | `VehiclesScreen.tsx`         |
+| `VehicleDetail`      | `VehicleDetailScreen.tsx`    |
+| `Settings`           | `SettingsScreen.tsx`         |
+| `Staff`              | `StaffScreen.tsx`            |
+| `Invoices`           | `InvoicesScreen.tsx`         |
+| `InvoiceViewer`      | `InvoiceViewerScreen.tsx`    |
+| `EstimationEditor`   | `EstimationEditorScreen.tsx` |
+
+Every route above (and its params) is registered in `src/types/navigation.ts`'s `RootStackParamList`/`MainTabParamList` — see **TypeScript Conventions** below.
 
 ---
 
@@ -206,7 +228,7 @@ Use these exact hex values to maintain visual consistency with the web frontend:
 <View style={{ backgroundColor: 'dodgerblue' }}>
 ```
 
-> **Future:** Consider extracting these into a shared `theme.js` constants file.
+> **Future:** Consider extracting these into a shared `theme.ts` constants file.
 
 ### Standard Component Styles
 
@@ -273,7 +295,7 @@ sectionTitle: {
 
 ## 📡 API Service Rules
 
-### Interceptor (`apiInterceptor.js`)
+### Interceptor (`apiInterceptor.ts`)
 
 The shared Axios instance handles:
 - **Base URL:** Reads from `EXPO_PUBLIC_API_URL` env var (falls back to local dev defaults)
@@ -282,20 +304,43 @@ The shared Axios instance handles:
 
 ### Service File Pattern
 
-```javascript
+```typescript
 import api from './apiInterceptor';
+import type { ApiListResponse, ApiItemResponse, ApiMessageResponse } from '../types/api';
+import type { Customer } from '../types/models';
 
-// ✅ Named exports, one function per endpoint
-export const getCustomers = (params) => api.get('/customers', { params });
-export const getCustomer = (id) => api.get(`/customers/${id}`);
-export const createCustomer = (data) => api.post('/customers', data);
-export const updateCustomer = (id, data) => api.put(`/customers/${id}`, data);
-export const deleteCustomer = (id) => api.delete(`/customers/${id}`);
+export interface CustomerListParams {
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+// ✅ Named exports, one function per endpoint, typed params + envelope return
+export const getCustomers = async (params?: CustomerListParams): Promise<ApiListResponse<Customer>> => {
+  const res = await api.get('/customers', { params });
+  return res.data;
+};
+export const getCustomer = async (id: string): Promise<ApiItemResponse<Customer>> => {
+  const res = await api.get(`/customers/${id}`);
+  return res.data;
+};
+export const createCustomer = async (data: Partial<Customer>): Promise<ApiItemResponse<Customer>> => {
+  const res = await api.post('/customers', data);
+  return res.data;
+};
+export const updateCustomer = async (id: string, data: Partial<Customer>): Promise<ApiItemResponse<Customer>> => {
+  const res = await api.put(`/customers/${id}`, data);
+  return res.data;
+};
+export const deleteCustomer = async (id: string): Promise<ApiMessageResponse> => {
+  const res = await api.delete(`/customers/${id}`);
+  return res.data;
+};
 ```
 
 ### Rules:
 - One file per backend resource (mirrors the web frontend's API layer)
-- Return the Axios promise — let the calling screen handle success/error
+- Unwrap `res.data` (the API response envelope) before returning — never return the raw Axios response
 - Never show toasts, alerts, or handle navigation inside API services
 - Consistent function naming: `get*`, `create*`, `update*`, `delete*`
 
@@ -328,7 +373,7 @@ AppNavigator
 ```
 
 ### Rules:
-- Auth state determines which navigator is rendered (conditional in `AppNavigator.js`)
+- Auth state determines which navigator is rendered (conditional in `AppNavigator.tsx`)
 - Main tab screens: `Dashboard`, `JobCards`, `Customers`, `More`
 - All other screens are stack navigators pushed on top of `MainTabs`
 - Tab bar uses Ionicons from `@expo/vector-icons`
@@ -345,9 +390,9 @@ navigation.navigate('JobCardDetail', { jobCard: entireJobCardObject });
 
 ### Adding a New Screen
 
-1. Create the screen file in `src/screens/NewScreen.js`
-2. Import in `AppNavigator.js`
-3. Add to the appropriate navigator (Tab or Stack)
+1. Create the screen file in `src/screens/NewScreen.tsx`
+2. Add the route (and its params, or `undefined` if none) to `RootStackParamList` or `MainTabParamList` in `src/types/navigation.ts`
+3. Import in `AppNavigator.tsx` and add to the appropriate navigator (Tab or Stack)
 4. If it's a tab screen, add an icon mapping in `MainTabs` `screenOptions`
 
 ---
@@ -456,7 +501,7 @@ Or for FlatList:
 
 ### Context-Based Auth
 
-- Auth state is managed via `AuthContext.js`
+- Auth state is managed via `AuthContext.tsx`
 - Token and user are persisted to `AsyncStorage` under:
   - `garagepulse_token` — JWT string
   - `garagepulse_user` — JSON-serialized user object
@@ -574,6 +619,55 @@ import { KeyboardAvoidingView, Platform } from 'react-native';
 
 ---
 
+## 🔷 TypeScript Conventions
+
+The whole mobile app is TypeScript (`strict: true` in `tsconfig.json`, extending `expo/tsconfig.base`). No new `.jsx`/`.js` files — everything is `.tsx`/`.ts`.
+
+### Rules
+- **Every component gets an explicit `interface Props`**, colocated in the same file directly above the component. There was no PropTypes to migrate from, so this is the first source of truth for a component's contract.
+- **Never define a component inside another component's render body** (e.g. a `const Field = (...) => (...)` declared inside a modal component's function). Every render of the parent creates a *new* function identity for that nested component, so React unmounts and remounts it — and its `TextInput` — on every keystroke, silently dropping everything but the first character typed. This is a real bug, not just a lint nit (`react-hooks/static-components`) — it was caught during this migration by a form-fill test failing with only the first character registering. Always hoist form-field sub-components to module scope, as `BottomSheetPicker.tsx`, `SettingsScreen.tsx`'s `Field`, and `LoginScreen.tsx`'s `Field` already do.
+- **Shared domain types live in `src/types/models.ts`** (`User`, `Customer`, `Vehicle`, `JobCard`, `Invoice`, etc.) and `src/types/api.ts` (`ApiListResponse<T>`, `ApiItemResponse<T>`, `ApiMessageResponse`) — same backend contract as the web frontend's equivalent files, ported (not shared via import) since this is a separate repo/app.
+- **Navigation is fully typed** via `src/types/navigation.ts`: `RootStackParamList` (every stack screen + its params) and `MainTabParamList` (the four `MainTabs` screens), plus a `declare global { namespace ReactNavigation { interface RootParamList ... } }` augmentation so `useNavigation()` infers route names without a generic. A screen's props come from `RootStackScreenProps<'ScreenName'>` or, for a `MainTabs` screen that also needs to navigate to a stack-level route (e.g. `JobCardsScreen` navigating to `JobCardDetail`), `MainTabScreenProps<'ScreenName'>` (a `CompositeScreenProps` of both navigators). Adding a screen means adding its entry to the relevant `ParamList` first — see the Navigation Rules "Adding a New Screen" steps above.
+- **Avoid `any`, including on `catch` parameters.** Use `src/utils/errors.ts`'s `getErrorMessage(error: unknown, fallback: string)` to pull a backend error message out of a caught Axios error instead of `catch (e: any) { e?.response?.data?.message }` — it narrows `unknown` safely and keeps `no-explicit-any` clean.
+- `@expo/vector-icons` must be a **direct** `dependencies` entry (not left to resolve transitively through `expo`'s own `node_modules`) — TypeScript's module resolution won't reach into a nested dependency's `node_modules` the way Metro's runtime resolver does.
+- Run `npm run typecheck` (`tsc --noEmit`) before pushing — it's also enforced in CI (`.github/workflows/ci.yml`).
+
+---
+
+## 🧪 Testing Conventions
+
+Tests use **Jest** (`jest-expo` preset) + **React Native Testing Library** + its built-in `userEvent`, with API service modules mocked via `jest.mock(...)` — tests never hit a real network.
+
+### Where tests live
+- **Colocated with the file they test**: `StatusStepper.tsx` → `StatusStepper.test.tsx`, `customerService.ts` → `customerService.test.ts`, right next to each other — same reasoning as the web frontend (tests are single-file-scoped, so colocation keeps them moving/deleting with the code they verify).
+- `jest.config.js` — `preset: 'jest-expo'`, `setupFilesAfterEnv: ['./jest.setup.ts']`.
+- `jest.setup.ts` — global mocks every test needs: `@expo/vector-icons` (mocked to a plain `Text`, since the real one pulls in `expo-font`/`expo-asset` native asset-loading machinery that Jest can't run) and `@react-native-async-storage/async-storage` (mocked via the package's own official `.../jest/async-storage-mock`).
+
+### Rules
+- **`render()` from `@testing-library/react-native` returns a `Promise` — always `await` it.** This is a change from the deprecated `react-test-renderer`-based API: `const result = render(...)` without `await` gives you an unresolved Promise (so `result.getByText` doesn't exist), and the `screen` singleton isn't bound until the render settles, so a synchronous `screen.getByText(...)` immediately afterward fails with "`render` function has not been called." Always write `await render(...)`.
+- **Mock API service modules with an explicit factory**, not a bare `jest.mock('../api/xService')` automock: `jest.mock('../api/customerService', () => ({ getCustomers: jest.fn(), ... }))`. A bare automock still has to `require()` the real module to introspect its shape, which pulls in the real `apiInterceptor.ts` and its `axios.create()` call — and axios's fetch-adapter detection crashes under jest-expo's environment. This applies to any module that (transitively) imports `apiInterceptor.ts`.
+- **`AuthContext` only calls `getMe()` to re-validate a session already persisted in `AsyncStorage`** (unlike the web app, which always calls `getMe()` on mount) — tests exercising that path must seed `AsyncStorage.setItem('garagepulse_token', ...)` / `garagepulse_user` first, and `AsyncStorage.clear()` in `beforeEach` so tests don't leak state into each other.
+- Priority order for new work: hooks and context (pure logic, cheap to test), the service-layer contract for any new/changed service module, one presentational-component test for anything with real branching (like `StatusStepper`), and one fetch → render (+ primary action) test per new screen — not exhaustive coverage.
+- Prefer `getByText`/`getByPlaceholderText`/`getByRole` queries over `testID` where the element already has visible, accessible text. Add `testID` (and, where it doubles as a real accessibility improvement, `accessibilityLabel`) only for icon-only controls with no discoverable text — see the `add-customer-fab` button in `CustomersScreen.tsx`.
+
+### Running tests
+```bash
+npm test          # single run (jest) — what CI runs
+npm run test:watch # watch mode while developing
+```
+
+---
+
+## ⚡ Performance Conventions
+
+- **`FlatList` `renderItem` and `keyExtractor` must be wrapped in `useCallback`** on every list screen (`JobCardsScreen`, `CustomersScreen`, `VehiclesScreen`, `InvoicesScreen`, `StaffScreen`). Without this, typing in a screen's search box recreates `renderItem` on every keystroke, which is a documented React Native performance anti-pattern for virtualized lists. Keep the dependency array minimal — usually just `navigation` (React Navigation guarantees it's referentially stable) plus any role-check booleans the row actually branches on.
+- **Never define a component inside another component's render body** — see the TypeScript Conventions note above. This is a performance rule as much as a correctness one: even where it doesn't lose keystrokes outright, unmounting/remounting a subtree on every parent render is expensive and defeats React's reconciliation.
+- **Screens are lazy-mounted by React Navigation by default** (`lazy: true` on both `createNativeStackNavigator` and `createBottomTabNavigator`) — this is the mobile equivalent of the web app's route-level code-splitting and is already correctly in place. Don't disable `lazy` without a specific reason.
+- **Keep `newArchEnabled: true`** (Fabric/TurboModules, set in `app.json`) and Hermes (Expo's default JS engine) — both are already-optimal defaults for this Expo/RN version; don't turn them off.
+- **Don't add `React.memo`/`useMemo`/`useCallback` beyond the FlatList case above without profiling evidence.** Unmeasured memoization mostly adds risk (stale-closure bugs from wrong dependency arrays) without a proven benefit — same stance as the web frontend.
+
+---
+
 ## ✅ Pre-Push Checklist
 
 - [ ] No `console.log` statements
@@ -583,8 +677,14 @@ import { KeyboardAvoidingView, Platform } from 'react-native';
 - [ ] Loading states show `ActivityIndicator` with color `#3b5ff8`
 - [ ] Error states show `Toast.show()` with user-friendly messages
 - [ ] List screens implement pull-to-refresh (`RefreshControl`)
-- [ ] New screens are registered in `AppNavigator.js`
+- [ ] New screens are registered in `AppNavigator.tsx` **and** `src/types/navigation.ts`'s `ParamList`
 - [ ] Navigation params pass IDs, not full objects
 - [ ] Android shadows include `elevation` property
 - [ ] Forms handle keyboard avoidance on iOS
 - [ ] No hardcoded API URLs — use environment variable
+- [ ] No component is defined inside another component's render body
+- [ ] `FlatList` `renderItem`/`keyExtractor` on list screens are wrapped in `useCallback`
+- [ ] New/changed components, hooks, or service modules have at least one colocated test
+- [ ] `npm run typecheck` passes with zero errors
+- [ ] `npm run lint` passes
+- [ ] `npm test` passes locally
