@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl }
 import { getDashboardStats, DashboardStats } from '../api/dashboardService';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
+import WebAppBanner from '../components/WebAppBanner';
 import type { MainTabScreenProps } from '../types/navigation';
 
 type Props = MainTabScreenProps<'Dashboard'>;
@@ -56,6 +57,8 @@ export default function DashboardScreen(_props: Props) {
         <Text style={styles.greeting}>Good Day, {user?.name?.split(' ')[0]} 👋</Text>
         <Text style={styles.subtitle}>Here is your garage overview</Text>
       </View>
+
+      <WebAppBanner />
 
       <View style={styles.statsGrid}>
         <View style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}>

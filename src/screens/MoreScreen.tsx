@@ -2,6 +2,7 @@ import React, { ComponentProps } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { openWebApp } from '../utils/webApp';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Role } from '../types/models';
 
@@ -76,6 +77,14 @@ export default function MoreScreen({ navigation }: Props) {
       iconBg: '#f3f4f6',
       iconColor: '#6b7280',
       onPress: () => navigation.navigate('Settings'),
+    },
+    {
+      title: 'Web App',
+      subtitle: 'Open the full app in your browser',
+      icon: 'globe-outline',
+      iconBg: '#eff6ff',
+      iconColor: '#3b82f6',
+      onPress: openWebApp,
     },
   ];
 
