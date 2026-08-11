@@ -25,8 +25,6 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
   const [showPayModal, setShowPayModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
 
-  useEffect(() => { fetchInvoice(); }, [invoiceId]);
-
   const fetchInvoice = async () => {
     try {
       const { data } = await getInvoice(invoiceId);
@@ -38,6 +36,11 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchInvoice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceId]);
 
   const handleMarkPaid = async () => {
     if (!invoice) return;

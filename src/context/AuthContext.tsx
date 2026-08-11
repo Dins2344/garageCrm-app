@@ -19,9 +19,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    checkToken();
-  }, []);
+  const logout = async () => {
+    await AsyncStorage.removeItem('garagepulse_token');
+    await AsyncStorage.removeItem('garagepulse_user');
+    setUser(null);
+  };
 
   const checkToken = async () => {
     try {
@@ -43,6 +45,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  useEffect(() => {
+    checkToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const login = async (email: string, password: string) => {
     const { token, data } = await authLogin(email, password);
     await AsyncStorage.setItem('garagepulse_token', token);
@@ -57,12 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem('garagepulse_user', JSON.stringify(data));
     setUser(data);
     return data;
-  };
-
-  const logout = async () => {
-    await AsyncStorage.removeItem('garagepulse_token');
-    await AsyncStorage.removeItem('garagepulse_user');
-    setUser(null);
   };
 
   const hasRole = (...roles: string[]) => {

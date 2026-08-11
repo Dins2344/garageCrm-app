@@ -35,11 +35,6 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
   const [discount, setDiscount] = useState('0');
   const [taxRate, setTaxRate] = useState('18');
 
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const fetchData = async () => {
     try {
       const jcRes = await getJobCard(id);
@@ -68,6 +63,11 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Parts handlers ──
   const addPart = () => {

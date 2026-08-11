@@ -143,19 +143,6 @@ export default function SettingsScreen({ navigation }: Props) {
   const [confirmPwd, setConfirmPwd] = useState('');
   const [savingPwd, setSavingPwd] = useState(false);
 
-  useEffect(() => {
-    fetchGarage();
-  }, []);
-
-  const fetchGarage = async () => {
-    try {
-      const { data } = await getGarage();
-      setGarage(data);
-      populateGarageForm(data);
-    } catch { /* non-critical */ }
-    finally { setGarageLoading(false); }
-  };
-
   const populateGarageForm = (g: Garage) => {
     setGarageName(g.name || '');
     setGaragePhone(g.phone || '');
@@ -168,6 +155,20 @@ export default function SettingsScreen({ navigation }: Props) {
     setGarageState(g.address?.state || '');
     setGaragePincode(g.address?.pincode || '');
   };
+
+  const fetchGarage = async () => {
+    try {
+      const { data } = await getGarage();
+      setGarage(data);
+      populateGarageForm(data);
+    } catch { /* non-critical */ }
+    finally { setGarageLoading(false); }
+  };
+
+  useEffect(() => {
+    fetchGarage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSaveGarage = async () => {
     if (!garageName.trim()) { Toast.show({ type: 'error', text1: 'Garage name is required' }); return; }

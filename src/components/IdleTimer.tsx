@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, ReactNode } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo, ReactNode } from 'react';
 import { View, PanResponder, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,22 +27,31 @@ const IdleTimer = ({ children }: { children: ReactNode }) => {
     resetTimerRef.current = resetTimer;
   }, [resetTimer]);
 
-  // PanResponder created once; reads from resetTimerRef so it always
-  // calls the current version regardless of re-renders.
+  // PanResponder created once via useMemo; reads from resetTimerRef so it
+  // always calls the current version regardless of re-renders.
   // Uses the correct PanResponder callback names (not the Responder API).
   // Returning false lets touches pass through to child components normally.
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => {
-        resetTimerRef.current?.();
-        return false;
-      },
-      onMoveShouldSetPanResponder: () => {
-        resetTimerRef.current?.();
-        return false;
-      },
-    })
-  ).current;
+  //
+  // resetTimerRef.current is only read inside onStart/onMoveShouldSetPanResponder,
+  // which the native gesture system invokes on a real touch event, never
+  // during render. The rule's static analysis can't see that the read is
+  // inside a callback that isn't itself called synchronously here.
+  /* eslint-disable react-hooks/refs */
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => {
+          resetTimerRef.current?.();
+          return false;
+        },
+        onMoveShouldSetPanResponder: () => {
+          resetTimerRef.current?.();
+          return false;
+        },
+      }),
+    []
+  );
+  /* eslint-enable react-hooks/refs */
 
   useEffect(() => {
     if (user) {
