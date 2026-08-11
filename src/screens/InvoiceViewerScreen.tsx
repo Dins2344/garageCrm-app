@@ -4,11 +4,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { getInvoice, updateInvoicePayment, deleteInvoice, downloadInvoicePdf } from '../api/invoiceService';
+import { getInvoice, updateInvoicePayment, deleteInvoice, getInvoicePdfUrl } from '../api/invoiceService';
 import { useAuth } from '../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import BottomSheetPicker from '../components/BottomSheetPicker';
+import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Invoice, PaymentMethod } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -86,19 +88,15 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
     if (!invoice) return;
     setDownloading(true);
     try {
-      const res = await downloadInvoicePdf(invoiceId);
-
-      // Convert arraybuffer to base64
-      const bytes = new Uint8Array(res.data);
-      let binary = '';
-      for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      const base64 = btoa(binary);
-
+      const token = await AsyncStorage.getItem('garagepulse_token');
       const fileUri = FileSystem.documentDirectory + `Invoice-${invoice?.invoiceNumber || 'download'}.pdf`;
-      await FileSystem.writeAsStringAsync(fileUri, base64, {
-        encoding: FileSystem.EncodingType.Base64,
+
+      // Downloaded natively straight to disk (with the auth header attached)
+      // rather than fetched through axios as an arraybuffer — RN's JS engine
+      // has no `btoa`/`atob` global, so converting the response to base64
+      // manually threw at runtime on every attempt.
+      await FileSystem.downloadAsync(getInvoicePdfUrl(invoiceId), fileUri, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 
       if (await Sharing.isAvailableAsync()) {
@@ -125,9 +123,11 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={s.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b5ff8" />
-      </View>
+      <ResponsiveScreen>
+        <View style={s.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b5ff8" />
+        </View>
+      </ResponsiveScreen>
     );
   }
 
@@ -163,6 +163,8 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
   );
 
   return (
+    <>
+    <ResponsiveScreen backgroundColor="#fdfcfb">
     <View style={s.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       {/* Header — uses SafeAreaView on iOS, manual status bar offset on Android */}
@@ -351,8 +353,12 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
 
         <Text style={s.footer}>Thank you for your business!</Text>
       </ScrollView>
+    </View>
+    </ResponsiveScreen>
 
-      {/* ── PAYMENT METHOD MODAL ── */}
+      {/* ── PAYMENT METHOD MODAL ── kept outside ResponsiveScreen so the
+          backdrop dims the true full screen width on tablets, not just the
+          capped content column. */}
       {showPayModal && (
         <View style={s.payOverlay}>
           <View style={s.paySheet}>
@@ -391,7 +397,7 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
           </View>
         </View>
       )}
-    </View>
+    </>
   );
 }
 
@@ -509,11 +515,11 @@ const s = StyleSheet.create({
   // Payment modal
   payOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', alignItems: 'center',
   },
   paySheet: {
     backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, paddingBottom: 40,
+    padding: 24, paddingBottom: 40, width: '100%', maxWidth: SHEET_MAX_WIDTH,
   },
   payHandle: {
     width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb',

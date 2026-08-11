@@ -10,6 +10,7 @@ import { getVehicles, createVehicle } from '../api/vehicleService';
 import { getMechanics, getAdvisors } from '../api/userService';
 import { createJobCard } from '../api/jobCardService';
 import BottomSheetPicker from '../components/BottomSheetPicker';
+import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer, Vehicle, User, FuelType, ServiceType, ComplaintPriority } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -181,8 +182,8 @@ function SearchModal<T extends { _id: string }>({ visible, onClose, title, items
 }
 
 const ms = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%' },
+  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   title: { fontSize: 17, fontWeight: 'bold', color: '#111827' },
@@ -396,6 +397,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ResponsiveScreen>
       <View style={s.container}>
         {/* Header */}
         <View style={s.header}>
@@ -701,6 +703,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
           )}
         />
       </View>
+      </ResponsiveScreen>
     </KeyboardAvoidingView>
   );
 }

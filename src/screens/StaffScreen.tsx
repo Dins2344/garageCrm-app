@@ -9,6 +9,7 @@ import BottomSheetPicker from '../components/BottomSheetPicker';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/userService';
+import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { User, Role } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -325,6 +326,7 @@ export default function StaffScreen(_props: Props) {
   const keyExtractor = useCallback((item: User) => item._id, []);
 
   return (
+    <ResponsiveScreen>
     <View style={styles.container}>
       {loading ? (
         <View style={styles.loading}><ActivityIndicator size="large" color="#3b5ff8" /></View>
@@ -439,6 +441,7 @@ export default function StaffScreen(_props: Props) {
         canSetAdmin={canSetAdmin}
       />
     </View>
+    </ResponsiveScreen>
   );
 }
 
@@ -501,8 +504,8 @@ const styles = StyleSheet.create({
     shadowColor: '#3b5ff8', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
   // Modal
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
   modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },

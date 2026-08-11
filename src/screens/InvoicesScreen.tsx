@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { getInvoices } from '../api/invoiceService';
 import Toast from 'react-native-toast-message';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Invoice, PaymentStatus } from '../types/models';
 
@@ -232,6 +233,7 @@ export default function InvoicesScreen({ navigation }: Props) {
   };
 
   return (
+    <ResponsiveScreen>
     <View style={s.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
@@ -270,6 +272,7 @@ export default function InvoicesScreen({ navigation }: Props) {
         />
       )}
     </View>
+    </ResponsiveScreen>
   );
 }
 

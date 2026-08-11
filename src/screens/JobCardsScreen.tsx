@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getJobCards } from '../api/jobCardService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { JobCard, JobStatus } from '../types/models';
 
@@ -127,6 +128,7 @@ export default function JobCardsScreen({ navigation }: Props) {
   const keyExtractor = useCallback((item: JobCard) => item._id, []);
 
   return (
+    <ResponsiveScreen>
     <View style={styles.container}>
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
@@ -170,6 +172,7 @@ export default function JobCardsScreen({ navigation }: Props) {
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
     </View>
+    </ResponsiveScreen>
   );
 }
 

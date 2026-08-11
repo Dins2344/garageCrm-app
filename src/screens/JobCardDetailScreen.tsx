@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import StatusStepper from '../components/StatusStepper';
 import { useAuth } from '../context/AuthContext';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { JobCard } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -127,9 +128,11 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b5ff8" />
-      </View>
+      <ResponsiveScreen>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b5ff8" />
+        </View>
+      </ResponsiveScreen>
     );
   }
 
@@ -150,6 +153,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
   const vehicle = typeof jobCard?.vehicle === 'object' ? jobCard.vehicle : null;
 
   return (
+    <ResponsiveScreen>
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -394,6 +398,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
 
       </ScrollView>
     </View>
+    </ResponsiveScreen>
   );
 }
 

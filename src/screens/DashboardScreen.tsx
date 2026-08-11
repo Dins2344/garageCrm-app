@@ -4,6 +4,7 @@ import { getDashboardStats, DashboardStats } from '../api/dashboardService';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import WebAppBanner from '../components/WebAppBanner';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { MainTabScreenProps } from '../types/navigation';
 
 type Props = MainTabScreenProps<'Dashboard'>;
@@ -37,10 +38,12 @@ export default function DashboardScreen(_props: Props) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b5ff8" />
-        <Text style={styles.loadingText}>Loading Dashboard...</Text>
-      </View>
+      <ResponsiveScreen>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b5ff8" />
+          <Text style={styles.loadingText}>Loading Dashboard...</Text>
+        </View>
+      </ResponsiveScreen>
     );
   }
 
@@ -49,6 +52,7 @@ export default function DashboardScreen(_props: Props) {
   };
 
   return (
+    <ResponsiveScreen>
     <ScrollView
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -100,6 +104,7 @@ export default function DashboardScreen(_props: Props) {
         </View>
       </View>
     </ScrollView>
+    </ResponsiveScreen>
   );
 }
 

@@ -1,5 +1,4 @@
-import type { AxiosResponse } from 'axios';
-import api from './apiInterceptor';
+import api, { API_BASE_URL } from './apiInterceptor';
 import type { Invoice, PaymentStatus, PaymentMethod } from '../types/models';
 import type { ApiListResponse, ApiItemResponse, ApiMessageResponse } from '../types/api';
 
@@ -42,10 +41,10 @@ export const updateInvoicePayment = async (id: string, data: UpdatePaymentData):
 };
 
 /**
- * Download invoice PDF. Returns base64 string.
- * On mobile we use arraybuffer and convert to base64 for file-system save.
+ * Full URL for an invoice's PDF, for use with FileSystem.downloadAsync()
+ * (a native download straight to disk, with an explicit auth header) rather
+ * than fetching it through axios — RN's JS engine has no `btoa`/`atob`
+ * global, so the old arraybuffer -> base64-string -> writeAsStringAsync
+ * approach threw at runtime on every download attempt.
  */
-export const downloadInvoicePdf = async (id: string): Promise<AxiosResponse<ArrayBuffer>> => {
-  const res = await api.get(`/invoices/${id}/pdf`, { responseType: 'arraybuffer' });
-  return res;
-};
+export const getInvoicePdfUrl = (id: string): string => `${API_BASE_URL}/invoices/${id}/pdf`;

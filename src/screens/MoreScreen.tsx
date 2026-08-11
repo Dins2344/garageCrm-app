@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'rea
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { openWebApp } from '../utils/webApp';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Role } from '../types/models';
 
@@ -98,6 +99,7 @@ export default function MoreScreen({ navigation }: Props) {
   const getRoleLabel = (role?: Role) => (role && ROLE_LABEL[role]) || role || '';
 
   return (
+    <ResponsiveScreen>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Profile Section */}
       <View style={styles.profileSection}>
@@ -159,6 +161,7 @@ export default function MoreScreen({ navigation }: Props) {
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
     </ScrollView>
+    </ResponsiveScreen>
   );
 }
 

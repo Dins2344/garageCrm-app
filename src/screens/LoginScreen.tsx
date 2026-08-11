@@ -2,12 +2,13 @@ import React, { useState, ComponentProps } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator,
-  ScrollView, StatusBar, KeyboardTypeOptions
+  ScrollView, StatusBar, KeyboardTypeOptions, Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { getErrorMessage } from '../utils/errors';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 
 type Props = RootStackScreenProps<'Login'>;
@@ -17,7 +18,14 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 function Logo({ size = 52 }: { size?: number }) {
   return (
     <View style={[styles.logoWrap, { width: size, height: size, borderRadius: size * 0.24 }]}>
-      <Ionicons name="car-sport" size={size * 0.52} color="#fff" />
+      <Image
+        // Metro needs a static require() to resolve local image assets —
+        // there's no ambient `*.png` module declaration here for an ES import.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        source={require('../../assets/transFavi.png')}
+        style={{ width: size * 0.78, height: size * 0.78 }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -138,6 +146,7 @@ export default function LoginScreen(_props: Props) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <StatusBar barStyle="light-content" backgroundColor="#3b5ff8" />
+      <ResponsiveScreen backgroundColor="#3b5ff8">
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -288,6 +297,7 @@ export default function LoginScreen(_props: Props) {
 
         <Text style={styles.footer}>© 2026 GaragePulse. All rights reserved.</Text>
       </ScrollView>
+      </ResponsiveScreen>
     </KeyboardAvoidingView>
   );
 }

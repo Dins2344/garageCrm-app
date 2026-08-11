@@ -8,6 +8,7 @@ import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '..
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
+import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Customer, Address } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -209,6 +210,7 @@ export default function CustomersScreen(_props: Props) {
   const keyExtractor = useCallback((item: Customer) => item._id, []);
 
   return (
+    <ResponsiveScreen>
     <View style={s.container}>
       <View style={s.searchBox}>
         <Ionicons name="search" size={20} color="#9ca3af" style={{ marginRight: 8 }} />
@@ -248,6 +250,7 @@ export default function CustomersScreen(_props: Props) {
 
       <CustomerModal visible={modalVisible} onClose={() => setModalVisible(false)} onSave={handleSave} editing={editing} />
     </View>
+    </ResponsiveScreen>
   );
 }
 
@@ -274,8 +277,8 @@ const s = StyleSheet.create({
   emptySub: { fontSize: 13, color: '#9ca3af' },
   fab: { position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#3b5ff8', justifyContent: 'center', alignItems: 'center', shadowColor: '#3b5ff8', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   // Modal
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
+  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   sheetTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },

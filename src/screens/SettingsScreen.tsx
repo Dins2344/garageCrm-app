@@ -8,6 +8,7 @@ import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, changePassword } from '../api/authService';
 import { getGarage, updateGarage } from '../api/garageService';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Garage, Role } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -231,6 +232,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ResponsiveScreen>
       <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
         {/* Profile Hero */}
@@ -344,6 +346,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      </ResponsiveScreen>
     </KeyboardAvoidingView>
   );
 }

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SHEET_MAX_WIDTH } from './ResponsiveScreen';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -166,13 +167,15 @@ const styles = StyleSheet.create({
   optIcon: { width: 30, height: 30, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
 
   // Sheet
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '65%',
     minHeight: 200,
+    width: '100%',
+    maxWidth: SHEET_MAX_WIDTH,
   },
   handle: {
     width: 40, height: 4, borderRadius: 2,

@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { getJobCard, saveJobCardEstimation } from '../api/jobCardService';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { JobCard } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -145,9 +146,11 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={s.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b5ff8" />
-      </View>
+      <ResponsiveScreen>
+        <View style={s.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b5ff8" />
+        </View>
+      </ResponsiveScreen>
     );
   }
 
@@ -155,6 +158,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ResponsiveScreen>
       <View style={s.container}>
         {/* Header */}
         <View style={s.header}>
@@ -403,6 +407,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 
         </ScrollView>
       </View>
+      </ResponsiveScreen>
     </KeyboardAvoidingView>
   );
 }

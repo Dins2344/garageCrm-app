@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { getVehicle, getVehicleHistory } from '../api/vehicleService';
+import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Vehicle, JobCard, FuelType, JobStatus } from '../types/models';
 
@@ -82,10 +83,12 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b5ff8" />
-        <Text style={styles.loadingText}>Loading vehicle...</Text>
-      </View>
+      <ResponsiveScreen>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b5ff8" />
+          <Text style={styles.loadingText}>Loading vehicle...</Text>
+        </View>
+      </ResponsiveScreen>
     );
   }
 
@@ -96,6 +99,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
   const owner = typeof vehicle.customer === 'object' ? vehicle.customer : null;
 
   return (
+    <ResponsiveScreen>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
@@ -190,6 +194,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
         )}
       </View>
     </ScrollView>
+    </ResponsiveScreen>
   );
 }
 
