@@ -1,14 +1,15 @@
-import React, { useState, ComponentProps } from 'react';
+import React, { useState, useEffect, ComponentProps } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator,
-  ScrollView, StatusBar, KeyboardTypeOptions, Image
+  ScrollView, StatusBar, KeyboardTypeOptions, Image, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { getErrorMessage } from '../utils/errors';
-import ResponsiveScreen from '../components/ResponsiveScreen';
+import { forgotPassword } from '../api/authService';
+import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 
 type Props = RootStackScreenProps<'Login'>;
@@ -71,6 +72,133 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
   );
 }
 
+// ─── Forgot Password Modal ─────────────────────────────────────────────────────
+interface ForgotPasswordModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+// Defined at module scope — see AddBranchModal in SettingsScreen.tsx for why:
+// a component defined inside another component's render body loses focus/text
+// on every keystroke because React treats it as a brand-new type each render.
+type ForgotPasswordStep = 'confirm' | 'not-owner' | 'email';
+
+function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
+  const [step, setStep] = useState<ForgotPasswordStep>('confirm');
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (visible) { setStep('confirm'); setEmail(''); }
+  }, [visible]);
+
+  const handleSubmit = async () => {
+    if (!email.trim()) {
+      Toast.show({ type: 'error', text1: 'Please enter your email address' });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await forgotPassword(email.trim());
+      Toast.show({ type: 'success', text1: res.message, visibilityTime: 5000 });
+      onClose();
+    } catch (e) {
+      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to send reset link') });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={forgotPwdStyles.overlay}>
+        <View style={forgotPwdStyles.sheet}>
+          <View style={forgotPwdStyles.handle} />
+          <View style={forgotPwdStyles.header}>
+            <Text style={forgotPwdStyles.title}>Forgot Password</Text>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+          </View>
+
+          {/* ── Step 1: confirm role ── */}
+          {step === 'confirm' && (
+            <View style={forgotPwdStyles.body}>
+              <Text style={forgotPwdStyles.helperText}>Are you the owner of your garage account?</Text>
+              <TouchableOpacity style={forgotPwdStyles.choiceBtnPrimary} onPress={() => setStep('email')}>
+                <Text style={forgotPwdStyles.choiceBtnPrimaryText}>Yes, I'm the owner</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={forgotPwdStyles.choiceBtnSecondary} onPress={() => setStep('not-owner')}>
+                <Text style={forgotPwdStyles.choiceBtnSecondaryText}>No, I'm a staff member</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ── Not the owner: no email collected, no request sent ── */}
+          {step === 'not-owner' && (
+            <View style={forgotPwdStyles.body}>
+              <View style={forgotPwdStyles.noticeBox}>
+                <Text style={forgotPwdStyles.noticeText}>
+                  Staff passwords are managed by the garage. Ask your owner or an admin to reset your password from Settings → Staff.
+                </Text>
+              </View>
+              <TouchableOpacity style={[forgotPwdStyles.choiceBtnSecondary, { marginTop: 16 }]} onPress={() => setStep('confirm')}>
+                <Text style={forgotPwdStyles.choiceBtnSecondaryText}>Back</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ── Step 2: owner enters email ── */}
+          {step === 'email' && (
+            <>
+              <ScrollView style={forgotPwdStyles.body} keyboardShouldPersistTaps="handled">
+                <Text style={forgotPwdStyles.helperText}>
+                  Enter your account email and we'll send you a link to reset your password.
+                </Text>
+                <Field label="Email Address" value={email} onChangeText={setEmail}
+                  placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
+              </ScrollView>
+              <View style={forgotPwdStyles.footer}>
+                <TouchableOpacity style={forgotPwdStyles.cancelBtn} onPress={() => setStep('confirm')}>
+                  <Text style={forgotPwdStyles.cancelBtnText}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[forgotPwdStyles.submitBtn, submitting && { opacity: 0.6 }]} onPress={handleSubmit} disabled={submitting}>
+                  {submitting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={forgotPwdStyles.submitBtnText}>Send Link</Text>}
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+      {/* Modal-scoped Toast — RN's Modal renders above the app-root Toast in
+          App.tsx, so the root Toast would be hidden behind this sheet. */}
+      <Toast />
+    </Modal>
+  );
+}
+
+const forgotPwdStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  title: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  body: { padding: 20 },
+  helperText: { fontSize: 14, color: '#6b7280', lineHeight: 20, marginBottom: 16 },
+  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#f3f4f6' },
+  cancelBtnText: { color: '#374151', fontWeight: '600' },
+  submitBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#3b5ff8' },
+  submitBtnText: { color: '#fff', fontWeight: '700' },
+  noticeBox: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 12, padding: 16 },
+  noticeText: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  // Standalone full-width choice buttons (confirm/not-owner steps) — deliberately
+  // NOT flex:1 like submitBtn/cancelBtn above, which only works inside the
+  // row-direction footer; flex:1 in a plain column View collapses to zero height.
+  choiceBtnPrimary: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#3b5ff8' },
+  choiceBtnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  choiceBtnSecondary: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6', marginTop: 10 },
+  choiceBtnSecondaryText: { color: '#374151', fontWeight: '600', fontSize: 15 },
+});
+
 // ─── Features list (shown on register) ────────────────────────────────────────
 const FEATURES = [
   { icon: '📋', label: 'Job Card Management' },
@@ -86,6 +214,7 @@ export default function LoginScreen(_props: Props) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [step, setStep] = useState(1);       // register multi-step: 1 | 2
   const [loading, setLoading] = useState(false);
+  const [forgotPwdVisible, setForgotPwdVisible] = useState(false);
 
   // Shared
   const [email, setEmail] = useState('');
@@ -177,6 +306,10 @@ export default function LoginScreen(_props: Props) {
                 placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
               <Field label="Password" value={password} onChangeText={setPassword}
                 placeholder="••••••••" secureTextEntry autoCapitalize="none" icon="lock-closed-outline" />
+
+              <TouchableOpacity onPress={() => setForgotPwdVisible(true)} style={styles.forgotPwdRow}>
+                <Text style={styles.forgotPwdLink}>Forgot password?</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.primaryBtn, loading && { opacity: 0.65 }]}
@@ -298,6 +431,7 @@ export default function LoginScreen(_props: Props) {
         <Text style={styles.footer}>© 2026 GaragePulse. All rights reserved.</Text>
       </ScrollView>
       </ResponsiveScreen>
+      <ForgotPasswordModal visible={forgotPwdVisible} onClose={() => setForgotPwdVisible(false)} />
     </KeyboardAvoidingView>
   );
 }
@@ -358,6 +492,10 @@ const styles = StyleSheet.create({
     borderRadius: 16, paddingHorizontal: 14, height: 50,
   },
   inputField: { flex: 1, fontSize: 15, color: '#1f2937' },
+
+  // Forgot password link
+  forgotPwdRow: { alignSelf: 'flex-end', marginTop: -8, marginBottom: 4 },
+  forgotPwdLink: { fontSize: 13, fontWeight: '600', color: '#3b5ff8' },
 
   // Buttons
   primaryBtn: {
