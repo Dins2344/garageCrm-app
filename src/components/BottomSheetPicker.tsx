@@ -1,6 +1,7 @@
 import React, { useState, ComponentProps } from 'react';
 import {
-  View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput
+  View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput,
+  KeyboardAvoidingView, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SHEET_MAX_WIDTH } from './ResponsiveScreen';
@@ -76,7 +77,8 @@ export default function BottomSheetPicker({
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setVisible(false)} />
           <TouchableOpacity activeOpacity={1} style={styles.sheet} onPress={e => e.stopPropagation()}>
             <View style={styles.handle} />
 
@@ -138,7 +140,7 @@ export default function BottomSheetPicker({
               )}
             </ScrollView>
           </TouchableOpacity>
-        </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

@@ -166,6 +166,13 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
           </View>
         </View>
       </KeyboardAvoidingView>
+      {/* Modal-scoped Toast — RN's Modal renders in its own native layer above
+          the app root, so the root <Toast/> in App.tsx is hidden behind it.
+          Mounting a second instance here makes it the active one (by mount
+          order) while this modal is open; it falls back to the root instance
+          once this one unmounts. See react-native-toast-message's docs on
+          showing a Toast inside a Modal. */}
+      <Toast />
     </Modal>
   );
 }

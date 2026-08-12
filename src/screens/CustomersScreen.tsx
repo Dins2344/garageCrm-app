@@ -123,6 +123,9 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
           </View>
         </View>
       </KeyboardAvoidingView>
+      {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
+          is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
+      <Toast />
     </Modal>
   );
 }

@@ -156,7 +156,7 @@ function SearchModal<T extends { _id: string }>({ visible, onClose, title, items
   const filtered = items.filter(i => searchKeys.some(k => String(i[k] || '').toLowerCase().includes(q.toLowerCase())));
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={ms.overlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={ms.overlay}>
         <View style={ms.sheet}>
           <View style={ms.handle} />
           <View style={ms.header}>
@@ -176,7 +176,7 @@ function SearchModal<T extends { _id: string }>({ visible, onClose, title, items
             {filtered.length === 0 && <Text style={ms.empty}>No results found</Text>}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
