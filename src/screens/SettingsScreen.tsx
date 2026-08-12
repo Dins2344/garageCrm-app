@@ -191,7 +191,7 @@ const branchModalStyles = StyleSheet.create({
 
 export default function SettingsScreen({ navigation }: Props) {
   const { user, logout, hasRole } = useAuth();
-  const { garages, activeGarageId, switchGarage, addBranch } = useGarage();
+  const { garages, activeGarageId, garagesLoading, switchGarage, addBranch } = useGarage();
   const canEditGarage = hasRole('owner', 'admin');
   const isOwner = hasRole('owner');
   const [addBranchVisible, setAddBranchVisible] = useState(false);
@@ -385,7 +385,9 @@ export default function SettingsScreen({ navigation }: Props) {
         {/* ── MY BRANCHES (owners only) ── */}
         {isOwner && (
           <SectionCard title="My Branches" icon="git-branch-outline">
-            {garages.map(g => (
+            {garagesLoading ? (
+              <ActivityIndicator color="#3b5ff8" style={{ paddingVertical: 20 }} />
+            ) : garages.map(g => (
               <TouchableOpacity
                 key={g._id}
                 style={styles.branchRow}
