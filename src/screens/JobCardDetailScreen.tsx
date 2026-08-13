@@ -187,6 +187,11 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoTitle}>{customer?.name}</Text>
                 <Text style={styles.infoSubtitle}>{customer?.phone}</Text>
+                {(customer?.address?.street || customer?.address?.city) && (
+                  <Text style={styles.infoSubtitle}>
+                    {[customer.address?.street, customer.address?.city].filter(Boolean).join(', ')}
+                  </Text>
+                )}
               </View>
             </View>
             <View style={styles.divider} />

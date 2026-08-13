@@ -287,6 +287,8 @@ export default function CreateJobCardScreen({ navigation }: Props) {
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newCustEmail, setNewCustEmail] = useState('');
+  const [newCustPlace, setNewCustPlace] = useState('');
+  const [newCustCity, setNewCustCity] = useState('');
 
   // Vehicle
   const [vehTab, setVehTab] = useState(0); // 0=existing, 1=new
@@ -350,6 +352,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
   const handleSubmit = async () => {
     if (!advisorId) { Toast.show({ type: 'error', text1: 'Please assign a Service Advisor' }); return; }
+    if (!odometerAtIntake.trim()) { Toast.show({ type: 'error', text1: 'Please enter the odometer reading' }); return; }
     const validComplaints = complaints.filter(c => c.description.trim());
     if (validComplaints.length === 0) { Toast.show({ type: 'error', text1: 'Please add at least one complaint' }); return; }
 
@@ -360,7 +363,10 @@ export default function CreateJobCardScreen({ navigation }: Props) {
       if (custTab === 0) {
         customerId = selCustomer!._id;
       } else {
-        const { data } = await createCustomer({ name: newCustName.trim(), phone: newCustPhone.trim(), email: newCustEmail.trim() });
+        const { data } = await createCustomer({
+          name: newCustName.trim(), phone: newCustPhone.trim(), email: newCustEmail.trim(),
+          address: { street: newCustPlace.trim(), city: newCustCity.trim() }
+        });
         customerId = data._id;
       }
 
@@ -445,6 +451,8 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                     <F label="Full Name" value={newCustName} onChange={setNewCustName} placeholder="John Doe" required />
                     <F label="Phone" value={newCustPhone} onChange={setNewCustPhone} placeholder="9876543210" keyboard="phone-pad" cap="none" required />
                     <F label="Email" value={newCustEmail} onChange={setNewCustEmail} placeholder="email@example.com (optional)" keyboard="email-address" cap="none" />
+                    <F label="Place" value={newCustPlace} onChange={setNewCustPlace} placeholder="Area / locality (optional)" />
+                    <F label="City" value={newCustCity} onChange={setNewCustCity} placeholder="City (optional)" />
                   </>
                 )}
               </View>
@@ -542,7 +550,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                 {/* Odometer + Expected Delivery Date */}
                 <View style={[s.rowFields, { marginTop: 14 }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.label}>Odometer (km)</Text>
+                    <Text style={s.label}>Odometer (km) *</Text>
                     <TextInput
                       style={s.input}
                       value={odometerAtIntake}

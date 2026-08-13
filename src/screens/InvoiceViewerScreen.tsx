@@ -240,6 +240,11 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
             {customer?.email && (
               <Text style={s.cardSub}>✉️ {customer.email}</Text>
             )}
+            {(customer?.address?.street || customer?.address?.city) && (
+              <Text style={s.cardSub}>
+                📍 {[customer.address?.street, customer.address?.city].filter(Boolean).join(', ')}
+              </Text>
+            )}
           </View>
           <View style={[s.card, { flex: 1 }]}>
             <Text style={s.cardLabel}>VEHICLE</Text>
@@ -248,6 +253,9 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
               {vehicle?.make} {vehicle?.model}
               {vehicle?.year ? ` (${vehicle.year})` : ''}
             </Text>
+            {jobCard?.odometerAtIntake !== undefined && jobCard?.odometerAtIntake !== null && (
+              <Text style={s.cardSub}>Kilometers Run: {jobCard.odometerAtIntake.toLocaleString('en-IN')} km</Text>
+            )}
           </View>
         </View>
 
@@ -296,7 +304,7 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
             </View>
           )}
           <View style={s.totalsRow}>
-            <Text style={s.totalsLabel}>Tax ({invoice.taxRate || 18}%)</Text>
+            <Text style={s.totalsLabel}>Tax ({invoice.taxRate ?? 18}%)</Text>
             <Text style={s.totalsValue}>{fmt(invoice.taxAmount)}</Text>
           </View>
           <View style={s.totalsDivider} />

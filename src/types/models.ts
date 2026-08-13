@@ -163,7 +163,7 @@ export type PaymentMethod = 'cash' | 'upi' | 'card' | 'bank_transfer' | 'other' 
 export interface Invoice {
   _id: string;
   invoiceNumber: string;
-  jobCard?: { _id: string; jobCardNumber: string; status?: string } | string;
+  jobCard?: { _id: string; jobCardNumber: string; status?: string; odometerAtIntake?: number } | string;
   customer?: Customer | string;
   vehicle?: Vehicle | string;
   garage?: Garage | string;
