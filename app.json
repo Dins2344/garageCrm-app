@@ -2,7 +2,7 @@
   "expo": {
     "name": "Garage Pulse",
     "slug": "garage-pulse",
-    "version": "1.0.3",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/transFavi.png",
     "userInterfaceStyle": "light",
@@ -22,8 +22,8 @@
         "backgroundColor": "#FAFAFA"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.garagepulse.app",
-      "versionCode": 1,
+      "package": "com.dctechs.garagepulse",
+      "versionCode": 3,
       "permissions": [
         "INTERNET",
         "CAMERA"
@@ -35,7 +35,8 @@
     "plugins": [
       [
         "expo-build-properties"
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {

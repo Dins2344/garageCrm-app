@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://dctech.space/api"
+        "EXPO_PUBLIC_API_URL": "https://dctech.space/api",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://dctech.space/home"
       }
     },
     "preview": {
@@ -17,13 +18,15 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://dctech.space/api"
+        "EXPO_PUBLIC_API_URL": "https://dctech.space/api",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://dctech.space/home"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://dctech.space/api"
+        "EXPO_PUBLIC_API_URL": "https://dctech.space/api",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://dctech.space/home"
       }
     }
   },
