@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/userService';
@@ -172,7 +173,7 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
           order) while this modal is open; it falls back to the root instance
           once this one unmounts. See react-native-toast-message's docs on
           showing a Toast inside a Modal. */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }

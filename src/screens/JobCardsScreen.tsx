@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
+import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { JobCard, JobStatus } from '../types/models';
 
@@ -204,7 +205,9 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    // Extra clearance for the floating dock tab bar (absolute-positioned,
+    // so it no longer reserves its own space in the layout).
+    paddingBottom: TAB_BAR_CLEARANCE + 20,
   },
   card: {
     backgroundColor: '#fff',
@@ -266,7 +269,8 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 24,
+    // Sits above the floating dock tab bar instead of the screen edge.
+    bottom: TAB_BAR_CLEARANCE,
     right: 24,
     width: 56,
     height: 56,

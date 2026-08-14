@@ -130,4 +130,25 @@ describe('AuthContext', () => {
 
     await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
   });
+
+  it('logout() resets the dismissed "More on the web" banner', async () => {
+    await seedStoredSession();
+    // Simulate the banner having been dismissed in a previous session — it
+    // used to survive logout forever, so the banner could never reappear.
+    await AsyncStorage.setItem('garagepulse_web_banner_dismissed', 'true');
+    jest.mocked(authService.getMe).mockResolvedValue({ success: true, data: mockUser });
+    const user = userEvent.setup();
+
+    await render(
+      <AuthProvider>
+        <Consumer />
+      </AuthProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('owner@example.com'));
+
+    await user.press(screen.getByTestId('logout-btn'));
+
+    await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
+    expect(await AsyncStorage.getItem('garagepulse_web_banner_dismissed')).toBeNull();
+  });
 });

@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { getErrorMessage } from '../utils/errors';
 import { forgotPassword } from '../api/authService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
@@ -170,7 +171,7 @@ function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
       </KeyboardAvoidingView>
       {/* Modal-scoped Toast — RN's Modal renders above the app-root Toast in
           App.tsx, so the root Toast would be hidden behind this sheet. */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }

@@ -7,16 +7,18 @@ import {
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../api/vehicleService';
 import { getCustomers } from '../api/customerService';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
-import type { RootStackScreenProps } from '../types/navigation';
+import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
+import type { MainTabScreenProps } from '../types/navigation';
 import type { Customer, Vehicle, FuelType } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
 
-type Props = RootStackScreenProps<'Vehicles'>;
+type Props = MainTabScreenProps<'Vehicles'>;
 
 const FUEL_COLOR: Partial<Record<FuelType, string>> = { petrol: '#ef4444', diesel: '#3b82f6', electric: '#10b981', hybrid: '#8b5cf6', cng: '#f59e0b' };
 
@@ -204,7 +206,7 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
       </KeyboardAvoidingView>
       {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
           is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }
@@ -354,7 +356,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fdfcfb' },
   searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 16, marginBottom: 8, borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12 },
   searchInput2: { flex: 1, height: 44, fontSize: 15, color: '#1f2937' },
-  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 },
+  list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: TAB_BAR_CLEARANCE + 20 },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   vehicleIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
@@ -372,7 +374,7 @@ const s = StyleSheet.create({
   empty: { alignItems: 'center', marginTop: 60, gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: 'bold', color: '#374151' },
   emptySub: { fontSize: 13, color: '#9ca3af' },
-  fab: { position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#3b5ff8', justifyContent: 'center', alignItems: 'center', shadowColor: '#3b5ff8', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  fab: { position: 'absolute', bottom: TAB_BAR_CLEARANCE, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#3b5ff8', justifyContent: 'center', alignItems: 'center', shadowColor: '#3b5ff8', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   // Modal
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', width: '100%', maxWidth: SHEET_MAX_WIDTH },

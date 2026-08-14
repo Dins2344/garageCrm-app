@@ -1,7 +1,8 @@
 import React, { useState, useEffect, ComponentProps } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, Modal, KeyboardAvoidingView, Platform, KeyboardTypeOptions
+  ActivityIndicator, Modal, KeyboardAvoidingView, Platform, KeyboardTypeOptions,
+  SafeAreaView, StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -397,22 +398,40 @@ export default function CreateJobCardScreen({ navigation }: Props) {
       Toast.show({ type: 'success', text1: '✅ Job Card Created!' });
       navigation.goBack();
     } catch (e) {
-      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to create Job Card') });
+      // Split across text1/text2 — the toast renders text1 on a single line,
+      // which would truncate longer server messages (e.g. the "vehicle already
+      // has an open job card (JC-…)" one, hiding the job card number).
+      Toast.show({
+        type: 'error',
+        text1: 'Could not create job card',
+        text2: getErrorMessage(e, 'Please try again'),
+        visibilityTime: 5000,
+      });
     } finally { setLoading(false); }
   };
+
+  const header = (
+    <View style={s.headerInner}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+        <Ionicons name="close" size={24} color="#111827" />
+      </TouchableOpacity>
+      <Text style={s.headerTitle}>New Job Card</Text>
+      <View style={{ width: 32 }} />
+    </View>
+  );
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ResponsiveScreen>
       <View style={s.container}>
-        {/* Header */}
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <Ionicons name="close" size={24} color="#111827" />
-          </TouchableOpacity>
-          <Text style={s.headerTitle}>New Job Card</Text>
-          <View style={{ width: 32 }} />
-        </View>
+        {/* Header — SafeAreaView handles the top inset natively on iOS;
+            Android's SafeAreaView is a no-op, so it gets the status bar
+            height added manually. Same pattern as InvoiceViewerScreen. */}
+        {Platform.OS === 'ios' ? (
+          <SafeAreaView style={s.safeHeader}>{header}</SafeAreaView>
+        ) : (
+          <View style={s.header}>{header}</View>
+        )}
 
         {/* Step Pills */}
         <View style={s.stepRow}>
@@ -554,8 +573,13 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                     <TextInput
                       style={s.input}
                       value={odometerAtIntake}
-                      onChangeText={setOdometerAtIntake}
-                      keyboardType="numeric"
+                      // Digits only, hard-capped at 7 (9,999,999 km is beyond
+                      // any real vehicle). Guards against pasted junk, decimal
+                      // separators that `numeric` keyboards allow, and runaway
+                      // values from repeated re-entry after a failed submit.
+                      onChangeText={t => setOdometerAtIntake(t.replace(/[^0-9]/g, '').slice(0, 7))}
+                      keyboardType="number-pad"
+                      maxLength={7}
                       placeholder="e.g. 42000"
                       placeholderTextColor="#9ca3af"
                     />
@@ -718,7 +742,9 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fdfcfb' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Platform.OS === 'ios' ? 54 : 16, paddingBottom: 14, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  safeHeader: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, paddingHorizontal: 16, paddingTop: 4 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: (StatusBar.currentHeight || 24) + 10, paddingBottom: 14, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   // Steps

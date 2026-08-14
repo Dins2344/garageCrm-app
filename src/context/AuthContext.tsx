@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login as authLogin, register as authRegister, getMe, RegisterFormData } from '../api/authService';
 import IdleTimer from '../components/IdleTimer';
+import { WEB_BANNER_DISMISSED_KEY } from '../components/WebAppBanner';
 import type { User } from '../types/models';
 
 export interface AuthContextValue {
@@ -11,6 +12,7 @@ export interface AuthContextValue {
   register: (formData: RegisterFormData) => Promise<User>;
   logout: () => Promise<void>;
   hasRole: (...roles: string[]) => boolean;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -23,6 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.removeItem('garagepulse_token');
     await AsyncStorage.removeItem('garagepulse_user');
     await AsyncStorage.removeItem('garagepulse_active_garage');
+    // Dismissing the "More on the web" nudge is a per-user preference, not a
+    // permanent per-device one. Without this it survived logout forever, so
+    // the banner could never come back — and on a shared garage device one
+    // person dismissing it hid it from everyone who logged in afterwards.
+    await AsyncStorage.removeItem(WEB_BANNER_DISMISSED_KEY);
     setUser(null);
   };
 
@@ -71,8 +78,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !!user && roles.includes(user.role);
   };
 
+  // Re-fetches the current user from the server and updates both context
+  // state and the cached copy in AsyncStorage — called after a profile edit
+  // so the new name/phone shows up immediately everywhere (avatar initials,
+  // greetings, staff lists, ...) instead of only after the next login.
+  const refreshUser = async () => {
+    const res = await getMe();
+    setUser(res.data);
+    await AsyncStorage.setItem('garagepulse_user', JSON.stringify(res.data));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, hasRole, refreshUser }}>
       <IdleTimer>
         {children}
       </IdleTimer>

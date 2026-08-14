@@ -3,7 +3,7 @@ import { render, screen, waitFor, userEvent } from '@testing-library/react-nativ
 import CustomersScreen from './CustomersScreen';
 import * as customerService from '../api/customerService';
 import type { Customer } from '../types/models';
-import type { MainTabScreenProps } from '../types/navigation';
+import type { RootStackScreenProps } from '../types/navigation';
 
 // Explicit factory — see AuthContext.test.tsx for why automock isn't used here.
 jest.mock('../api/customerService', () => ({
@@ -32,7 +32,7 @@ const sampleCustomer: Customer = {
   vehicles: [],
 };
 
-const props = {} as MainTabScreenProps<'Customers'>;
+const props = {} as RootStackScreenProps<'Customers'>;
 
 describe('CustomersScreen', () => {
   beforeEach(() => {

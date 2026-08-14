@@ -7,14 +7,15 @@ import {
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../api/customerService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
-import type { MainTabScreenProps } from '../types/navigation';
+import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer, Address } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
 
-type Props = MainTabScreenProps<'Customers'>;
+type Props = RootStackScreenProps<'Customers'>;
 
 interface CustomerForm {
   name: string;
@@ -125,7 +126,7 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
       </KeyboardAvoidingView>
       {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
           is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }

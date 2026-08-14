@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, KeyboardTypeOptions, Modal
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
-import { updateProfile, changePassword } from '../api/authService';
 import { getGarage, updateGarage, getBranchStaff } from '../api/garageService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
+import { Field, PrimaryBtn } from '../components/FormControls';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Garage, Role, User } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
@@ -38,62 +39,6 @@ function SectionCard({ title, icon, children, action }: SectionCardProps) {
       </View>
       <View style={styles.cardBody}>{children}</View>
     </View>
-  );
-}
-
-interface FieldProps {
-  label: string;
-  value: string;
-  onChangeText?: (v: string) => void;
-  placeholder?: string;
-  keyboardType?: KeyboardTypeOptions;
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  editable?: boolean;
-  secureTextEntry?: boolean;
-}
-
-function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, editable = true, secureTextEntry }: FieldProps) {
-  const [show, setShow] = useState(false);
-  const isPwd = secureTextEntry !== undefined;
-  return (
-    <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.inputRow, !editable && styles.inputDimmed]}>
-        <TextInput
-          style={styles.inputField}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="#9ca3af"
-          keyboardType={keyboardType || 'default'}
-          autoCapitalize={autoCapitalize || 'sentences'}
-          editable={editable}
-          secureTextEntry={isPwd ? !show : false}
-        />
-        {isPwd && (
-          <TouchableOpacity onPress={() => setShow(s => !s)} style={{ padding: 4 }}>
-            <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-}
-
-interface PrimaryBtnProps {
-  label: string;
-  icon: IconName;
-  onPress: () => void;
-  loading?: boolean;
-}
-
-function PrimaryBtn({ label, icon, onPress, loading }: PrimaryBtnProps) {
-  return (
-    <TouchableOpacity style={[styles.primaryBtn, loading && { opacity: 0.6 }]} onPress={onPress} disabled={loading} activeOpacity={0.8}>
-      {loading ? <ActivityIndicator color="#fff" size="small" /> : (
-        <><Ionicons name={icon} size={17} color="#fff" /><Text style={styles.primaryBtnText}>{label}</Text></>
-      )}
-    </TouchableOpacity>
   );
 }
 
@@ -171,7 +116,7 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
       </KeyboardAvoidingView>
       {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
           is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }
@@ -315,7 +260,7 @@ function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm 
           </View>
         </View>
       </KeyboardAvoidingView>
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }
@@ -356,17 +301,6 @@ export default function SettingsScreen({ navigation }: Props) {
   const [garageState, setGarageState] = useState('');
   const [garagePincode, setGaragePincode] = useState('');
   const [savingGarage, setSavingGarage] = useState(false);
-
-  // Profile state
-  const [profileName, setProfileName] = useState(user?.name || '');
-  const [profilePhone, setProfilePhone] = useState(user?.phone || '');
-  const [savingProfile, setSavingProfile] = useState(false);
-
-  // Password state
-  const [currentPwd, setCurrentPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
-  const [savingPwd, setSavingPwd] = useState(false);
 
   const populateGarageForm = (g: Garage) => {
     setGarageName(g.name || '');
@@ -418,31 +352,6 @@ export default function SettingsScreen({ navigation }: Props) {
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to update garage') });
     } finally { setSavingGarage(false); }
-  };
-
-  const handleSaveProfile = async () => {
-    if (!profileName.trim()) { Toast.show({ type: 'error', text1: 'Name cannot be empty' }); return; }
-    setSavingProfile(true);
-    try {
-      await updateProfile({ name: profileName.trim(), phone: profilePhone.trim() });
-      Toast.show({ type: 'success', text1: 'Profile updated!' });
-    } catch (e) {
-      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to update profile') });
-    } finally { setSavingProfile(false); }
-  };
-
-  const handleChangePassword = async () => {
-    if (!currentPwd || !newPwd || !confirmPwd) { Toast.show({ type: 'error', text1: 'Please fill all fields' }); return; }
-    if (newPwd.length < 6) { Toast.show({ type: 'error', text1: 'Password must be at least 6 characters' }); return; }
-    if (newPwd !== confirmPwd) { Toast.show({ type: 'error', text1: 'Passwords do not match' }); return; }
-    setSavingPwd(true);
-    try {
-      await changePassword({ currentPassword: currentPwd, newPassword: newPwd });
-      Toast.show({ type: 'success', text1: 'Password changed!' });
-      setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
-    } catch (e) {
-      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to change password') });
-    } finally { setSavingPwd(false); }
   };
 
   const handleLogout = () => {
@@ -573,21 +482,29 @@ export default function SettingsScreen({ navigation }: Props) {
           <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
         </TouchableOpacity>
 
-        {/* ── MY PROFILE ── */}
-        <SectionCard title="Edit My Profile" icon="person-outline">
-          <Field label="Full Name" value={profileName} onChangeText={setProfileName} placeholder="Your name" />
-          <Field label="Email" value={user?.email || ''} placeholder="Email" editable={false} keyboardType="email-address" autoCapitalize="none" />
-          <Field label="Phone Number" value={profilePhone} onChangeText={setProfilePhone} placeholder="Phone number" keyboardType="phone-pad" autoCapitalize="none" />
-          <PrimaryBtn label="Save Changes" icon="save-outline" onPress={handleSaveProfile} loading={savingProfile} />
-        </SectionCard>
+        {/* ── MY PROFILE SHORTCUT ── */}
+        <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('EditProfile')}>
+          <View style={styles.staffShortcutLeft}>
+            <View style={styles.staffShortcutIcon}><Ionicons name="person-outline" size={22} color="#3b5ff8" /></View>
+            <View>
+              <Text style={styles.staffShortcutTitle}>Edit My Profile</Text>
+              <Text style={styles.staffShortcutSub}>Update your name and phone number</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+        </TouchableOpacity>
 
-        {/* ── CHANGE PASSWORD ── */}
-        <SectionCard title="Change Password" icon="lock-closed-outline">
-          <Field label="Current Password" value={currentPwd} onChangeText={setCurrentPwd} placeholder="Current password" secureTextEntry autoCapitalize="none" />
-          <Field label="New Password" value={newPwd} onChangeText={setNewPwd} placeholder="Min. 6 characters" secureTextEntry autoCapitalize="none" />
-          <Field label="Confirm New Password" value={confirmPwd} onChangeText={setConfirmPwd} placeholder="Re-enter new password" secureTextEntry autoCapitalize="none" />
-          <PrimaryBtn label="Update Password" icon="key-outline" onPress={handleChangePassword} loading={savingPwd} />
-        </SectionCard>
+        {/* ── CHANGE PASSWORD SHORTCUT ── */}
+        <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('ChangePassword')}>
+          <View style={styles.staffShortcutLeft}>
+            <View style={styles.staffShortcutIcon}><Ionicons name="lock-closed-outline" size={22} color="#3b5ff8" /></View>
+            <View>
+              <Text style={styles.staffShortcutTitle}>Change Password</Text>
+              <Text style={styles.staffShortcutSub}>Update your account password</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+        </TouchableOpacity>
 
         {/* ── APP INFO ── */}
         <SectionCard title="App Info" icon="information-circle-outline">
@@ -700,22 +617,8 @@ const styles = StyleSheet.create({
   staffShortcutSub: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
 
   // Form
-  fieldWrap: { marginBottom: 14 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  inputRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12,
-  },
-  inputDimmed: { opacity: 0.55 },
-  inputField: { flex: 1, height: 44, fontSize: 15, color: '#1f2937' },
   row: { flexDirection: 'row' },
   subLabel: { fontSize: 13, fontWeight: '700', color: '#6b7280', marginBottom: 8, marginTop: 4 },
-
-  primaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 13, marginTop: 6,
-  },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
 
   // Info display rows
   infoRow: {
