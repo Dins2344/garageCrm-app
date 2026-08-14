@@ -1,13 +1,23 @@
 import api from './apiInterceptor';
-import type { Garage, User } from '../types/models';
+import type { Address, Garage, GarageSettings, User } from '../types/models';
 import type { ApiItemResponse } from '../types/api';
+
+/**
+ * The API merges `settings` and `address` key-by-key (dotted-path `$set`), so
+ * a caller may send just the sub-keys it owns and the rest are preserved.
+ * `Partial<Garage>` alone would wrongly demand a complete sub-document.
+ */
+export type GarageUpdatePayload = Partial<Omit<Garage, 'settings' | 'address'>> & {
+  settings?: Partial<GarageSettings>;
+  address?: Partial<Address>;
+};
 
 export const getGarage = async (): Promise<ApiItemResponse<Garage>> => {
   const res = await api.get('/garage');
   return res.data;
 };
 
-export const updateGarage = async (data: Partial<Garage>): Promise<ApiItemResponse<Garage>> => {
+export const updateGarage = async (data: GarageUpdatePayload): Promise<ApiItemResponse<Garage>> => {
   const res = await api.put('/garage', data);
   return res.data;
 };

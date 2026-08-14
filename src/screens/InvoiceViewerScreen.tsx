@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useGarage } from '../context/GarageContext';
+import { formatMoney, formatNumber, formatDate } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Platform, StatusBar, SafeAreaView
 } from 'react-native';
@@ -18,6 +20,8 @@ import { getErrorMessage } from '../utils/errors';
 type Props = RootStackScreenProps<'InvoiceViewer'>;
 
 export default function InvoiceViewerScreen({ route, navigation }: Props) {
+  const { locale } = useGarage();
+  const money = (n?: number) => formatMoney(n, locale);
   const { invoiceId } = route.params;
   const { hasRole } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -121,12 +125,10 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
     }
   };
 
-  const fmt = (n?: number) => '₹' + (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n?: number) => money(n);
 
-  const fmtDate = (d?: string | null) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
+  const fmtDate = (d?: string | null) =>
+    d ? formatDate(d, locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
   if (loading) {
     return (
@@ -254,7 +256,7 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
               {vehicle?.year ? ` (${vehicle.year})` : ''}
             </Text>
             {jobCard?.odometerAtIntake !== undefined && jobCard?.odometerAtIntake !== null && (
-              <Text style={s.cardSub}>Kilometers Run: {jobCard.odometerAtIntake.toLocaleString('en-IN')} km</Text>
+              <Text style={s.cardSub}>Kilometers Run: {formatNumber(jobCard.odometerAtIntake, locale)} km</Text>
             )}
           </View>
         </View>
@@ -304,7 +306,8 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
             </View>
           )}
           <View style={s.totalsRow}>
-            <Text style={s.totalsLabel}>Tax ({invoice.taxRate ?? 18}%)</Text>
+            {/* `?? 0`, never `?? 18`: a zero-tax country would otherwise show a fabricated 18% line on a real invoice. */}
+            <Text style={s.totalsLabel}>{locale.taxLabel} ({invoice.taxRate ?? 0}%)</Text>
             <Text style={s.totalsValue}>{fmt(invoice.taxAmount)}</Text>
           </View>
           <View style={s.totalsDivider} />

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, ComponentProps } from 'react';
+import { useGarage } from '../context/GarageContext';
+import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   ActivityIndicator, Modal, KeyboardAvoidingView, Platform, KeyboardTypeOptions,
@@ -269,6 +271,8 @@ interface ComplaintDraft {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CreateJobCardScreen({ navigation }: Props) {
+  const { locale } = useGarage();
+  const money = (n?: number) => formatMoney(n, locale);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -595,7 +599,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                       <Ionicons name="calendar-outline" size={16} color={expectedDeliveryDate ? '#1f2937' : '#9ca3af'} />
                       <Text style={{ fontSize: 14, color: expectedDeliveryDate ? '#1f2937' : '#9ca3af', flex: 1 }}>
                         {expectedDeliveryDate
-                          ? expectedDeliveryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          ? fmtDate(expectedDeliveryDate, locale, { day: '2-digit', month: 'short', year: 'numeric' })
                           : 'Select date'}
                       </Text>
                       {expectedDeliveryDate && (

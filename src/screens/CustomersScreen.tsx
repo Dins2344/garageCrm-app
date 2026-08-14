@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
@@ -133,7 +134,7 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
 
 export default function CustomersScreen(_props: Props) {
   const { hasRole } = useAuth();
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -191,7 +192,7 @@ export default function CustomersScreen(_props: Props) {
           <Text style={s.customerName}>{c.name}</Text>
           <Text style={s.customerSub}>{c.phone}{c.email ? ` · ${c.email}` : ''}</Text>
         </View>
-        <Text style={s.spentText}>₹{(c.totalSpent || 0).toLocaleString('en-IN')}</Text>
+        <Text style={s.spentText}>{formatMoney(c.totalSpent, locale)}</Text>
       </View>
       <View style={s.cardFooter}>
         <View style={s.metaChip}><Ionicons name="car-outline" size={13} color="#6b7280" /><Text style={s.metaChipText}>{c.vehicles?.length || 0} vehicles</Text></View>

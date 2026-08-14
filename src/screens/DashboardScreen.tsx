@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getDashboardStats, DashboardStats } from '../api/dashboardService';
@@ -40,7 +41,7 @@ export default function DashboardScreen(_props: Props) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
 
   const fetchStats = async () => {
     try {
@@ -79,7 +80,7 @@ export default function DashboardScreen(_props: Props) {
     );
   }
 
-  const formatCurrency = (amount?: number) => `₹${(amount || 0).toLocaleString('en-IN')}`;
+  const formatCurrency = (amount?: number) => formatMoney(amount, locale);
 
   const weeklyRevenue = stats?.weeklyRevenue || [];
   const maxWeekly = Math.max(1, ...weeklyRevenue.map(d => d.revenue));
@@ -111,7 +112,7 @@ export default function DashboardScreen(_props: Props) {
                 return (
                   <View key={i} style={styles.barCol}>
                     <Text style={styles.barValue} numberOfLines={1}>
-                      {d.revenue > 0 ? `₹${Math.round(d.revenue / 1000)}k` : ''}
+                      {d.revenue > 0 ? `${locale.currency} ${Math.round(d.revenue / 1000)}k` : ''}
                     </Text>
                     <View style={styles.barTrack}>
                       <View style={[styles.bar, { height: barHeight }]} />

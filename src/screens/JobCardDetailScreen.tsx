@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getJobCard, updateJobCard, approveJobCardEstimation } from '../api/jobCardService';
@@ -18,7 +19,7 @@ type Props = RootStackScreenProps<'JobCardDetail'>;
 export default function JobCardDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const { hasRole } = useAuth();
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
   const [jobCard, setJobCard] = useState<JobCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -214,14 +215,14 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               {!!jobCard?.odometerAtIntake && jobCard.odometerAtIntake > 0 && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Odometer</Text>
-                  <Text style={styles.detailValue}>{jobCard.odometerAtIntake?.toLocaleString('en-IN')} km</Text>
+                  <Text style={styles.detailValue}>{formatNumber(jobCard.odometerAtIntake, locale)} km</Text>
                 </View>
               )}
               {jobCard?.expectedDeliveryDate && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Expected Delivery</Text>
                   <Text style={styles.detailValue}>
-                    {new Date(jobCard.expectedDeliveryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {fmtDate(jobCard.expectedDeliveryDate, locale, { day: '2-digit', month: 'short', year: 'numeric' })}
                   </Text>
                 </View>
               )}
@@ -280,9 +281,9 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                     <View key={i} style={styles.estItemRow}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.estItemName}>{p.partName}</Text>
-                        <Text style={styles.estItemMeta}>{p.quantity} × ₹{p.unitPrice?.toLocaleString('en-IN')}</Text>
+                        <Text style={styles.estItemMeta}>{p.quantity} × {formatMoney(p.unitPrice, locale)}</Text>
                       </View>
-                      <Text style={styles.estItemTotal}>₹{p.total?.toLocaleString('en-IN')}</Text>
+                      <Text style={styles.estItemTotal}>{formatMoney(p.total, locale)}</Text>
                     </View>
                   ))}
                 </View>
@@ -296,9 +297,9 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                     <View key={i} style={styles.estItemRow}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.estItemName}>{l.description}</Text>
-                        <Text style={styles.estItemMeta}>{l.hours}h × ₹{l.ratePerHour?.toLocaleString('en-IN')}/hr</Text>
+                        <Text style={styles.estItemMeta}>{l.hours}h × {formatMoney(l.ratePerHour, locale)}/hr</Text>
                       </View>
-                      <Text style={styles.estItemTotal}>₹{l.total?.toLocaleString('en-IN')}</Text>
+                      <Text style={styles.estItemTotal}>{formatMoney(l.total, locale)}</Text>
                     </View>
                   ))}
                 </View>
@@ -309,22 +310,22 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               {/* Summary totals */}
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Subtotal</Text>
-                <Text style={styles.summaryValue}>₹{(est.subtotal || 0).toLocaleString('en-IN')}</Text>
+                <Text style={styles.summaryValue}>{formatMoney(est.subtotal, locale)}</Text>
               </View>
               {est.discount > 0 && (
                 <View style={styles.summaryRow}>
                   <Text style={[styles.summaryLabel, { color: '#10b981' }]}>Discount</Text>
-                  <Text style={[styles.summaryValue, { color: '#10b981' }]}>-₹{est.discount?.toLocaleString('en-IN')}</Text>
+                  <Text style={[styles.summaryValue, { color: '#10b981' }]}>−{formatMoney(est.discount, locale)}</Text>
                 </View>
               )}
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Tax ({est.taxRate || 0}%)</Text>
-                <Text style={styles.summaryValue}>₹{(est.taxAmount || 0).toLocaleString('en-IN')}</Text>
+                <Text style={styles.summaryLabel}>{locale.taxLabel} ({est.taxRate || 0}%)</Text>
+                <Text style={styles.summaryValue}>{formatMoney(est.taxAmount, locale)}</Text>
               </View>
               <View style={styles.divider} />
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabelBold}>Grand Total</Text>
-                <Text style={styles.summaryValueBold}>₹{(est.grandTotal || 0).toLocaleString('en-IN')}</Text>
+                <Text style={styles.summaryValueBold}>{formatMoney(est.grandTotal, locale)}</Text>
               </View>
 
               {/* Approved badge */}

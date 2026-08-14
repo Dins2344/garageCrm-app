@@ -1,4 +1,6 @@
 import React, { useState, useEffect, ComponentProps } from 'react';
+import { useGarage } from '../context/GarageContext';
+import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator,
   TouchableOpacity, RefreshControl
@@ -48,6 +50,8 @@ function InfoRow({ icon, label, value, valueColor }: InfoRowProps) {
 }
 
 export default function VehicleDetailScreen({ route, navigation }: Props) {
+  const { locale } = useGarage();
+  const money = (n?: number) => formatMoney(n, locale);
   const { id } = route.params;
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [jobCards, setJobCards] = useState<JobCard[]>([]);
@@ -135,7 +139,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
         <InfoRow icon="calendar-outline" label="Year" value={vehicle.year?.toString()} />
         <InfoRow icon="hardware-chip-outline" label="Engine Number" value={vehicle.engineNumber} />
         <InfoRow icon="barcode-outline" label="Chassis Number" value={vehicle.chassisNumber} />
-        <InfoRow icon="speedometer-outline" label="Current Odometer" value={vehicle.currentOdometerReading ? `${vehicle.currentOdometerReading.toLocaleString('en-IN')} km` : null} />
+        <InfoRow icon="speedometer-outline" label="Current Odometer" value={vehicle.currentOdometerReading ? `${formatNumber(vehicle.currentOdometerReading, locale)} km` : null} />
       </View>
 
       {/* Owner Details */}
@@ -174,7 +178,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
                 <View style={styles.jobCardLeft}>
                   <Text style={styles.jobCardNumber}>{jc.jobCardNumber}</Text>
                   <Text style={styles.jobCardDate}>
-                    {jc.createdAt ? new Date(jc.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    {jc.createdAt ? fmtDate(jc.createdAt, locale, { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                   </Text>
                 </View>
                 <View style={styles.jobCardRight}>
@@ -183,7 +187,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
                   </View>
                   {jc.estimation?.grandTotal ? (
                     <Text style={styles.jobCardAmount}>
-                      ₹{jc.estimation.grandTotal.toLocaleString('en-IN')}
+                      {money(jc.estimation.grandTotal)}
                     </Text>
                   ) : null}
                   <Ionicons name="chevron-forward" size={16} color="#d1d5db" style={{ marginTop: 4 }} />

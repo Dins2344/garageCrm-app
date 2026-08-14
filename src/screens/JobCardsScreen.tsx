@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator, ListRenderItem } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getJobCards } from '../api/jobCardService';
@@ -25,7 +26,7 @@ const STATUS_COLORS: Partial<Record<JobStatus, string>> = {
 };
 
 export default function JobCardsScreen({ navigation }: Props) {
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
   const [jobCards, setJobCards] = useState<JobCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -121,7 +122,7 @@ export default function JobCardsScreen({ navigation }: Props) {
         </View>
         <View style={[styles.row, { marginTop: 8 }]}>
           <Text style={styles.priceText}>
-            Est: {item.estimation?.grandTotal ? `₹${item.estimation.grandTotal.toLocaleString('en-IN')}` : 'Pending'}
+            Est: {item.estimation?.grandTotal ? formatMoney(item.estimation.grandTotal, locale) : 'Pending'}
           </Text>
         </View>
       </View>

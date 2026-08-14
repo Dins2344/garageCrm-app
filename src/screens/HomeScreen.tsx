@@ -1,4 +1,5 @@
 import React, { useState, useCallback, ComponentProps } from 'react';
+import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, TouchableOpacity,
   Modal, SafeAreaView, StatusBar, Platform
@@ -101,7 +102,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { user, hasRole } = useAuth();
-  const { activeGarageId, garages, switchGarage } = useGarage();
+  const { activeGarageId, garages, switchGarage, locale } = useGarage();
 
   const fetchDashboard = async () => {
     try {
@@ -142,7 +143,7 @@ export default function HomeScreen({ navigation }: Props) {
     );
   }
 
-  const formatCurrency = (amount?: number) => `₹${(amount || 0).toLocaleString('en-IN')}`;
+  const formatCurrency = (amount?: number) => formatMoney(amount, locale);
 
   const activeGarageName = garages.find(g => g._id === activeGarageId)?.name;
   const pendingEstimations = stats?.overview?.pendingEstimations || 0;

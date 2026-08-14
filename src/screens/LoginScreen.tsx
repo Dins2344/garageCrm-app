@@ -11,6 +11,9 @@ import { toastConfig } from '../components/toastConfig';
 import { getErrorMessage } from '../utils/errors';
 import { forgotPassword } from '../api/authService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
+import BottomSheetPicker from '../components/BottomSheetPicker';
+import { useCountries } from '../hooks/useCountries';
+import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
 
 type Props = RootStackScreenProps<'Login'>;
@@ -225,6 +228,29 @@ export default function LoginScreen(_props: Props) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [garageName, setGarageName] = useState('');
+  // India by default, matching the server: every garage created before the
+  // picker existed is Indian, and it stays the common case.
+  const [country, setCountry] = useState(DEFAULT_LOCALE.country);
+  const [timezone, setTimezone] = useState('');
+
+  const { countries } = useCountries();
+  const selectedCountry = countries.find(c => c.code === country);
+  const timezoneOptions = timezoneChoicesFor(country);
+  // Only ask for a zone when the country genuinely spans several. The server
+  // ignores it otherwise, so hiding the field keeps the form honest.
+  const needsTimezone = (selectedCountry?.requiresTimezoneChoice ?? false) && timezoneOptions.length > 0;
+  // Until the list loads, offer the default so the picker is never empty and
+  // signup is never blocked by a failed reference-data fetch.
+  const countryOptions = countries.length
+    ? countries.map(c => ({ value: c.code, label: c.name }))
+    : [{ value: DEFAULT_LOCALE.country, label: 'India' }];
+
+  const handleCountryChange = (value: string) => {
+    setCountry(value);
+    // Clear any zone picked for the previous country — 'America/Denver' on a
+    // garage that just switched to Australia would be worse than no value.
+    setTimezone('');
+  };
 
   const switchMode = (m: 'login' | 'register') => {
     setMode(m);
@@ -252,7 +278,12 @@ export default function LoginScreen(_props: Props) {
   // ── Register step 1 → 2 ──
   const handleNextStep = () => {
     if (!name.trim()) { Toast.show({ type: 'error', text1: 'Please enter your name' }); return; }
-    if (!phone.trim() || phone.length < 10) { Toast.show({ type: 'error', text1: 'Enter a valid 10-digit phone number' }); return; }
+    // Presence only. The old `phone.length < 10` check was India's format
+    // hardcoded into the client, and it rejects valid numbers elsewhere (a
+    // Singapore mobile is 8 digits). The server validates against the chosen
+    // country and returns a message naming it.
+    if (!phone.trim()) { Toast.show({ type: 'error', text1: 'Please enter your phone number' }); return; }
+    if (needsTimezone && !timezone) { Toast.show({ type: 'error', text1: 'Please select your timezone' }); return; }
     if (!email.trim()) { Toast.show({ type: 'error', text1: 'Please enter your email' }); return; }
     if (!password || password.length < 6) { Toast.show({ type: 'error', text1: 'Password must be at least 6 characters' }); return; }
     setStep(2);
@@ -263,7 +294,11 @@ export default function LoginScreen(_props: Props) {
     if (!garageName.trim()) { Toast.show({ type: 'error', text1: 'Please enter your garage name' }); return; }
     setLoading(true);
     try {
-      await register({ name: name.trim(), email: email.trim(), phone: phone.trim(), password, garageName: garageName.trim() });
+      await register({
+        name: name.trim(), email: email.trim(), phone: phone.trim(), password,
+        garageName: garageName.trim(), country,
+        ...(needsTimezone && timezone ? { timezone } : {})
+      });
       Toast.show({ type: 'success', text1: 'Garage registered! Welcome 🎉' });
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Registration failed') });
@@ -352,8 +387,30 @@ export default function LoginScreen(_props: Props) {
 
               <Field label="Full Name *" value={name} onChangeText={setName}
                 placeholder="John Doe" icon="person-outline" />
+              {/* Country comes before phone on purpose: it decides what a
+                  valid phone number looks like, so the placeholder and the
+                  check below both follow it. */}
+              <BottomSheetPicker
+                label="Country"
+                required
+                searchable
+                options={countryOptions}
+                selectedValue={country}
+                onValueChange={handleCountryChange}
+              />
+              {needsTimezone && (
+                <BottomSheetPicker
+                  label="Timezone"
+                  required
+                  options={timezoneOptions.map(tz => ({ value: tz.value, label: tz.label }))}
+                  selectedValue={timezone}
+                  onValueChange={setTimezone}
+                  placeholder="Select your timezone"
+                />
+              )}
               <Field label="Phone Number *" value={phone} onChangeText={setPhone}
-                placeholder="9876543210" keyboardType="phone-pad" autoCapitalize="none" icon="call-outline" />
+                placeholder={selectedCountry?.phoneExample ?? DEFAULT_LOCALE.phoneExample}
+                keyboardType="phone-pad" autoCapitalize="none" icon="call-outline" />
               <Field label="Email Address *" value={email} onChangeText={setEmail}
                 placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
               <Field label="Password *" value={password} onChangeText={setPassword}
