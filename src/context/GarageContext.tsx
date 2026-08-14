@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { listBranches, createBranch } from '../api/garageService';
+import { listBranches, createBranch, deleteBranch, type DeleteBranchPayload } from '../api/garageService';
 import { useAuth } from './AuthContext';
 import type { Garage } from '../types/models';
 
@@ -17,6 +17,7 @@ interface GarageContextValue {
   garagesLoading: boolean;
   switchGarage: (garageId: string) => Promise<void>;
   addBranch: (data: Pick<Garage, 'name' | 'phone'>) => Promise<Garage>;
+  removeBranch: (garageId: string, payload?: DeleteBranchPayload) => Promise<void>;
 }
 
 const GarageContext = createContext<GarageContextValue | null>(null);
@@ -80,8 +81,19 @@ export function GarageProvider({ children }: { children: ReactNode }) {
     return garage;
   };
 
+  const removeBranch = async (garageId: string, payload?: DeleteBranchPayload): Promise<void> => {
+    const { data } = await deleteBranch(garageId, payload);
+    setOwnerGarages(prev => prev.filter(g => g._id !== garageId));
+    // If the deleted branch was active, follow the backend's fallback (the
+    // owner's own `garage` ref was just repointed there too) so the app
+    // doesn't keep sending X-Garage-Id for a branch that no longer exists.
+    if (garageId === ownerActiveGarageId) {
+      await switchGarage(data.fallbackGarageId);
+    }
+  };
+
   return (
-    <GarageContext.Provider value={{ garages, activeGarageId, garagesLoading, switchGarage, addBranch }}>
+    <GarageContext.Provider value={{ garages, activeGarageId, garagesLoading, switchGarage, addBranch, removeBranch }}>
       {children}
       {switching && (
         <View style={styles.overlay} pointerEvents="auto">
