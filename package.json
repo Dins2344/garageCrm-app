@@ -2,6 +2,10 @@
   "name": "mobile",
   "version": "1.0.0",
   "main": "index.ts",
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",

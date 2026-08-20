@@ -808,6 +808,7 @@ npm run test:watch # watch mode while developing
 
 - [ ] No emoji anywhere — UI text, toasts, comments, or commit messages
 - [ ] No inline storage keys, external URLs, or magic numbers — import from `constants.ts`
+- [ ] Dependencies installed under Node 20 / npm 10 (`nvm use`) — verify with `npx -y npm@10 ci --dry-run`
 - [ ] No new component that duplicates one already in `src/components/`
 - [ ] No `console.log` statements
 - [ ] All colors use documented hex palette (no named colors or arbitrary hex)
