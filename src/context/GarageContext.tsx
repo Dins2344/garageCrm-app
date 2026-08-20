@@ -4,9 +4,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { listBranches, createBranch, deleteBranch, getGarage, type DeleteBranchPayload } from '../api/garageService';
 import { useAuth } from './AuthContext';
 import { DEFAULT_LOCALE } from '../utils/locale';
+import { ACTIVE_GARAGE_KEY } from '../utils/constants';
 import type { Garage, ResolvedLocale } from '../types/models';
 
-const ACTIVE_GARAGE_KEY = 'garagepulse_active_garage';
+
 // Minimum time the "switching branch" overlay stays up, so screens that
 // refetch on focus (see the garage-scoped screens' useFocusEffect deps on
 // activeGarageId) have a real chance to complete before it clears.

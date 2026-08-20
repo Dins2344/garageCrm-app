@@ -204,11 +204,14 @@ const forgotPwdStyles = StyleSheet.create({
 });
 
 // ─── Features list (shown on register) ────────────────────────────────────────
-const FEATURES = [
-  { icon: '📋', label: 'Job Card Management' },
-  { icon: '💰', label: 'Billing & Invoices' },
-  { icon: '📦', label: 'Inventory Tracking' },
-  { icon: '👥', label: 'Staff Management' },
+// Ionicons rather than emoji: emoji render differently on every platform and
+// OS version, and at pill size they read as clip art next to the rest of the
+// app's icon set.
+const FEATURES: { icon: IconName; label: string }[] = [
+  { icon: 'clipboard-outline', label: 'Job Card Management' },
+  { icon: 'card-outline', label: 'Billing & Invoices' },
+  { icon: 'cube-outline', label: 'Inventory Tracking' },
+  { icon: 'people-outline', label: 'Staff Management' },
 ];
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
@@ -267,7 +270,7 @@ export default function LoginScreen(_props: Props) {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      Toast.show({ type: 'success', text1: 'Welcome back! 👋' });
+      Toast.show({ type: 'success', text1: 'Welcome back!' });
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Login failed') });
     } finally {
@@ -299,7 +302,7 @@ export default function LoginScreen(_props: Props) {
         garageName: garageName.trim(), country,
         ...(needsTimezone && timezone ? { timezone } : {})
       });
-      Toast.show({ type: 'success', text1: 'Garage registered! Welcome 🎉' });
+      Toast.show({ type: 'success', text1: 'Garage registered!' });
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Registration failed') });
     } finally {
@@ -335,7 +338,7 @@ export default function LoginScreen(_props: Props) {
           {/* ──── LOGIN FORM ──── */}
           {mode === 'login' && (
             <>
-              <Text style={styles.cardTitle}>Welcome back 👋</Text>
+              <Text style={styles.cardTitle}>Welcome back</Text>
               <Text style={styles.cardSub}>Enter your credentials to continue</Text>
 
               <Field label="Email Address" value={email} onChangeText={setEmail}
@@ -448,7 +451,7 @@ export default function LoginScreen(_props: Props) {
                 </View>
               </View>
 
-              <Text style={styles.cardTitle}>Name your garage 🏪</Text>
+              <Text style={styles.cardTitle}>Name your garage</Text>
               <Text style={styles.cardSub}>This will appear on all your documents</Text>
 
               <Field label="Garage Name *" value={garageName} onChangeText={setGarageName}
@@ -460,7 +463,7 @@ export default function LoginScreen(_props: Props) {
                 <View style={styles.featureGrid}>
                   {FEATURES.map((f, i) => (
                     <View key={i} style={styles.featurePill}>
-                      <Text style={styles.featureEmoji}>{f.icon}</Text>
+                      <Ionicons name={f.icon} size={14} color="#3b5ff8" />
                       <Text style={styles.featureText}>{f.label}</Text>
                     </View>
                   ))}
@@ -580,7 +583,6 @@ const styles = StyleSheet.create({
   featuresLabel: { fontSize: 12, fontWeight: '700', color: '#9ca3af', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   featurePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', borderRadius: 160, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#e5e7eb' },
-  featureEmoji: { fontSize: 14 },
   featureText: { fontSize: 12, fontWeight: '600', color: '#374151' },
 
   footer: { textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 24, paddingHorizontal: 24 },

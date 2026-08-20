@@ -5,7 +5,7 @@
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 mobile/
@@ -39,6 +39,9 @@ mobile/
 │   │   ├── api.ts             # Generic API response envelope types
 │   │   └── navigation.ts      # RootStackParamList / MainTabParamList — typed routes & params
 │   └── utils/
+│       ├── constants.ts     # Storage keys, limits, branding
+│       ├── format.ts        # Locale-aware money/date/number formatting
+│       ├── locale.ts        # DEFAULT_LOCALE + timezone choices
 │       └── errors.ts          # getErrorMessage() — typed Axios error extraction (no `any`)
 ├── App.tsx                    # Root component (providers + navigator)
 ├── index.ts                   # Expo entry point
@@ -67,7 +70,7 @@ Every `.tsx`/`.ts` file may have a colocated `*.test.tsx`/`*.test.ts` sibling �
 
 ---
 
-## 🧱 Architecture Rules
+## Architecture Rules
 
 ### Layer Separation
 
@@ -108,7 +111,7 @@ App.tsx (providers: AuthProvider, SafeAreaProvider, Toast)
 
 ---
 
-## 📛 Naming Conventions
+## Naming Conventions
 
 ### Files
 
@@ -126,23 +129,23 @@ App.tsx (providers: AuthProvider, SafeAreaProvider, Toast)
 ### Functions & Variables
 
 ```javascript
-// ✅ Screens are PascalCase default exports
+// Screens are PascalCase default exports
 export default function DashboardScreen() { ... }
 
-// ✅ Event handlers
+// Event handlers
 const handleSubmit = () => { ... };
 const handleDeleteCustomer = (id) => { ... };
 
-// ✅ Data fetching functions
+// Data fetching functions
 const fetchDashboard = async () => { ... };
 const loadCustomers = async () => { ... };
 
-// ✅ Boolean state
+// Boolean state
 const [loading, setLoading] = useState(true);
 const [refreshing, setRefreshing] = useState(false);
 const [isModalVisible, setIsModalVisible] = useState(false);
 
-// ✅ Navigation names match screen names
+// Navigation names match screen names
 navigation.navigate('JobCardDetail', { id: jobCard._id });
 ```
 
@@ -167,14 +170,14 @@ Every route above (and its params) is registered in `src/types/navigation.ts`'s 
 
 ---
 
-## 🎨 Styling Rules
+## Styling Rules
 
 ### StyleSheet at Bottom of File
 
 All styles MUST use `StyleSheet.create()` defined at the bottom of the component file.
 
 ```javascript
-// ✅ Correct — styles at bottom
+// Correct — styles at bottom
 export default function DashboardScreen() {
   return (
     <View style={styles.container}>
@@ -196,7 +199,7 @@ const styles = StyleSheet.create({
   },
 });
 
-// ❌ Wrong — inline styles
+// Wrong — inline styles
 <View style={{ flex: 1, padding: 16, backgroundColor: '#f9fafb' }}>
 ```
 
@@ -221,10 +224,10 @@ Use these exact hex values to maintain visual consistency with the web frontend:
 | **Purple Accent**  | `#8b5cf6`  | Charts, secondary accent       |
 
 ```javascript
-// ✅ Use consistent color values
+// Use consistent color values
 <View style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}>
 
-// ❌ Don't use random colors
+// Don't use random colors
 <View style={{ backgroundColor: 'dodgerblue' }}>
 ```
 
@@ -293,7 +296,7 @@ sectionTitle: {
 
 ---
 
-## 📡 API Service Rules
+## API Service Rules
 
 ### Interceptor (`apiInterceptor.ts`)
 
@@ -315,7 +318,7 @@ export interface CustomerListParams {
   limit?: number;
 }
 
-// ✅ Named exports, one function per endpoint, typed params + envelope return
+// Named exports, one function per endpoint, typed params + envelope return
 export const getCustomers = async (params?: CustomerListParams): Promise<ApiListResponse<Customer>> => {
   const res = await api.get('/customers', { params });
   return res.data;
@@ -346,7 +349,7 @@ export const deleteCustomer = async (id: string): Promise<ApiMessageResponse> =>
 
 ---
 
-## 🧭 Navigation Rules
+## Navigation Rules
 
 ### Navigator Structure
 
@@ -381,10 +384,10 @@ AppNavigator
 - Navigation params should pass minimal data (preferably just `id`):
 
 ```javascript
-// ✅ Pass just the ID
+// Pass just the ID
 navigation.navigate('JobCardDetail', { id: jobCard._id });
 
-// ❌ Don't pass entire objects through navigation params
+// Don't pass entire objects through navigation params
 navigation.navigate('JobCardDetail', { jobCard: entireJobCardObject });
 ```
 
@@ -397,7 +400,7 @@ navigation.navigate('JobCardDetail', { jobCard: entireJobCardObject });
 
 ---
 
-## 🔄 Screen Patterns
+## Screen Patterns
 
 ### Standard Data-Fetching Screen
 
@@ -459,17 +462,17 @@ const styles = StyleSheet.create({ ... });
 ```javascript
 import Toast from 'react-native-toast-message';
 
-// ✅ Success after mutation
+// Success after mutation
 Toast.show({ type: 'success', text1: 'Customer created successfully' });
 
-// ✅ Error
+// Error
 Toast.show({ type: 'error', text1: 'Failed to load data' });
 
-// ✅ With subtitle
+// With subtitle
 Toast.show({ type: 'error', text1: 'Delete failed', text2: error.message });
 
-// ❌ Don't use Alert.alert() for routine feedback
-// ❌ Don't use console.log() for user-facing messages
+// Don't use Alert.alert() for routine feedback
+// Don't use console.log() for user-facing messages
 ```
 
 ### Pull-to-Refresh
@@ -497,7 +500,7 @@ Or for FlatList:
 
 ---
 
-## 🔐 Authentication Pattern
+## Authentication Pattern
 
 ### Context-Based Auth
 
@@ -525,7 +528,7 @@ The `IdleTimer` component wraps the app and auto-logs out after inactivity. It's
 
 ---
 
-## 🧹 Code Style
+## Code Style
 
 ### Module System
 - **ES Modules** (`import` / `export`) throughout the mobile app
@@ -542,7 +545,7 @@ The `IdleTimer` component wraps the app and auto-logs out after inactivity. It's
 ### Currency Formatting
 
 ```javascript
-// ✅ Consistent currency format matching the web app
+// Consistent currency format matching the web app
 const formatCurrency = (amount) => {
   return `₹${(amount || 0).toLocaleString('en-IN')}`;
 };
@@ -550,42 +553,175 @@ const formatCurrency = (amount) => {
 
 ---
 
-## 🚫 Anti-Patterns to Avoid
+## Constants — What Belongs in `utils/constants.ts`
+
+All app-wide constants live in `src/utils/constants.ts`.
+
+### What Goes Here:
+- AsyncStorage keys (`TOKEN_KEY`, `USER_KEY`, `ACTIVE_GARAGE_KEY`, `WEB_BANNER_DISMISSED_KEY`)
+- `ALL_STORAGE_KEYS` — the list logout clears
+- Limits and page sizes (`DEFAULT_PAGE_SIZE`, `DROPDOWN_FETCH_LIMIT`, `VEHICLE_HISTORY_LIMIT`)
+- Branding (`APP_NAME`)
+
+External URLs that come from an env var stay with their helper — see
+`WEB_APP_URL` in `utils/webApp.ts`.
+
+### What Does NOT Go Here:
+
+- **One-off screen copy.** A heading, button label, placeholder or toast used
+  in exactly one place reads better inline.
+- **Currency symbol, locale, tax labels, phone examples.** These resolve from
+  the garage's country at runtime through `utils/locale.ts` and
+  `utils/format.ts`.
+
+### Storage keys are the ones that bite
 
 ```javascript
-// ❌ Don't use inline styles for reusable patterns
+// Don't inline the key
+await AsyncStorage.getItem('garagepulse_token');
+
+// Import it
+import { TOKEN_KEY } from '../utils/constants';
+await AsyncStorage.getItem(TOKEN_KEY);
+```
+
+These were inlined 18 times across `apiInterceptor`, `AuthContext`,
+`GarageContext` and `InvoiceViewerScreen`. That is exactly how
+`garagepulse_web_banner_dismissed` came to be missing from logout's cleanup —
+the "More on the web" banner never reappeared, and on a shared garage device
+one person dismissing it hid it from everyone who logged in afterwards.
+
+**Logout clears `ALL_STORAGE_KEYS`, not a hand-written list.** When you add a
+new key, add it to that array and sign-out cleanup is handled:
+
+```javascript
+await AsyncStorage.multiRemove([...ALL_STORAGE_KEYS]);
+```
+
+A storage key must never be defined in a component file. `AuthContext`
+importing `WEB_BANNER_DISMISSED_KEY` from `WebAppBanner` was a layering
+inversion — constants do not depend on UI.
+
+---
+
+## No Emoji — Use Ionicons
+
+Emoji are not used anywhere in this app: not in screen text, section headings,
+toast messages, button labels, comments, or commit messages. They render from
+the platform font, so the same character looks different across Android
+versions and against iOS, and beside the app's Ionicons they read as clip art.
+
+`[emoji]` below stands in for a literal emoji character — this file stays free
+of them so a repo-wide scan finds zero hits.
+
+```javascript
+// Don't prefix UI strings with an emoji
+<Text style={s.cardTitle}>[emoji] Customer</Text>
+Toast.show({ type: 'success', text1: '[emoji] Job Card Created!' });
+
+// Use an Ionicon next to the text
+<View style={s.cardTitleRow}>
+  <Ionicons name="person-outline" size={16} color="#3b5ff8" />
+  <Text style={s.cardTitle}>Customer</Text>
+</View>
+Toast.show({ type: 'success', text1: 'Job Card Created!' });
+
+// Don't store emoji as data either — type the field as an icon name
+const FEATURES = [{ icon: '[emoji]', label: 'Job Card Management' }];
+const FEATURES: { icon: IconName; label: string }[] =
+  [{ icon: 'clipboard-outline', label: 'Job Card Management' }];
+```
+
+`IconName` is the standard alias for the Ionicons name union — most screens
+already declare it:
+
+```typescript
+type IconName = ComponentProps<typeof Ionicons>['name'];
+```
+
+---
+
+## Reuse Components Before Building New Ones
+
+This app has a small, deliberate component set. A new component written from
+React Native defaults looks obviously bolted on — square corners, hairline grey
+borders, system font weights — and quietly forks the design language.
+
+**Check these first:**
+
+| Need                          | Use                                  |
+| ----------------------------- | ------------------------------------ |
+| Dropdown / option list        | `BottomSheetPicker` (supports `searchable`) |
+| Text input with a label       | `Field` from `FormControls`          |
+| Primary action button         | `PrimaryBtn` from `FormControls`     |
+| Screen wrapper / max width    | `ResponsiveScreen`                   |
+| Job status progression        | `StatusStepper`                      |
+| Toast styling                 | `toastConfig`                        |
+
+**The order of preference:**
+
+1. Use the existing component.
+2. Add a prop to it, if it is nearly right.
+3. Only then write a new one — styled from the palette and shadow conventions
+   in **Styling Rules** above, never from defaults.
+
+```javascript
+// Don't hand-roll a picker when BottomSheetPicker exists
+<Modal>...custom option list...</Modal>
+
+// Don't create a second card style that almost matches the shared one
+card: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#ccc' }
+// Match the documented look: borderRadius 16-20, soft tinted shadow, no hard border
+```
+
+Two components that look 95% alike will drift apart, and that drift is what
+makes an app feel machine-assembled.
+
+---
+
+## Anti-Patterns to Avoid
+
+```javascript
+// Don't use emoji in UI text, toasts, or headings
+<Text style={s.cardTitle}>[emoji] Service Details</Text>
+// Use an Ionicon beside the text
+
+// Don't create a new component without checking components/ first
+// Reuse or extend — BottomSheetPicker, Field, PrimaryBtn, ResponsiveScreen
+
+// Don't use inline styles for reusable patterns
 <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
 // Use StyleSheet.create() instead
 
-// ❌ Don't use arbitrary color values
+// Don't use arbitrary color values
 <Text style={{ color: 'tomato' }}>
 // Use the documented hex palette
 
-// ❌ Don't pass complex objects through navigation params
+// Don't pass complex objects through navigation params
 navigation.navigate('Detail', { entireObject: {...} });
 // Pass IDs, fetch on the detail screen
 
-// ❌ Don't skip loading states
+// Don't skip loading states
 const [items, setItems] = useState([]);
 // Always show ActivityIndicator while fetching
 
-// ❌ Don't use console.log in committed code
+// Don't use console.log in committed code
 console.log('response:', data);
 // Remove before committing
 
-// ❌ Don't call API services inside components (only in screens)
+// Don't call API services inside components (only in screens)
 // Components receive data via props
 
-// ❌ Don't ignore RefreshControl — all list screens need pull-to-refresh
+// Don't ignore RefreshControl — all list screens need pull-to-refresh
 
-// ❌ Don't hardcode the API base URL
+// Don't hardcode the API base URL
 const api = axios.create({ baseURL: 'http://192.168.1.5:5000/api' });
 // Use EXPO_PUBLIC_API_URL environment variable
 ```
 
 ---
 
-## 📱 Platform-Specific Notes
+## Platform-Specific Notes
 
 ### Android Shadows
 Always include `elevation` alongside `shadow*` properties:
@@ -619,7 +755,7 @@ import { KeyboardAvoidingView, Platform } from 'react-native';
 
 ---
 
-## 🔷 TypeScript Conventions
+## TypeScript Conventions
 
 The whole mobile app is TypeScript (`strict: true` in `tsconfig.json`, extending `expo/tsconfig.base`). No new `.jsx`/`.js` files — everything is `.tsx`/`.ts`.
 
@@ -634,7 +770,7 @@ The whole mobile app is TypeScript (`strict: true` in `tsconfig.json`, extending
 
 ---
 
-## 🧪 Testing Conventions
+## Testing Conventions
 
 Tests use **Jest** (`jest-expo` preset) + **React Native Testing Library** + its built-in `userEvent`, with API service modules mocked via `jest.mock(...)` — tests never hit a real network.
 
@@ -658,7 +794,7 @@ npm run test:watch # watch mode while developing
 
 ---
 
-## ⚡ Performance Conventions
+## Performance Conventions
 
 - **`FlatList` `renderItem` and `keyExtractor` must be wrapped in `useCallback`** on every list screen (`JobCardsScreen`, `CustomersScreen`, `VehiclesScreen`, `InvoicesScreen`, `StaffScreen`). Without this, typing in a screen's search box recreates `renderItem` on every keystroke, which is a documented React Native performance anti-pattern for virtualized lists. Keep the dependency array minimal — usually just `navigation` (React Navigation guarantees it's referentially stable) plus any role-check booleans the row actually branches on.
 - **Never define a component inside another component's render body** — see the TypeScript Conventions note above. This is a performance rule as much as a correctness one: even where it doesn't lose keystrokes outright, unmounting/remounting a subtree on every parent render is expensive and defeats React's reconciliation.
@@ -668,8 +804,11 @@ npm run test:watch # watch mode while developing
 
 ---
 
-## ✅ Pre-Push Checklist
+## Pre-Push Checklist
 
+- [ ] No emoji anywhere — UI text, toasts, comments, or commit messages
+- [ ] No inline storage keys, external URLs, or magic numbers — import from `constants.ts`
+- [ ] No new component that duplicates one already in `src/components/`
 - [ ] No `console.log` statements
 - [ ] All colors use documented hex palette (no named colors or arbitrary hex)
 - [ ] All styles use `StyleSheet.create()` (no inline style objects for reusable patterns)

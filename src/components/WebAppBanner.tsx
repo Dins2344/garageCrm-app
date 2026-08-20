@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { openWebApp } from '../utils/webApp';
+// The key lives in utils/constants.ts, not here: logout clears every key from
+// ALL_STORAGE_KEYS, and AuthContext importing a storage key from a component
+// was a layering inversion waiting to be missed.
+import { WEB_BANNER_DISMISSED_KEY } from '../utils/constants';
 
-// Exported so logout can clear it — dismissal is a per-user preference, not
-// a permanent per-device one. See AuthContext.logout.
-export const WEB_BANNER_DISMISSED_KEY = 'garagepulse_web_banner_dismissed';
 
 /**
  * Small nudge pointing users at the web app for functionality that isn't

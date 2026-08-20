@@ -28,6 +28,18 @@ interface ShortcutItem {
   roles?: Role[];
 }
 
+/** A single outstanding-work row in the "Needs Attention" block. */
+interface AttentionItem {
+  key: string;
+  show: boolean;
+  icon: IconName;
+  color: string;
+  title: string;
+  subtitle: string;
+  /** Omitted when the app has nowhere to send the user for this item. */
+  onPress?: () => void;
+}
+
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good Morning';
@@ -150,36 +162,79 @@ export default function HomeScreen({ navigation }: Props) {
   const activeJobCards = stats?.overview?.activeJobCards || 0;
   const remindersCount = stats?.upcomingReminders?.length || 0;
 
-  // The hero status card adapts to what actually needs attention right now,
-  // rather than showing a static/generic message.
-  let statusTitle = 'All Clear';
-  let statusMessage = 'No active jobs right now — a great time to catch up.';
-  let statusIcon: IconName = 'checkmark-circle';
-  if (pendingEstimations > 0) {
-    statusTitle = 'Action Needed';
-    statusMessage = `${pendingEstimations} estimation${pendingEstimations > 1 ? 's' : ''} awaiting your approval`;
-    statusIcon = 'alert-circle';
-  } else if (activeJobCards > 0) {
-    statusTitle = 'All Good';
-    statusMessage = `${activeJobCards} active job${activeJobCards > 1 ? 's' : ''} in progress`;
-    statusIcon = 'construct';
-  }
-
+  // A full grid rather than a trimmed one: tapping a big labelled tile is the
+  // fastest way into a section even when the dock also has it, and the row
+  // wraps, so extra entries cost nothing but a second line.
   const quickActions: ShortcutItem[] = [
     { label: 'New Job Card', icon: 'add-circle', color: '#3b5ff8', bg: '#eff2ff', onPress: () => navigation.navigate('CreateJobCard'), roles: ['owner', 'admin', 'service_advisor'] },
     { label: 'Job Cards', icon: 'clipboard', color: '#8b5cf6', bg: '#f5f3ff', onPress: () => navigation.navigate('JobCards') },
     { label: 'Vehicles', icon: 'car-sport', color: '#10b981', bg: '#f0fdf4', onPress: () => navigation.navigate('Vehicles') },
     { label: 'Customers', icon: 'people', color: '#f59e0b', bg: '#fffbeb', onPress: () => navigation.navigate('Customers'), roles: ['owner', 'admin', 'service_advisor', 'receptionist'] },
-  ];
-
-  const manageActions: ShortcutItem[] = [
     { label: 'Invoices', icon: 'document-text', color: '#ec4899', bg: '#fdf2f8', onPress: () => navigation.navigate('Invoices') },
+    { label: 'Dashboard', icon: 'bar-chart', color: '#0ea5e9', bg: '#f0f9ff', onPress: () => navigation.navigate('Dashboard') },
     { label: 'Staff', icon: 'people-circle', color: '#06b6d4', bg: '#ecfeff', onPress: () => navigation.navigate('Staff'), roles: ['owner', 'admin'] },
     { label: 'Settings', icon: 'settings', color: '#6b7280', bg: '#f3f4f6', onPress: () => navigation.navigate('Settings') },
   ];
 
   const visibleQuickActions = quickActions.filter(item => !item.roles || hasRole(...item.roles));
-  const visibleManageActions = manageActions.filter(item => !item.roles || hasRole(...item.roles));
+
+  // ── Needs Attention ──
+  // The things a garage actually has to DO today, gathered into one block near
+  // the top. Each row is only rendered when its count is non-zero, and the
+  // whole section disappears when there's nothing outstanding — an empty
+  // "0 pending" row is noise, not information.
+  const readyForPickup = stats?.overview?.readyForPickup || 0;
+  const unpaidCount = stats?.unpaid?.count || 0;
+  const unpaidTotal = stats?.unpaid?.total || 0;
+  const nextReminderDate = stats?.upcomingReminders
+    ?.map(r => r.nextServiceDate)
+    .filter(Boolean)
+    .sort()[0];
+
+  // Annotated on the literal, not on the .filter() result: the contextual type
+  // is what narrows `icon` to Ionicons' name union instead of plain string.
+  const allAttentionItems: AttentionItem[] = [
+    {
+      key: 'estimations',
+      show: pendingEstimations > 0,
+      icon: 'alert-circle',
+      color: '#f59e0b',
+      title: `${pendingEstimations} estimation${pendingEstimations > 1 ? 's' : ''} awaiting approval`,
+      subtitle: 'Follow up so the work can start',
+      onPress: () => navigation.navigate('JobCards'),
+    },
+    {
+      key: 'pickup',
+      show: readyForPickup > 0,
+      icon: 'checkmark-done-circle',
+      color: '#10b981',
+      title: `${readyForPickup} vehicle${readyForPickup > 1 ? 's' : ''} ready for pickup`,
+      subtitle: 'Let the customer know it’s done',
+      onPress: () => navigation.navigate('JobCards'),
+    },
+    {
+      key: 'unpaid',
+      show: unpaidCount > 0,
+      icon: 'card',
+      color: '#ef4444',
+      title: `${unpaidCount} unpaid invoice${unpaidCount > 1 ? 's' : ''}`,
+      subtitle: `${formatCurrency(unpaidTotal)} outstanding`,
+      onPress: () => navigation.navigate('Invoices'),
+    },
+    {
+      key: 'reminders',
+      show: remindersCount > 0,
+      icon: 'calendar',
+      color: '#8b5cf6',
+      title: `${remindersCount} service${remindersCount > 1 ? 's' : ''} due soon`,
+      // No destination: there is no reminders screen in the app yet, and a row
+      // that looks tappable but goes nowhere is worse than a plain one.
+      subtitle: nextReminderDate
+        ? `Next on ${fmtDate(nextReminderDate, locale, { day: 'numeric', month: 'short' })}`
+        : 'Reach out to these customers',
+    },
+  ];
+  const attentionItems = allAttentionItems.filter(item => item.show);
 
   return (
     <ResponsiveScreen>
@@ -192,7 +247,7 @@ export default function HomeScreen({ navigation }: Props) {
       {/* ── Header ── */}
       <View style={styles.topRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.greetingSmall}>{getGreeting()}, {user?.name?.split(' ')[0]} 👋</Text>
+          <Text style={styles.greetingSmall}>{getGreeting()}, {user?.name?.split(' ')[0]}</Text>
           <Text style={styles.greetingBold} numberOfLines={1}>{activeGarageName || 'Your Garage'}</Text>
         </View>
         <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('Settings')} activeOpacity={0.8}>
@@ -205,25 +260,65 @@ export default function HomeScreen({ navigation }: Props) {
         <BranchSwitcher garages={garages} activeGarageId={activeGarageId} onSwitch={switchGarage} />
       )}
 
-      {/* ── Status hero card ── */}
-      <View style={styles.statusCard}>
-        <View style={styles.statusCircle1} />
-        <View style={styles.statusCircle2} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.statusLabel}>Today's Status</Text>
-          <Text style={styles.statusTitle}>{statusTitle}</Text>
-          <Text style={styles.statusMessage}>{statusMessage}</Text>
-        </View>
-        <View style={styles.statusIconWrap}>
-          <Ionicons name={statusIcon} size={36} color="#fff" />
-        </View>
-      </View>
+      {/* ── Needs Attention ──
+          The first thing under the header, because "what do I have to do
+          today?" is the question someone opens the app to ask.
 
-      <WebAppBanner />
+          This replaced a separate "Today's Status" hero that derived its
+          headline from the same pendingEstimations/activeJobCards figures —
+          so the screen stated the same fact twice, in two different visual
+          styles, one directly above the other. The all-clear branch below is
+          what that hero contributed that this block didn't. */}
+      {attentionItems.length === 0 ? (
+        <View style={styles.allClearCard} testID="all-clear">
+          <View style={[styles.attentionIcon, { backgroundColor: '#10b98118' }]}>
+            <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.attentionTitle}>All clear</Text>
+            <Text style={styles.attentionSub}>
+              {activeJobCards > 0
+                ? `${activeJobCards} job${activeJobCards > 1 ? 's' : ''} in progress, nothing waiting on you`
+                : 'Nothing needs your attention right now'}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.attentionCard} testID="needs-attention">
+          <Text style={styles.attentionHeading}>Needs Attention</Text>
+          {attentionItems.map((item, index) => {
+            const rowStyle = [
+              styles.attentionRow,
+              index === attentionItems.length - 1 && styles.attentionRowLast,
+            ];
+            const body = (
+              <>
+                <View style={[styles.attentionIcon, { backgroundColor: `${item.color}18` }]}>
+                  <Ionicons name={item.icon} size={20} color={item.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.attentionTitle}>{item.title}</Text>
+                  <Text style={styles.attentionSub}>{item.subtitle}</Text>
+                </View>
+                {/* Chevron only where tapping actually goes somewhere. */}
+                {item.onPress && <Ionicons name="chevron-forward" size={18} color="#c7cbd4" />}
+              </>
+            );
+
+            return item.onPress ? (
+              <TouchableOpacity key={item.key} style={rowStyle} activeOpacity={0.6} onPress={item.onPress}>
+                {body}
+              </TouchableOpacity>
+            ) : (
+              <View key={item.key} style={rowStyle}>{body}</View>
+            );
+          })}
+        </View>
+      )}
 
       {/* ── Quick Actions ── */}
       <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.shortcutRow}>
+      <View style={styles.shortcutRow} testID="quick-actions">
         {visibleQuickActions.map(item => (
           <TouchableOpacity key={item.label} style={styles.shortcutItem} activeOpacity={0.7} onPress={item.onPress}>
             <View style={[styles.shortcutIconWrap, { backgroundColor: item.bg }]}>
@@ -234,77 +329,66 @@ export default function HomeScreen({ navigation }: Props) {
         ))}
       </View>
 
-      {/* ── Manage ── */}
-      {visibleManageActions.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Manage</Text>
-          <View style={styles.shortcutRow}>
-            {visibleManageActions.map(item => (
-              <TouchableOpacity key={item.label} style={styles.shortcutItem} activeOpacity={0.7} onPress={item.onPress}>
-                <View style={[styles.shortcutIconWrap, { backgroundColor: item.bg }]}>
-                  <Ionicons name={item.icon} size={24} color={item.color} />
-                </View>
-                <Text style={styles.shortcutLabel} numberOfLines={1}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
-      )}
-
-      {/* ── Reminders nudge ── */}
-      {remindersCount > 0 && (
-        <View style={styles.reminderCard}>
-          <View style={styles.reminderIconWrap}>
-            <Ionicons name="calendar" size={24} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reminderTitle}>{remindersCount} Service{remindersCount > 1 ? 's' : ''} Due Soon</Text>
-            <Text style={styles.reminderSub}>Reach out to these customers for their next service</Text>
-          </View>
-        </View>
-      )}
-
-      {/* ── Stats ── */}
-      <Text style={styles.sectionTitle}>Snapshot</Text>
+      {/* ── Today ──
+          Only figures about TODAY. Pending estimations used to sit in this
+          grid as well, which meant the same number was on screen three times:
+          in the status card, here, and again in the overview list below. */}
+      <Text style={styles.sectionTitle}>Today</Text>
       <View style={styles.statsGrid}>
-        <View style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}>
+        <TouchableOpacity
+          style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('JobCards')}
+        >
           <Text style={styles.statLabel}>Active Job Cards</Text>
           <Text style={styles.statValue}>{activeJobCards}</Text>
-        </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.statCard, { borderLeftColor: '#8b5cf6', borderLeftWidth: 4 }]}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('JobCards')}
+        >
+          <Text style={styles.statLabel}>New Jobs Today</Text>
+          <Text style={styles.statValue}>{stats?.overview?.todayJobCards || 0}</Text>
+        </TouchableOpacity>
         <View style={[styles.statCard, { borderLeftColor: '#10b981', borderLeftWidth: 4 }]}>
           <Text style={styles.statLabel}>Today's Revenue</Text>
           <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.today)}</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: '#8b5cf6', borderLeftWidth: 4 }]}>
-          <Text style={styles.statLabel}>Monthly Revenue</Text>
-          <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.month)}</Text>
-        </View>
         <View style={[styles.statCard, { borderLeftColor: '#f59e0b', borderLeftWidth: 4 }]}>
-          <Text style={styles.statLabel}>Pending Estimations</Text>
-          <Text style={styles.statValue}>{pendingEstimations}</Text>
+          <Text style={styles.statLabel}>This Month</Text>
+          <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.month)}</Text>
         </View>
       </View>
 
-      {/* ── Quick Overview list ── */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Quick Overview</Text>
-        <View style={styles.listItem}>
-          <Text style={styles.listLabel}>Total Customers</Text>
-          <Text style={styles.listValue}>{stats?.overview?.totalCustomers || 0}</Text>
-        </View>
-        <View style={styles.listItem}>
-          <Text style={styles.listLabel}>Total Vehicles</Text>
-          <Text style={styles.listValue}>{stats?.overview?.totalVehicles || 0}</Text>
-        </View>
-        <View style={styles.listItem}>
-          <Text style={styles.listLabel}>Today's New Jobs</Text>
-          <Text style={styles.listValue}>{stats?.overview?.todayJobCards || 0}</Text>
-        </View>
-        <View style={[styles.listItem, { borderBottomWidth: 0 }]}>
-          <Text style={styles.listLabel}>In Progress</Text>
-          <Text style={styles.listValue}>{stats?.overview?.inProgressJobs || 0}</Text>
-        </View>
+      {/* ── Business totals ──
+          Slow-moving reference numbers, so they sit last: useful to glance at,
+          never the reason someone opened the app. */}
+      <View style={styles.totalsRow}>
+        <TouchableOpacity
+          style={styles.totalItem}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Customers')}
+        >
+          <Ionicons name="people-outline" size={18} color="#6b7280" />
+          <Text style={styles.totalValue}>{formatNumber(stats?.overview?.totalCustomers, locale)}</Text>
+          <Text style={styles.totalLabel}>Customers</Text>
+        </TouchableOpacity>
+        <View style={styles.totalDivider} />
+        <TouchableOpacity
+          style={styles.totalItem}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('Vehicles')}
+        >
+          <Ionicons name="car-outline" size={18} color="#6b7280" />
+          <Text style={styles.totalValue}>{formatNumber(stats?.overview?.totalVehicles, locale)}</Text>
+          <Text style={styles.totalLabel}>Vehicles</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Moved below the fold: it's a cross-sell, and it used to sit above
+          Quick Actions, pushing the actual work down the screen. */}
+      <WebAppBanner />
     </ScrollView>
     </SafeAreaView>
     </ResponsiveScreen>
@@ -466,54 +550,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Status hero card
-  statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3b5ff8',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#3b5ff8', shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6,
-  },
-  statusCircle1: {
-    position: 'absolute', width: 160, height: 160, borderRadius: 80,
-    backgroundColor: 'rgba(255,255,255,0.08)', top: -60, right: -40,
-  },
-  statusCircle2: {
-    position: 'absolute', width: 100, height: 100, borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.08)', bottom: -30, left: -20,
-  },
-  statusLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statusTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 4,
-  },
-  statusMessage: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  statusIconWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 12,
-  },
 
   // Section titles
   sectionTitle: {
@@ -550,33 +586,111 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Reminder card
-  reminderCard: {
+  // Needs Attention
+  // Replaces the old single-purpose reminder card. That one was a solid amber
+  // block that shouted louder than the status hero above it while being the
+  // only thing on the screen you couldn't tap; this is a neutral card whose
+  // rows carry their own colour, so several can coexist without competing.
+  attentionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 4,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#f1f2f4',
+    shadowColor: '#6366f1',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  // Same shell as attentionCard but a single centred row and no heading — a
+  // quiet "nothing to do" state shouldn't take as much room as a list of work.
+  allClearCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#f59e0b',
+    backgroundColor: '#fff',
     borderRadius: 18,
     padding: 16,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#f1f2f4',
+    shadowColor: '#6366f1',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  reminderIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  attentionHeading: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 10,
+  },
+  attentionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f6f7f8',
+  },
+  attentionRowLast: {
+    borderBottomWidth: 0,
+  },
+  attentionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  reminderTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#fff',
+  attentionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
   },
-  reminderSub: {
+  attentionSub: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
+    color: '#9ca3af',
     marginTop: 2,
+  },
+
+  // Business totals
+  totalsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#f1f2f4',
+    paddingVertical: 16,
+    marginBottom: 20,
+  },
+  totalItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  totalDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: '#f1f2f4',
+  },
+  totalValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  totalLabel: {
+    fontSize: 12,
+    color: '#9ca3af',
+    fontWeight: '600',
   },
 
   // Stats grid
@@ -608,39 +722,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1f2937',
   },
-
-  // Quick Overview card
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 8,
-    shadowColor: '#6366f1',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  listItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  listLabel: {
-    fontSize: 15,
-    color: '#4b5563',
-  },
-  listValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111827',
-  }
 });

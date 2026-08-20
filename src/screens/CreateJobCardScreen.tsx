@@ -21,6 +21,22 @@ import { getErrorMessage } from '../utils/errors';
 type Props = RootStackScreenProps<'CreateJobCard'>;
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
+/**
+ * Section heading with a leading icon.
+ *
+ * These headings used to prefix the text with an emoji. Emoji render from the
+ * platform font, so they changed appearance between Android versions and sat
+ * inconsistently next to the Ionicons used everywhere else in the app.
+ */
+function CardTitle({ icon, children }: { icon: IconName; children: React.ReactNode }) {
+  return (
+    <View style={s.cardTitleRow}>
+      <Ionicons name={icon} size={16} color="#3b5ff8" />
+      <Text style={s.cardTitle}>{children}</Text>
+    </View>
+  );
+}
+
 // ─── Pure-JS Calendar Picker (no native modules — works in Expo Go) ───────────
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
@@ -399,7 +415,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
         internalNotes: internalNotes.trim() || undefined,
       });
 
-      Toast.show({ type: 'success', text1: '✅ Job Card Created!' });
+      Toast.show({ type: 'success', text1: 'Job Card Created!' });
       navigation.goBack();
     } catch (e) {
       // Split across text1/text2 — the toast renders text1 on a single line,
@@ -457,7 +473,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
             <>
               {/* ── CUSTOMER ── */}
               <View style={s.card}>
-                <Text style={s.cardTitle}>👤 Customer</Text>
+                <CardTitle icon="person-outline">Customer</CardTitle>
                 <TabToggle value={custTab} onChange={t => { setCustTab(t); setSelCustomer(null); }} labels={['Existing Customer', 'New Customer']} />
 
                 {custTab === 0 ? (
@@ -482,7 +498,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
               {/* ── VEHICLE ── */}
               <View style={s.card}>
-                <Text style={s.cardTitle}>🚗 Vehicle</Text>
+                <CardTitle icon="car-outline">Vehicle</CardTitle>
                 <TabToggle value={vehTab} onChange={t => { setVehTab(t); setSelVehicle(null); }} labels={['Existing Vehicle', 'New Vehicle']} />
 
                 {vehTab === 0 ? (
@@ -535,7 +551,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
             <>
               {/* ── WORK DETAILS ── */}
               <View style={s.card}>
-                <Text style={s.cardTitle}>🔧 Service Details</Text>
+                <CardTitle icon="construct-outline">Service Details</CardTitle>
 
                 <BottomSheetPicker
                   label="Service Type"
@@ -623,7 +639,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
               {/* ── COMPLAINTS ── */}
               <View style={s.card}>
                 <View style={s.complaintHeader}>
-                  <Text style={s.cardTitle}>⚠️ Customer Complaints *</Text>
+                  <CardTitle icon="alert-circle-outline">Customer Complaints *</CardTitle>
                   <TouchableOpacity style={s.addComplaintBtn} onPress={addComplaint}>
                     <Ionicons name="add" size={16} color="#3b5ff8" />
                     <Text style={s.addComplaintText}>Add</Text>
@@ -669,7 +685,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
               {/* ── INTERNAL NOTES ── */}
               <View style={s.card}>
-                <Text style={s.cardTitle}>📝 Internal Notes</Text>
+                <CardTitle icon="document-text-outline">Internal Notes</CardTitle>
                 <TextInput
                   style={[s.input, { height: 80, textAlignVertical: 'top' }]}
                   value={internalNotes}
@@ -766,7 +782,8 @@ const s = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 40 },
   // Card
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 14 },
+  cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
+  cardTitle: { fontSize: 16, fontWeight: "bold", color: "#111827" },
   // Tabs
   tabs: { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 16, padding: 3, marginBottom: 14 },
   tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 16 },

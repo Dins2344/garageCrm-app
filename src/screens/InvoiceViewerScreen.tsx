@@ -9,6 +9,7 @@ import Toast from 'react-native-toast-message';
 import { getInvoice, updateInvoicePayment, deleteInvoice, getInvoicePdfUrl } from '../api/invoiceService';
 import { useAuth } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TOKEN_KEY, ACTIVE_GARAGE_KEY } from '../utils/constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import BottomSheetPicker from '../components/BottomSheetPicker';
@@ -93,8 +94,8 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
     setDownloading(true);
     try {
       const [token, garageId] = await Promise.all([
-        AsyncStorage.getItem('garagepulse_token'),
-        AsyncStorage.getItem('garagepulse_active_garage'),
+        AsyncStorage.getItem(TOKEN_KEY),
+        AsyncStorage.getItem(ACTIVE_GARAGE_KEY),
       ]);
       const fileUri = FileSystem.documentDirectory + `Invoice-${invoice?.invoiceNumber || 'download'}.pdf`;
 
@@ -236,16 +237,27 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
           <View style={[s.card, { flex: 1 }]}>
             <Text style={s.cardLabel}>BILL TO</Text>
             <Text style={s.cardTitle}>{customer?.name || '—'}</Text>
+            {/* Icons rather than emoji: this screen is the on-screen twin of
+                the invoice PDF, and emoji look out of place on a document. */}
             {customer?.phone && (
-              <Text style={s.cardSub}>📞 {customer.phone}</Text>
+              <View style={s.contactRow}>
+                <Ionicons name="call-outline" size={12} color="#6b7280" />
+                <Text style={s.cardSub}>{customer.phone}</Text>
+              </View>
             )}
             {customer?.email && (
-              <Text style={s.cardSub}>✉️ {customer.email}</Text>
+              <View style={s.contactRow}>
+                <Ionicons name="mail-outline" size={12} color="#6b7280" />
+                <Text style={s.cardSub}>{customer.email}</Text>
+              </View>
             )}
             {(customer?.address?.street || customer?.address?.city) && (
-              <Text style={s.cardSub}>
-                📍 {[customer.address?.street, customer.address?.city].filter(Boolean).join(', ')}
-              </Text>
+              <View style={s.contactRow}>
+                <Ionicons name="location-outline" size={12} color="#6b7280" />
+                <Text style={[s.cardSub, { flex: 1 }]}>
+                  {[customer.address?.street, customer.address?.city].filter(Boolean).join(', ')}
+                </Text>
+              </View>
             )}
           </View>
           <View style={[s.card, { flex: 1 }]}>
@@ -464,6 +476,7 @@ const s = StyleSheet.create({
   cardLabel: { fontSize: 10, fontWeight: '800', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 6 },
   cardTitle: { fontSize: 15, fontWeight: 'bold', color: '#111827', marginBottom: 3 },
   cardSub: { fontSize: 12, color: '#6b7280', marginTop: 1 },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
 
   // Meta
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },

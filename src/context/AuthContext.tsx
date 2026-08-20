@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login as authLogin, register as authRegister, getMe, RegisterFormData } from '../api/authService';
 import IdleTimer from '../components/IdleTimer';
-import { WEB_BANNER_DISMISSED_KEY } from '../components/WebAppBanner';
+import { TOKEN_KEY, USER_KEY, ALL_STORAGE_KEYS } from '../utils/constants';
 import type { User } from '../types/models';
 
 export interface AuthContextValue {
@@ -22,29 +22,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const logout = async () => {
-    await AsyncStorage.removeItem('garagepulse_token');
-    await AsyncStorage.removeItem('garagepulse_user');
-    await AsyncStorage.removeItem('garagepulse_active_garage');
-    // Dismissing the "More on the web" nudge is a per-user preference, not a
-    // permanent per-device one. Without this it survived logout forever, so
-    // the banner could never come back — and on a shared garage device one
-    // person dismissing it hid it from everyone who logged in afterwards.
-    await AsyncStorage.removeItem(WEB_BANNER_DISMISSED_KEY);
+    // Clears every key the app writes, from one list, so a new key added to
+    // constants.ts is cleaned up automatically. Naming keys individually here
+    // is what let the "More on the web" dismissal survive logout forever — the
+    // banner could never come back, and on a shared garage device one person
+    // dismissing it hid it from everyone who logged in afterwards.
+    await AsyncStorage.multiRemove([...ALL_STORAGE_KEYS]);
     setUser(null);
   };
 
   const checkToken = async () => {
     try {
       const [token, savedUserStr] = await Promise.all([
-        AsyncStorage.getItem('garagepulse_token'),
-        AsyncStorage.getItem('garagepulse_user'),
+        AsyncStorage.getItem(TOKEN_KEY),
+        AsyncStorage.getItem(USER_KEY),
       ]);
 
       if (token && savedUserStr) {
         setUser(JSON.parse(savedUserStr));
         const res = await getMe();
         setUser(res.data);
-        await AsyncStorage.setItem('garagepulse_user', JSON.stringify(res.data));
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(res.data));
       }
     } catch {
       await logout();
@@ -60,16 +58,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { token, data } = await authLogin(email, password);
-    await AsyncStorage.setItem('garagepulse_token', token);
-    await AsyncStorage.setItem('garagepulse_user', JSON.stringify(data));
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(data));
     setUser(data);
     return data;
   };
 
   const register = async (formData: RegisterFormData) => {
     const { token, data } = await authRegister(formData);
-    await AsyncStorage.setItem('garagepulse_token', token);
-    await AsyncStorage.setItem('garagepulse_user', JSON.stringify(data));
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(data));
     setUser(data);
     return data;
   };
@@ -85,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     const res = await getMe();
     setUser(res.data);
-    await AsyncStorage.setItem('garagepulse_user', JSON.stringify(res.data));
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(res.data));
   };
 
   return (
