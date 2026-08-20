@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGarage } from '../context/GarageContext';
-import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
+import { formatMoney } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   ActivityIndicator, KeyboardAvoidingView, Platform, Alert, StatusBar

@@ -15,7 +15,6 @@ jest.mock('@react-navigation/native', () => ({
   // `require` inside the factory, not the file-scope React import: jest hoists
   // mock factories above every import, so closing over one is a ReferenceError.
   useFocusEffect: (cb: () => void | (() => void)) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const react = require('react');
     react.useEffect(cb, [cb]);
   },

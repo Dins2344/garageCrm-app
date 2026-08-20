@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
+import { formatMoney } from '../utils/format';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator, ListRenderItem } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getJobCards } from '../api/jobCardService';

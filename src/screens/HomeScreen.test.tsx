@@ -10,7 +10,6 @@ import type { MainTabScreenProps } from '../types/navigation';
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useFocusEffect: (cb: () => void | (() => void)) => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const react = require('react');
     react.useEffect(cb, [cb]);
   },
@@ -21,7 +20,6 @@ jest.mock('../api/dashboardService', () => ({
 }));
 
 jest.mock('../components/WebAppBanner', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Text } = require('react-native');
   return () => <Text>MORE ON THE WEB</Text>;
 });

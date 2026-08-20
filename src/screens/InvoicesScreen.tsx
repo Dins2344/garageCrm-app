@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { formatMoney, formatNumber, formatDate } from '../utils/format';
+import { formatMoney, formatDate } from '../utils/format';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, RefreshControl, TextInput, Platform, StatusBar, ListRenderItem

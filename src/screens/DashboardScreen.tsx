@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
+import { formatMoney } from '../utils/format';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getDashboardStats, DashboardStats } from '../api/dashboardService';

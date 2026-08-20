@@ -1,6 +1,6 @@
 import React, { useState, useEffect, ComponentProps } from 'react';
 import { useGarage } from '../context/GarageContext';
-import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
+import { formatDate as fmtDate } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   ActivityIndicator, Modal, KeyboardAvoidingView, Platform, KeyboardTypeOptions,
@@ -288,7 +288,6 @@ interface ComplaintDraft {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CreateJobCardScreen({ navigation }: Props) {
   const { locale } = useGarage();
-  const money = (n?: number) => formatMoney(n, locale);
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
