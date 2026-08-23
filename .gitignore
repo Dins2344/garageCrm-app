@@ -45,3 +45,7 @@ play-store-key.json
 # generated native folders
 /ios
 /android
+
+# Claude Code personal settings — machine-specific, never shared.
+# Committed project settings live in .claude/settings.json.
+.claude/settings.local.json
