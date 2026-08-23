@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { formatMoney } from '../utils/format';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator, ListRenderItem } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getJobCards } from '../api/jobCardService';
@@ -6,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
+import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { JobCard, JobStatus } from '../types/models';
 
@@ -24,7 +26,7 @@ const STATUS_COLORS: Partial<Record<JobStatus, string>> = {
 };
 
 export default function JobCardsScreen({ navigation }: Props) {
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
   const [jobCards, setJobCards] = useState<JobCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -120,7 +122,7 @@ export default function JobCardsScreen({ navigation }: Props) {
         </View>
         <View style={[styles.row, { marginTop: 8 }]}>
           <Text style={styles.priceText}>
-            Est: {item.estimation?.grandTotal ? `₹${item.estimation.grandTotal.toLocaleString('en-IN')}` : 'Pending'}
+            Est: {item.estimation?.grandTotal ? formatMoney(item.estimation.grandTotal, locale) : 'Pending'}
           </Text>
         </View>
       </View>
@@ -204,7 +206,9 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 24,
+    // Extra clearance for the floating dock tab bar (absolute-positioned,
+    // so it no longer reserves its own space in the layout).
+    paddingBottom: TAB_BAR_CLEARANCE + 20,
   },
   card: {
     backgroundColor: '#fff',
@@ -266,7 +270,8 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 24,
+    // Sits above the floating dock tab bar instead of the screen edge.
+    bottom: TAB_BAR_CLEARANCE,
     right: 24,
     width: 56,
     height: 56,

@@ -1,13 +1,14 @@
-import React, { ComponentProps } from 'react';
+import React from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import FloatingTabBar from '../components/FloatingTabBar';
 import type { RootStackParamList, MainTabParamList } from '../types/navigation';
 
 import LoginScreen from '../screens/LoginScreen';
+import HomeScreen from '../screens/HomeScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import JobCardsScreen from '../screens/JobCardsScreen';
 import CustomersScreen from '../screens/CustomersScreen';
@@ -21,8 +22,8 @@ import StaffScreen from '../screens/StaffScreen';
 import EstimationEditorScreen from '../screens/EstimationEditorScreen';
 import InvoiceViewerScreen from '../screens/InvoiceViewerScreen';
 import InvoicesScreen from '../screens/InvoicesScreen';
-
-type IconName = ComponentProps<typeof Ionicons>['name'];
+import EditProfileScreen from '../screens/EditProfileScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -30,30 +31,24 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: IconName = 'ellipse-outline';
-
-          if (route.name === 'Dashboard') {
-            iconName = focused ? 'grid' : 'grid-outline';
-          } else if (route.name === 'JobCards') {
-            iconName = focused ? 'clipboard' : 'clipboard-outline';
-          } else if (route.name === 'Customers') {
-            iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'More') {
-            iconName = focused ? 'menu' : 'menu-outline';
-          }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#3b5ff8',
-        tabBarInactiveTintColor: 'gray',
+      // Without this, React Navigation defaults to whichever tab is declared
+      // *first* in JSX below — which is now JobCards, since Home was moved
+      // to the center of the dock. This decouples "visual position" from
+      // "the tab you land on after login" so Home stays the actual default.
+      initialRouteName="Home"
+      // Fully custom floating dock — icons/labels/styling all live in
+      // FloatingTabBar, so nothing here needs tabBarIcon/tabBarStyle.
+      tabBar={props => <FloatingTabBar {...props} />}
+      screenOptions={{
+        tabBarHideOnKeyboard: true,
         headerTitleStyle: { fontWeight: 'bold' },
-      })}
+      }}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
+      {/* Home is deliberately centered in the dock (2 tabs on each side). */}
       <Tab.Screen name="JobCards" component={JobCardsScreen} options={{ title: 'Job Cards' }} />
-      <Tab.Screen name="Customers" component={CustomersScreen} />
+      <Tab.Screen name="Vehicles" component={VehiclesScreen} options={{ title: 'Vehicles' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Dashboard' }} />
       <Tab.Screen name="More" component={MoreScreen} />
     </Tab.Navigator>
   );
@@ -81,9 +76,9 @@ export default function AppNavigator() {
             <Stack.Screen name="InvoiceViewer" component={InvoiceViewerScreen} />
             <Stack.Screen name="CreateJobCard" component={CreateJobCardScreen} />
             <Stack.Screen
-              name="Vehicles"
-              component={VehiclesScreen}
-              options={{ headerShown: true, title: 'Vehicles', headerTitleStyle: { fontWeight: 'bold' } }}
+              name="Customers"
+              component={CustomersScreen}
+              options={{ headerShown: true, title: 'Customers', headerTitleStyle: { fontWeight: 'bold' } }}
             />
             <Stack.Screen
               name="VehicleDetail"
@@ -104,6 +99,16 @@ export default function AppNavigator() {
               name="Staff"
               component={StaffScreen}
               options={{ headerShown: true, title: 'Staff Management', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="EditProfile"
+              component={EditProfileScreen}
+              options={{ headerShown: true, title: 'Edit Profile', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="ChangePassword"
+              component={ChangePasswordScreen}
+              options={{ headerShown: true, title: 'Change Password', headerTitleStyle: { fontWeight: 'bold' } }}
             />
           </>
         ) : (

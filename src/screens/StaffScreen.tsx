@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/userService';
@@ -86,6 +87,9 @@ interface StaffModalProps {
 }
 
 function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: StaffModalProps) {
+  // The phone placeholder has to follow the garage's country — a UK garage
+  // adding staff was being shown an Indian 10-digit example.
+  const { locale } = useGarage();
   const [form, setForm] = useState<StaffFormDraft>(BLANK_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -134,7 +138,7 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
           <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
             <Field label="Full Name *" value={form.name} onChange={v => set('name', v)} placeholder="Staff member's name" />
             <Field label="Email *" value={form.email} onChange={v => set('email', v)} placeholder="email@example.com" keyboardType="email-address" autoCapitalize="none" />
-            <Field label="Phone *" value={form.phone} onChange={v => set('phone', v)} placeholder="10-digit phone number" keyboardType="phone-pad" autoCapitalize="none" />
+            <Field label="Phone *" value={form.phone} onChange={v => set('phone', v)} placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
             <Field
               label={editingUser ? 'New Password (leave blank to keep)' : 'Password *'}
               value={form.password}
@@ -172,7 +176,7 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
           order) while this modal is open; it falls back to the root instance
           once this one unmounts. See react-native-toast-message's docs on
           showing a Toast inside a Modal. */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }

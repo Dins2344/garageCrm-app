@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useGarage } from '../context/GarageContext';
+import { formatMoney, formatNumber, formatDate } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Platform, StatusBar, SafeAreaView
 } from 'react-native';
@@ -7,6 +9,7 @@ import Toast from 'react-native-toast-message';
 import { getInvoice, updateInvoicePayment, deleteInvoice, getInvoicePdfUrl } from '../api/invoiceService';
 import { useAuth } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TOKEN_KEY, ACTIVE_GARAGE_KEY } from '../utils/constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import BottomSheetPicker from '../components/BottomSheetPicker';
@@ -18,6 +21,8 @@ import { getErrorMessage } from '../utils/errors';
 type Props = RootStackScreenProps<'InvoiceViewer'>;
 
 export default function InvoiceViewerScreen({ route, navigation }: Props) {
+  const { locale } = useGarage();
+  const money = (n?: number) => formatMoney(n, locale);
   const { invoiceId } = route.params;
   const { hasRole } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -89,8 +94,8 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
     setDownloading(true);
     try {
       const [token, garageId] = await Promise.all([
-        AsyncStorage.getItem('garagepulse_token'),
-        AsyncStorage.getItem('garagepulse_active_garage'),
+        AsyncStorage.getItem(TOKEN_KEY),
+        AsyncStorage.getItem(ACTIVE_GARAGE_KEY),
       ]);
       const fileUri = FileSystem.documentDirectory + `Invoice-${invoice?.invoiceNumber || 'download'}.pdf`;
 
@@ -121,12 +126,10 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
     }
   };
 
-  const fmt = (n?: number) => '₹' + (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n?: number) => money(n);
 
-  const fmtDate = (d?: string | null) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
+  const fmtDate = (d?: string | null) =>
+    d ? formatDate(d, locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
   if (loading) {
     return (
@@ -234,16 +237,27 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
           <View style={[s.card, { flex: 1 }]}>
             <Text style={s.cardLabel}>BILL TO</Text>
             <Text style={s.cardTitle}>{customer?.name || '—'}</Text>
+            {/* Icons rather than emoji: this screen is the on-screen twin of
+                the invoice PDF, and emoji look out of place on a document. */}
             {customer?.phone && (
-              <Text style={s.cardSub}>📞 {customer.phone}</Text>
+              <View style={s.contactRow}>
+                <Ionicons name="call-outline" size={12} color="#6b7280" />
+                <Text style={s.cardSub}>{customer.phone}</Text>
+              </View>
             )}
             {customer?.email && (
-              <Text style={s.cardSub}>✉️ {customer.email}</Text>
+              <View style={s.contactRow}>
+                <Ionicons name="mail-outline" size={12} color="#6b7280" />
+                <Text style={s.cardSub}>{customer.email}</Text>
+              </View>
             )}
             {(customer?.address?.street || customer?.address?.city) && (
-              <Text style={s.cardSub}>
-                📍 {[customer.address?.street, customer.address?.city].filter(Boolean).join(', ')}
-              </Text>
+              <View style={s.contactRow}>
+                <Ionicons name="location-outline" size={12} color="#6b7280" />
+                <Text style={[s.cardSub, { flex: 1 }]}>
+                  {[customer.address?.street, customer.address?.city].filter(Boolean).join(', ')}
+                </Text>
+              </View>
             )}
           </View>
           <View style={[s.card, { flex: 1 }]}>
@@ -254,7 +268,7 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
               {vehicle?.year ? ` (${vehicle.year})` : ''}
             </Text>
             {jobCard?.odometerAtIntake !== undefined && jobCard?.odometerAtIntake !== null && (
-              <Text style={s.cardSub}>Kilometers Run: {jobCard.odometerAtIntake.toLocaleString('en-IN')} km</Text>
+              <Text style={s.cardSub}>Kilometers Run: {formatNumber(jobCard.odometerAtIntake, locale)} km</Text>
             )}
           </View>
         </View>
@@ -304,7 +318,8 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
             </View>
           )}
           <View style={s.totalsRow}>
-            <Text style={s.totalsLabel}>Tax ({invoice.taxRate ?? 18}%)</Text>
+            {/* `?? 0`, never `?? 18`: a zero-tax country would otherwise show a fabricated 18% line on a real invoice. */}
+            <Text style={s.totalsLabel}>{locale.taxLabel} ({invoice.taxRate ?? 0}%)</Text>
             <Text style={s.totalsValue}>{fmt(invoice.taxAmount)}</Text>
           </View>
           <View style={s.totalsDivider} />
@@ -461,6 +476,7 @@ const s = StyleSheet.create({
   cardLabel: { fontSize: 10, fontWeight: '800', color: '#9ca3af', letterSpacing: 0.8, marginBottom: 6 },
   cardTitle: { fontSize: 15, fontWeight: 'bold', color: '#111827', marginBottom: 3 },
   cardSub: { fontSize: 12, color: '#6b7280', marginTop: 1 },
+  contactRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
 
   // Meta
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },

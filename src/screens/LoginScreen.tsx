@@ -7,9 +7,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { getErrorMessage } from '../utils/errors';
 import { forgotPassword } from '../api/authService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
+import BottomSheetPicker from '../components/BottomSheetPicker';
+import { useCountries } from '../hooks/useCountries';
+import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
 
 type Props = RootStackScreenProps<'Login'>;
@@ -170,7 +174,7 @@ function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
       </KeyboardAvoidingView>
       {/* Modal-scoped Toast — RN's Modal renders above the app-root Toast in
           App.tsx, so the root Toast would be hidden behind this sheet. */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }
@@ -200,11 +204,14 @@ const forgotPwdStyles = StyleSheet.create({
 });
 
 // ─── Features list (shown on register) ────────────────────────────────────────
-const FEATURES = [
-  { icon: '📋', label: 'Job Card Management' },
-  { icon: '💰', label: 'Billing & Invoices' },
-  { icon: '📦', label: 'Inventory Tracking' },
-  { icon: '👥', label: 'Staff Management' },
+// Ionicons rather than emoji: emoji render differently on every platform and
+// OS version, and at pill size they read as clip art next to the rest of the
+// app's icon set.
+const FEATURES: { icon: IconName; label: string }[] = [
+  { icon: 'clipboard-outline', label: 'Job Card Management' },
+  { icon: 'card-outline', label: 'Billing & Invoices' },
+  { icon: 'cube-outline', label: 'Inventory Tracking' },
+  { icon: 'people-outline', label: 'Staff Management' },
 ];
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
@@ -224,6 +231,29 @@ export default function LoginScreen(_props: Props) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [garageName, setGarageName] = useState('');
+  // India by default, matching the server: every garage created before the
+  // picker existed is Indian, and it stays the common case.
+  const [country, setCountry] = useState(DEFAULT_LOCALE.country);
+  const [timezone, setTimezone] = useState('');
+
+  const { countries } = useCountries();
+  const selectedCountry = countries.find(c => c.code === country);
+  const timezoneOptions = timezoneChoicesFor(country);
+  // Only ask for a zone when the country genuinely spans several. The server
+  // ignores it otherwise, so hiding the field keeps the form honest.
+  const needsTimezone = (selectedCountry?.requiresTimezoneChoice ?? false) && timezoneOptions.length > 0;
+  // Until the list loads, offer the default so the picker is never empty and
+  // signup is never blocked by a failed reference-data fetch.
+  const countryOptions = countries.length
+    ? countries.map(c => ({ value: c.code, label: c.name }))
+    : [{ value: DEFAULT_LOCALE.country, label: 'India' }];
+
+  const handleCountryChange = (value: string) => {
+    setCountry(value);
+    // Clear any zone picked for the previous country — 'America/Denver' on a
+    // garage that just switched to Australia would be worse than no value.
+    setTimezone('');
+  };
 
   const switchMode = (m: 'login' | 'register') => {
     setMode(m);
@@ -240,7 +270,7 @@ export default function LoginScreen(_props: Props) {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      Toast.show({ type: 'success', text1: 'Welcome back! 👋' });
+      Toast.show({ type: 'success', text1: 'Welcome back!' });
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Login failed') });
     } finally {
@@ -251,7 +281,12 @@ export default function LoginScreen(_props: Props) {
   // ── Register step 1 → 2 ──
   const handleNextStep = () => {
     if (!name.trim()) { Toast.show({ type: 'error', text1: 'Please enter your name' }); return; }
-    if (!phone.trim() || phone.length < 10) { Toast.show({ type: 'error', text1: 'Enter a valid 10-digit phone number' }); return; }
+    // Presence only. The old `phone.length < 10` check was India's format
+    // hardcoded into the client, and it rejects valid numbers elsewhere (a
+    // Singapore mobile is 8 digits). The server validates against the chosen
+    // country and returns a message naming it.
+    if (!phone.trim()) { Toast.show({ type: 'error', text1: 'Please enter your phone number' }); return; }
+    if (needsTimezone && !timezone) { Toast.show({ type: 'error', text1: 'Please select your timezone' }); return; }
     if (!email.trim()) { Toast.show({ type: 'error', text1: 'Please enter your email' }); return; }
     if (!password || password.length < 6) { Toast.show({ type: 'error', text1: 'Password must be at least 6 characters' }); return; }
     setStep(2);
@@ -262,8 +297,12 @@ export default function LoginScreen(_props: Props) {
     if (!garageName.trim()) { Toast.show({ type: 'error', text1: 'Please enter your garage name' }); return; }
     setLoading(true);
     try {
-      await register({ name: name.trim(), email: email.trim(), phone: phone.trim(), password, garageName: garageName.trim() });
-      Toast.show({ type: 'success', text1: 'Garage registered! Welcome 🎉' });
+      await register({
+        name: name.trim(), email: email.trim(), phone: phone.trim(), password,
+        garageName: garageName.trim(), country,
+        ...(needsTimezone && timezone ? { timezone } : {})
+      });
+      Toast.show({ type: 'success', text1: 'Garage registered!' });
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Registration failed') });
     } finally {
@@ -299,7 +338,7 @@ export default function LoginScreen(_props: Props) {
           {/* ──── LOGIN FORM ──── */}
           {mode === 'login' && (
             <>
-              <Text style={styles.cardTitle}>Welcome back 👋</Text>
+              <Text style={styles.cardTitle}>Welcome back</Text>
               <Text style={styles.cardSub}>Enter your credentials to continue</Text>
 
               <Field label="Email Address" value={email} onChangeText={setEmail}
@@ -351,8 +390,30 @@ export default function LoginScreen(_props: Props) {
 
               <Field label="Full Name *" value={name} onChangeText={setName}
                 placeholder="John Doe" icon="person-outline" />
+              {/* Country comes before phone on purpose: it decides what a
+                  valid phone number looks like, so the placeholder and the
+                  check below both follow it. */}
+              <BottomSheetPicker
+                label="Country"
+                required
+                searchable
+                options={countryOptions}
+                selectedValue={country}
+                onValueChange={handleCountryChange}
+              />
+              {needsTimezone && (
+                <BottomSheetPicker
+                  label="Timezone"
+                  required
+                  options={timezoneOptions.map(tz => ({ value: tz.value, label: tz.label }))}
+                  selectedValue={timezone}
+                  onValueChange={setTimezone}
+                  placeholder="Select your timezone"
+                />
+              )}
               <Field label="Phone Number *" value={phone} onChangeText={setPhone}
-                placeholder="9876543210" keyboardType="phone-pad" autoCapitalize="none" icon="call-outline" />
+                placeholder={selectedCountry?.phoneExample ?? DEFAULT_LOCALE.phoneExample}
+                keyboardType="phone-pad" autoCapitalize="none" icon="call-outline" />
               <Field label="Email Address *" value={email} onChangeText={setEmail}
                 placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
               <Field label="Password *" value={password} onChangeText={setPassword}
@@ -390,7 +451,7 @@ export default function LoginScreen(_props: Props) {
                 </View>
               </View>
 
-              <Text style={styles.cardTitle}>Name your garage 🏪</Text>
+              <Text style={styles.cardTitle}>Name your garage</Text>
               <Text style={styles.cardSub}>This will appear on all your documents</Text>
 
               <Field label="Garage Name *" value={garageName} onChangeText={setGarageName}
@@ -402,7 +463,7 @@ export default function LoginScreen(_props: Props) {
                 <View style={styles.featureGrid}>
                   {FEATURES.map((f, i) => (
                     <View key={i} style={styles.featurePill}>
-                      <Text style={styles.featureEmoji}>{f.icon}</Text>
+                      <Ionicons name={f.icon} size={14} color="#3b5ff8" />
                       <Text style={styles.featureText}>{f.label}</Text>
                     </View>
                   ))}
@@ -522,7 +583,6 @@ const styles = StyleSheet.create({
   featuresLabel: { fontSize: 12, fontWeight: '700', color: '#9ca3af', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   featurePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', borderRadius: 160, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#e5e7eb' },
-  featureEmoji: { fontSize: 14 },
   featureText: { fontSize: 12, fontWeight: '600', color: '#374151' },
 
   footer: { textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 24, paddingHorizontal: 24 },

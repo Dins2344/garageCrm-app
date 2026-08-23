@@ -16,6 +16,10 @@ export interface RegisterFormData {
   garageName: string;
   garagePhone?: string;
   garageAddress?: Record<string, string>;
+  /** ISO alpha-2. Omitted by older clients, which the server defaults to IN. */
+  country?: string;
+  /** Only honoured for countries that span several zones (US/CA/AU). */
+  timezone?: string;
 }
 
 export const login = async (email: string, password: string): Promise<AuthResponse> => {

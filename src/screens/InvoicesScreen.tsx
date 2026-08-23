@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { formatMoney, formatDate } from '../utils/format';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, RefreshControl, TextInput, Platform, StatusBar, ListRenderItem
@@ -23,7 +24,7 @@ const PAYMENT_CONFIG: Record<PaymentStatus, { label: string; bg: string; text: s
 const LIMIT = 20;
 
 export default function InvoicesScreen({ navigation }: Props) {
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
   const [invoices, setInvoices]     = useState<Invoice[]>([]);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,12 +87,10 @@ export default function InvoicesScreen({ navigation }: Props) {
   };
 
   const fmt = (n?: number) =>
-    '₹' + (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    formatMoney(n, locale);
 
-  const fmtDate = (d?: string) => {
-    if (!d) return '—';
-    return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
+  const fmtDate = (d?: string) =>
+    d ? formatDate(d, locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
   // Wrapped in useCallback so FlatList doesn't get a new renderItem identity
   // on every keystroke in the search box — see CONTRIBUTING.md Performance Conventions.

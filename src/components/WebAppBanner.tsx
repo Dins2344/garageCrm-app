@@ -3,8 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { openWebApp } from '../utils/webApp';
+// The key lives in utils/constants.ts, not here: logout clears every key from
+// ALL_STORAGE_KEYS, and AuthContext importing a storage key from a component
+// was a layering inversion waiting to be missed.
+import { WEB_BANNER_DISMISSED_KEY } from '../utils/constants';
 
-const DISMISSED_KEY = 'garagepulse_web_banner_dismissed';
 
 /**
  * Small nudge pointing users at the web app for functionality that isn't
@@ -16,12 +19,12 @@ export default function WebAppBanner() {
   const [dismissed, setDismissed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(DISMISSED_KEY).then(v => setDismissed(v === 'true'));
+    AsyncStorage.getItem(WEB_BANNER_DISMISSED_KEY).then(v => setDismissed(v === 'true'));
   }, []);
 
   const handleDismiss = useCallback(() => {
     setDismissed(true);
-    AsyncStorage.setItem(DISMISSED_KEY, 'true');
+    AsyncStorage.setItem(WEB_BANNER_DISMISSED_KEY, 'true');
   }, []);
 
   if (dismissed !== false) return null;

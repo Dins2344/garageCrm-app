@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, KeyboardTypeOptions, Modal
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
-import { updateProfile, changePassword } from '../api/authService';
-import { getGarage, updateGarage } from '../api/garageService';
+import { getGarage, updateGarage, getBranchStaff } from '../api/garageService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
+import { Field, PrimaryBtn } from '../components/FormControls';
+import BottomSheetPicker from '../components/BottomSheetPicker';
+import { useCountries } from '../hooks/useCountries';
+import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
-import type { Garage, Role } from '../types/models';
+import type { Garage, Role, User } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
 
 type Props = RootStackScreenProps<'Settings'>;
@@ -41,62 +45,6 @@ function SectionCard({ title, icon, children, action }: SectionCardProps) {
   );
 }
 
-interface FieldProps {
-  label: string;
-  value: string;
-  onChangeText?: (v: string) => void;
-  placeholder?: string;
-  keyboardType?: KeyboardTypeOptions;
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  editable?: boolean;
-  secureTextEntry?: boolean;
-}
-
-function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, editable = true, secureTextEntry }: FieldProps) {
-  const [show, setShow] = useState(false);
-  const isPwd = secureTextEntry !== undefined;
-  return (
-    <View style={styles.fieldWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.inputRow, !editable && styles.inputDimmed]}>
-        <TextInput
-          style={styles.inputField}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="#9ca3af"
-          keyboardType={keyboardType || 'default'}
-          autoCapitalize={autoCapitalize || 'sentences'}
-          editable={editable}
-          secureTextEntry={isPwd ? !show : false}
-        />
-        {isPwd && (
-          <TouchableOpacity onPress={() => setShow(s => !s)} style={{ padding: 4 }}>
-            <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
-}
-
-interface PrimaryBtnProps {
-  label: string;
-  icon: IconName;
-  onPress: () => void;
-  loading?: boolean;
-}
-
-function PrimaryBtn({ label, icon, onPress, loading }: PrimaryBtnProps) {
-  return (
-    <TouchableOpacity style={[styles.primaryBtn, loading && { opacity: 0.6 }]} onPress={onPress} disabled={loading} activeOpacity={0.8}>
-      {loading ? <ActivityIndicator color="#fff" size="small" /> : (
-        <><Ionicons name={icon} size={17} color="#fff" /><Text style={styles.primaryBtnText}>{label}</Text></>
-      )}
-    </TouchableOpacity>
-  );
-}
-
 interface InfoRowProps {
   label: string;
   value?: string | null;
@@ -122,6 +70,9 @@ interface AddBranchModalProps {
 // a component defined inside another component's render body loses focus/text
 // on every keystroke because React treats it as a brand-new type each render.
 function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
+  // The phone placeholder has to follow the garage's country — a UK owner
+  // adding a branch was being shown an Indian 10-digit example.
+  const { locale } = useGarage();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
@@ -157,7 +108,7 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
           </View>
           <ScrollView style={branchModalStyles.body} keyboardShouldPersistTaps="handled">
             <Field label="Branch Name *" value={name} onChangeText={setName} placeholder="e.g. Downtown Branch" />
-            <Field label="Phone *" value={phone} onChangeText={setPhone} placeholder="10-digit phone number" keyboardType="phone-pad" autoCapitalize="none" />
+            <Field label="Phone *" value={phone} onChangeText={setPhone} placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
           </ScrollView>
           <View style={branchModalStyles.footer}>
             <TouchableOpacity style={branchModalStyles.cancelBtn} onPress={onClose}>
@@ -171,7 +122,7 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
       </KeyboardAvoidingView>
       {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
           is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }
@@ -190,11 +141,153 @@ const branchModalStyles = StyleSheet.create({
   saveBtnText: { color: '#fff', fontWeight: '700' },
 });
 
+interface DeleteBranchModalProps {
+  visible: boolean;
+  branch: Garage | null;
+  otherBranches: Garage[];
+  onClose: () => void;
+  onConfirm: (payload?: { staffAction?: 'delete' | 'reassign'; reassignToGarageId?: string }) => Promise<void>;
+}
+
+// Defined at module scope — see the identical note on AddBranchModal above.
+function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm }: DeleteBranchModalProps) {
+  const [checking, setChecking] = useState(true);
+  const [staff, setStaff] = useState<User[]>([]);
+  const [staffChoice, setStaffChoice] = useState<'delete' | 'reassign'>('reassign');
+  const [reassignTarget, setReassignTarget] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!visible || !branch) return;
+    setChecking(true);
+    setStaff([]);
+    setStaffChoice('reassign');
+    setReassignTarget(otherBranches[0]?._id || '');
+    getBranchStaff(branch._id)
+      .then(res => setStaff(res.data))
+      .catch(() => setStaff([]))
+      .finally(() => setChecking(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, branch]);
+
+  if (!branch) return null;
+
+  const handleConfirm = async () => {
+    setDeleting(true);
+    try {
+      if (staff.length === 0) {
+        await onConfirm();
+      } else if (staffChoice === 'delete') {
+        await onConfirm({ staffAction: 'delete' });
+      } else {
+        if (!reassignTarget) { Toast.show({ type: 'error', text1: 'Please choose a branch to reassign staff to' }); setDeleting(false); return; }
+        await onConfirm({ staffAction: 'reassign', reassignToGarageId: reassignTarget });
+      }
+      onClose();
+    } catch (e) {
+      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to delete branch') });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={branchModalStyles.overlay}>
+        <View style={branchModalStyles.sheet}>
+          <View style={branchModalStyles.handle} />
+          <View style={branchModalStyles.header}>
+            <Text style={branchModalStyles.title} numberOfLines={1}>Delete "{branch.name}"?</Text>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+          </View>
+          <ScrollView style={branchModalStyles.body} keyboardShouldPersistTaps="handled">
+            {checking ? (
+              <ActivityIndicator color="#3b5ff8" style={{ paddingVertical: 20 }} />
+            ) : staff.length === 0 ? (
+              <Text style={deleteBranchStyles.warningText}>
+                This will permanently delete this branch and all of its customers, vehicles, job cards,
+                invoices, inventory, and reminders. This cannot be undone.
+              </Text>
+            ) : (
+              <>
+                <Text style={deleteBranchStyles.warningText}>
+                  This branch has {staff.length} staff member{staff.length > 1 ? 's' : ''} assigned
+                  ({staff.map(s => s.name).join(', ')}). What should happen to them?
+                </Text>
+                <TouchableOpacity
+                  style={deleteBranchStyles.choiceRow}
+                  activeOpacity={0.7}
+                  onPress={() => setStaffChoice('reassign')}
+                >
+                  <Ionicons name={staffChoice === 'reassign' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'reassign' ? '#3b5ff8' : '#9ca3af'} />
+                  <Text style={deleteBranchStyles.choiceText}>Reassign them to another branch</Text>
+                </TouchableOpacity>
+                {staffChoice === 'reassign' && (
+                  <View style={deleteBranchStyles.targetList}>
+                    {otherBranches.map(g => (
+                      <TouchableOpacity
+                        key={g._id}
+                        style={deleteBranchStyles.targetRow}
+                        activeOpacity={0.7}
+                        onPress={() => setReassignTarget(g._id)}
+                      >
+                        <Ionicons name={reassignTarget === g._id ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={reassignTarget === g._id ? '#3b5ff8' : '#9ca3af'} />
+                        <Text style={deleteBranchStyles.targetText}>{g.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={deleteBranchStyles.choiceRow}
+                  activeOpacity={0.7}
+                  onPress={() => setStaffChoice('delete')}
+                >
+                  <Ionicons name={staffChoice === 'delete' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'delete' ? '#3b5ff8' : '#9ca3af'} />
+                  <Text style={deleteBranchStyles.choiceText}>Delete their accounts too</Text>
+                </TouchableOpacity>
+                <Text style={deleteBranchStyles.footnote}>
+                  The branch itself and all of its customers, vehicles, job cards, invoices, inventory,
+                  and reminders will be permanently deleted either way.
+                </Text>
+              </>
+            )}
+          </ScrollView>
+          <View style={branchModalStyles.footer}>
+            <TouchableOpacity style={branchModalStyles.cancelBtn} onPress={onClose} disabled={deleting}>
+              <Text style={branchModalStyles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[deleteBranchStyles.deleteBtn, (checking || deleting) && { opacity: 0.6 }]}
+              onPress={handleConfirm}
+              disabled={checking || deleting}
+            >
+              {deleting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={branchModalStyles.saveBtnText}>Delete Branch</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+      <Toast config={toastConfig} />
+    </Modal>
+  );
+}
+
+const deleteBranchStyles = StyleSheet.create({
+  warningText: { fontSize: 14, color: '#374151', lineHeight: 20, marginBottom: 16 },
+  choiceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  choiceText: { fontSize: 14, fontWeight: '600', color: '#1f2937', flex: 1 },
+  targetList: { paddingLeft: 30, gap: 4, marginBottom: 4 },
+  targetRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  targetText: { fontSize: 14, color: '#374151' },
+  footnote: { fontSize: 12, color: '#9ca3af', marginTop: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 12 },
+  deleteBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#ef4444' },
+});
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen({ navigation }: Props) {
   const { user, logout, hasRole } = useAuth();
-  const { garages, activeGarageId, garagesLoading, switchGarage, addBranch } = useGarage();
+  const { garages, activeGarageId, garagesLoading, switchGarage, addBranch, removeBranch, refreshGarage } = useGarage();
+  const [deleteBranchTarget, setDeleteBranchTarget] = useState<Garage | null>(null);
   const canEditGarage = hasRole('owner', 'admin');
   const isOwner = hasRole('owner');
   const [addBranchVisible, setAddBranchVisible] = useState(false);
@@ -213,18 +306,30 @@ export default function SettingsScreen({ navigation }: Props) {
   const [garageCity, setGarageCity] = useState('');
   const [garageState, setGarageState] = useState('');
   const [garagePincode, setGaragePincode] = useState('');
+  const [garageCountry, setGarageCountry] = useState(DEFAULT_LOCALE.country);
+  const [garageTimezone, setGarageTimezone] = useState('');
   const [savingGarage, setSavingGarage] = useState(false);
 
-  // Profile state
-  const [profileName, setProfileName] = useState(user?.name || '');
-  const [profilePhone, setProfilePhone] = useState(user?.phone || '');
-  const [savingProfile, setSavingProfile] = useState(false);
-
-  // Password state
-  const [currentPwd, setCurrentPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
-  const [savingPwd, setSavingPwd] = useState(false);
+  // Labels follow the country being EDITED, not the saved one, so switching
+  // the picker to United Kingdom relabels "GSTIN" to "VAT No." immediately —
+  // the owner sees what they're choosing before they commit to it.
+  const { countries } = useCountries();
+  const selectedCountry = countries.find(c => c.code === garageCountry);
+  const timezoneOptions = timezoneChoicesFor(garageCountry);
+  const needsTimezone = (selectedCountry?.requiresTimezoneChoice ?? false) && timezoneOptions.length > 0;
+  const countryOptions = countries.length
+    ? countries.map(c => ({ value: c.code, label: c.name }))
+    : [{ value: garageCountry, label: garageCountry }];
+  // Falls back to the saved locale, then India, so nothing renders blank while
+  // the country list is still loading.
+  const labels = {
+    tax: selectedCountry?.taxLabel ?? garage?.locale?.taxLabel ?? DEFAULT_LOCALE.taxLabel,
+    taxId: selectedCountry?.taxIdLabel ?? garage?.locale?.taxIdLabel ?? DEFAULT_LOCALE.taxIdLabel,
+    postal: selectedCountry?.postalLabel ?? garage?.locale?.postalLabel ?? DEFAULT_LOCALE.postalLabel,
+    postalInputMode: selectedCountry?.postalInputMode ?? garage?.locale?.postalInputMode ?? DEFAULT_LOCALE.postalInputMode,
+    currency: selectedCountry?.currency ?? garage?.locale?.currency ?? DEFAULT_LOCALE.currency,
+    phoneExample: selectedCountry?.phoneExample ?? garage?.locale?.phoneExample ?? DEFAULT_LOCALE.phoneExample,
+  };
 
   const populateGarageForm = (g: Garage) => {
     setGarageName(g.name || '');
@@ -237,6 +342,10 @@ export default function SettingsScreen({ navigation }: Props) {
     setGarageCity(g.address?.city || '');
     setGarageState(g.address?.state || '');
     setGaragePincode(g.address?.pincode || '');
+    // Garages created before country support have no `country` key at all;
+    // the server resolves them to India, so the form must show the same.
+    setGarageCountry(g.country || g.locale?.country || DEFAULT_LOCALE.country);
+    setGarageTimezone(g.settings?.timezone || '');
   };
 
   const fetchGarage = async () => {
@@ -262,45 +371,29 @@ export default function SettingsScreen({ navigation }: Props) {
         phone: garagePhone.trim(),
         email: garageEmail.trim(),
         gstNumber: garageGst.trim(),
+        country: garageCountry,
         address: { street: garageStreet, city: garageCity, state: garageState, pincode: garagePincode },
+        // Send only the settings this form actually edits. The API merges
+        // partial `settings` (dotted-path $set), so omitted keys are preserved.
+        // Resending them was also silently destructive: `serviceReminderDays`
+        // fell back to 7 here while the real default is 180.
         settings: {
-          taxRate: Number(garageTax) || 18,
-          laborRatePerHour: Number(garageLabor) || 500,
-          currency: garage?.settings?.currency ?? 'INR',
-          serviceReminderDays: garage?.settings?.serviceReminderDays ?? 7,
+          taxRate: Number(garageTax) || 0,
+          laborRatePerHour: Number(garageLabor) || 0,
+          // '' clears the override so the country table applies. Only
+          // multi-zone countries ever set it.
+          timezone: needsTimezone ? garageTimezone : '',
         },
       });
       setGarage(data);
       setEditingGarage(false);
+      // The whole app formats money and dates from context locale, so a
+      // country change has to propagate beyond this screen.
+      await refreshGarage().catch(() => {});
       Toast.show({ type: 'success', text1: 'Garage info updated!' });
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to update garage') });
     } finally { setSavingGarage(false); }
-  };
-
-  const handleSaveProfile = async () => {
-    if (!profileName.trim()) { Toast.show({ type: 'error', text1: 'Name cannot be empty' }); return; }
-    setSavingProfile(true);
-    try {
-      await updateProfile({ name: profileName.trim(), phone: profilePhone.trim() });
-      Toast.show({ type: 'success', text1: 'Profile updated!' });
-    } catch (e) {
-      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to update profile') });
-    } finally { setSavingProfile(false); }
-  };
-
-  const handleChangePassword = async () => {
-    if (!currentPwd || !newPwd || !confirmPwd) { Toast.show({ type: 'error', text1: 'Please fill all fields' }); return; }
-    if (newPwd.length < 6) { Toast.show({ type: 'error', text1: 'Password must be at least 6 characters' }); return; }
-    if (newPwd !== confirmPwd) { Toast.show({ type: 'error', text1: 'Passwords do not match' }); return; }
-    setSavingPwd(true);
-    try {
-      await changePassword({ currentPassword: currentPwd, newPassword: newPwd });
-      Toast.show({ type: 'success', text1: 'Password changed!' });
-      setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
-    } catch (e) {
-      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to change password') });
-    } finally { setSavingPwd(false); }
   };
 
   const handleLogout = () => {
@@ -354,13 +447,34 @@ export default function SettingsScreen({ navigation }: Props) {
           ) : editingGarage ? (
             <>
               <Field label="Garage Name *" value={garageName} onChangeText={setGarageName} placeholder="Your garage name" />
-              <Field label="Phone" value={garagePhone} onChangeText={setGaragePhone} placeholder="Garage contact number" keyboardType="phone-pad" autoCapitalize="none" />
+              <Field label="Phone" value={garagePhone} onChangeText={setGaragePhone} placeholder={labels.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
               <Field label="Email" value={garageEmail} onChangeText={setGarageEmail} placeholder="Garage email address" keyboardType="email-address" autoCapitalize="none" />
-              <Field label="GST Number" value={garageGst} onChangeText={setGarageGst} placeholder="15-digit GST number" autoCapitalize="characters" />
+              <BottomSheetPicker
+                label="Country"
+                searchable
+                options={countryOptions}
+                selectedValue={garageCountry}
+                onValueChange={value => {
+                  setGarageCountry(value);
+                  // Clear any zone picked for the previous country — a US zone
+                  // on a garage that just moved to Australia is worse than none.
+                  setGarageTimezone('');
+                }}
+              />
+              {needsTimezone && (
+                <BottomSheetPicker
+                  label="Timezone"
+                  options={timezoneOptions.map(tz => ({ value: tz.value, label: tz.label }))}
+                  selectedValue={garageTimezone}
+                  onValueChange={setGarageTimezone}
+                  placeholder="Select a timezone"
+                />
+              )}
+              <Field label={labels.taxId} value={garageGst} onChangeText={setGarageGst} placeholder={`Your ${labels.taxId}`} autoCapitalize="characters" />
               <View style={styles.row}>
-                <View style={{ flex: 1 }}><Field label="Tax Rate (%)" value={garageTax} onChangeText={setGarageTax} placeholder="18" keyboardType="numeric" autoCapitalize="none" /></View>
+                <View style={{ flex: 1 }}><Field label={`${labels.tax} Rate (%)`} value={garageTax} onChangeText={setGarageTax} placeholder="0" keyboardType="numeric" autoCapitalize="none" /></View>
                 <View style={{ width: 12 }} />
-                <View style={{ flex: 1 }}><Field label="Labor Rate (₹/hr)" value={garageLabor} onChangeText={setGarageLabor} placeholder="500" keyboardType="numeric" autoCapitalize="none" /></View>
+                <View style={{ flex: 1 }}><Field label={`Labor Rate (${labels.currency}/hr)`} value={garageLabor} onChangeText={setGarageLabor} placeholder="0" keyboardType="numeric" autoCapitalize="none" /></View>
               </View>
               <Text style={styles.subLabel}>Address</Text>
               <Field label="Street" value={garageStreet} onChangeText={setGarageStreet} placeholder="Street / Area" />
@@ -369,7 +483,16 @@ export default function SettingsScreen({ navigation }: Props) {
                 <View style={{ width: 12 }} />
                 <View style={{ flex: 1 }}><Field label="State" value={garageState} onChangeText={setGarageState} placeholder="State" /></View>
               </View>
-              <Field label="Pincode" value={garagePincode} onChangeText={setGaragePincode} placeholder="6-digit pincode" keyboardType="numeric" autoCapitalize="none" />
+              {/* keyboardType follows the country: a numeric keypad makes UK
+                  "SW1A 1AA" and Canadian "K1A 0B1" literally unenterable. */}
+              <Field
+                label={labels.postal}
+                value={garagePincode}
+                onChangeText={setGaragePincode}
+                placeholder={labels.postal}
+                keyboardType={labels.postalInputMode === 'numeric' ? 'numeric' : 'default'}
+                autoCapitalize="characters"
+              />
               <PrimaryBtn label="Save Garage Info" icon="save-outline" onPress={handleSaveGarage} loading={savingGarage} />
             </>
           ) : (
@@ -377,9 +500,10 @@ export default function SettingsScreen({ navigation }: Props) {
               <InfoRow label="Garage Name" value={garage?.name} />
               <InfoRow label="Phone" value={garage?.phone} />
               <InfoRow label="Email" value={garage?.email} />
-              <InfoRow label="GST Number" value={garage?.gstNumber} />
-              <InfoRow label="Tax Rate" value={garage?.settings?.taxRate ? `${garage.settings.taxRate}%` : null} />
-              <InfoRow label="Labor Rate" value={garage?.settings?.laborRatePerHour ? `₹${garage.settings.laborRatePerHour}/hr` : null} />
+              <InfoRow label="Country" value={selectedCountry?.name ?? garage?.locale?.country} />
+              <InfoRow label={labels.taxId} value={garage?.gstNumber} />
+              <InfoRow label={`${labels.tax} Rate`} value={`${garage?.settings?.taxRate ?? 0}%`} />
+              <InfoRow label="Labor Rate" value={`${labels.currency} ${garage?.settings?.laborRatePerHour ?? 0}/hr`} />
               <InfoRow label="Address" value={[garage?.address?.street, garage?.address?.city, garage?.address?.state, garage?.address?.pincode].filter(Boolean).join(', ')} last />
             </>
           )}
@@ -391,22 +515,26 @@ export default function SettingsScreen({ navigation }: Props) {
             {garagesLoading ? (
               <ActivityIndicator color="#3b5ff8" style={{ paddingVertical: 20 }} />
             ) : garages.map(g => (
-              <TouchableOpacity
-                key={g._id}
-                style={styles.branchRow}
-                activeOpacity={0.7}
-                onPress={() => switchGarage(g._id)}
-              >
-                <View style={styles.branchRowLeft}>
+              <View key={g._id} style={styles.branchRow}>
+                <TouchableOpacity
+                  style={styles.branchRowLeft}
+                  activeOpacity={0.7}
+                  onPress={() => switchGarage(g._id)}
+                >
                   <Ionicons
                     name={g._id === activeGarageId ? 'radio-button-on' : 'radio-button-off'}
                     size={20}
                     color={g._id === activeGarageId ? '#3b5ff8' : '#9ca3af'}
                   />
                   <Text style={styles.branchRowText}>{g.name}</Text>
-                </View>
-                {g._id === activeGarageId && <Text style={styles.branchActiveLabel}>Active</Text>}
-              </TouchableOpacity>
+                  {g._id === activeGarageId && <Text style={styles.branchActiveLabel}>Active</Text>}
+                </TouchableOpacity>
+                {garages.length > 1 && (
+                  <TouchableOpacity onPress={() => setDeleteBranchTarget(g)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                )}
+              </View>
             ))}
             <TouchableOpacity style={styles.addBranchRow} onPress={() => setAddBranchVisible(true)}>
               <Ionicons name="add-circle-outline" size={20} color="#3b5ff8" />
@@ -427,21 +555,29 @@ export default function SettingsScreen({ navigation }: Props) {
           <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
         </TouchableOpacity>
 
-        {/* ── MY PROFILE ── */}
-        <SectionCard title="Edit My Profile" icon="person-outline">
-          <Field label="Full Name" value={profileName} onChangeText={setProfileName} placeholder="Your name" />
-          <Field label="Email" value={user?.email || ''} placeholder="Email" editable={false} keyboardType="email-address" autoCapitalize="none" />
-          <Field label="Phone Number" value={profilePhone} onChangeText={setProfilePhone} placeholder="Phone number" keyboardType="phone-pad" autoCapitalize="none" />
-          <PrimaryBtn label="Save Changes" icon="save-outline" onPress={handleSaveProfile} loading={savingProfile} />
-        </SectionCard>
+        {/* ── MY PROFILE SHORTCUT ── */}
+        <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('EditProfile')}>
+          <View style={styles.staffShortcutLeft}>
+            <View style={styles.staffShortcutIcon}><Ionicons name="person-outline" size={22} color="#3b5ff8" /></View>
+            <View>
+              <Text style={styles.staffShortcutTitle}>Edit My Profile</Text>
+              <Text style={styles.staffShortcutSub}>Update your name and phone number</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+        </TouchableOpacity>
 
-        {/* ── CHANGE PASSWORD ── */}
-        <SectionCard title="Change Password" icon="lock-closed-outline">
-          <Field label="Current Password" value={currentPwd} onChangeText={setCurrentPwd} placeholder="Current password" secureTextEntry autoCapitalize="none" />
-          <Field label="New Password" value={newPwd} onChangeText={setNewPwd} placeholder="Min. 6 characters" secureTextEntry autoCapitalize="none" />
-          <Field label="Confirm New Password" value={confirmPwd} onChangeText={setConfirmPwd} placeholder="Re-enter new password" secureTextEntry autoCapitalize="none" />
-          <PrimaryBtn label="Update Password" icon="key-outline" onPress={handleChangePassword} loading={savingPwd} />
-        </SectionCard>
+        {/* ── CHANGE PASSWORD SHORTCUT ── */}
+        <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('ChangePassword')}>
+          <View style={styles.staffShortcutLeft}>
+            <View style={styles.staffShortcutIcon}><Ionicons name="lock-closed-outline" size={22} color="#3b5ff8" /></View>
+            <View>
+              <Text style={styles.staffShortcutTitle}>Change Password</Text>
+              <Text style={styles.staffShortcutSub}>Update your account password</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+        </TouchableOpacity>
 
         {/* ── APP INFO ── */}
         <SectionCard title="App Info" icon="information-circle-outline">
@@ -466,6 +602,17 @@ export default function SettingsScreen({ navigation }: Props) {
         onSave={async (data) => {
           await addBranch(data);
           Toast.show({ type: 'success', text1: 'Branch added!' });
+        }}
+      />
+      <DeleteBranchModal
+        visible={!!deleteBranchTarget}
+        branch={deleteBranchTarget}
+        otherBranches={garages.filter(g => g._id !== deleteBranchTarget?._id)}
+        onClose={() => setDeleteBranchTarget(null)}
+        onConfirm={async (payload) => {
+          if (!deleteBranchTarget) return;
+          await removeBranch(deleteBranchTarget._id, payload);
+          Toast.show({ type: 'success', text1: `Branch "${deleteBranchTarget.name}" deleted` });
         }}
       />
     </KeyboardAvoidingView>
@@ -525,7 +672,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
   },
-  branchRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  branchRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   branchRowText: { fontSize: 15, color: '#111827', fontWeight: '500' },
   branchActiveLabel: { fontSize: 12, fontWeight: '600', color: '#3b5ff8' },
   addBranchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
@@ -543,22 +690,8 @@ const styles = StyleSheet.create({
   staffShortcutSub: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
 
   // Form
-  fieldWrap: { marginBottom: 14 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  inputRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12,
-  },
-  inputDimmed: { opacity: 0.55 },
-  inputField: { flex: 1, height: 44, fontSize: 15, color: '#1f2937' },
   row: { flexDirection: 'row' },
   subLabel: { fontSize: 13, fontWeight: '700', color: '#6b7280', marginBottom: 8, marginTop: 4 },
-
-  primaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 13, marginTop: 6,
-  },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
 
   // Info display rows
   infoRow: {

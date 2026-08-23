@@ -3,7 +3,7 @@ import { render, screen, waitFor, userEvent } from '@testing-library/react-nativ
 import CustomersScreen from './CustomersScreen';
 import * as customerService from '../api/customerService';
 import type { Customer } from '../types/models';
-import type { MainTabScreenProps } from '../types/navigation';
+import type { RootStackScreenProps } from '../types/navigation';
 
 // Explicit factory — see AuthContext.test.tsx for why automock isn't used here.
 jest.mock('../api/customerService', () => ({
@@ -19,7 +19,15 @@ jest.mock('../context/AuthContext', () => ({
 }));
 
 jest.mock('../context/GarageContext', () => ({
-  useGarage: () => ({ garages: [], activeGarageId: 'g1', switchGarage: jest.fn(), addBranch: jest.fn() }),
+  // `locale` is never undefined in the real provider — it falls back to
+  // DEFAULT_LOCALE — so the mock must honour that or the screen's money
+  // formatting blows up on a state the app can't actually reach.
+  useGarage: () => ({
+    garages: [], activeGarageId: 'g1', garagesLoading: false,
+    locale: jest.requireActual('../utils/locale').DEFAULT_LOCALE,
+    activeGarage: null, refreshGarage: jest.fn(),
+    switchGarage: jest.fn(), addBranch: jest.fn(), removeBranch: jest.fn(),
+  }),
 }));
 
 const sampleCustomer: Customer = {
@@ -32,7 +40,7 @@ const sampleCustomer: Customer = {
   vehicles: [],
 };
 
-const props = {} as MainTabScreenProps<'Customers'>;
+const props = {} as RootStackScreenProps<'Customers'>;
 
 describe('CustomersScreen', () => {
   beforeEach(() => {

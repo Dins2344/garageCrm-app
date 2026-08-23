@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatMoney } from '../utils/format';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
@@ -7,14 +8,15 @@ import {
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../api/customerService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
-import type { MainTabScreenProps } from '../types/navigation';
+import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer, Address } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
 
-type Props = MainTabScreenProps<'Customers'>;
+type Props = RootStackScreenProps<'Customers'>;
 
 interface CustomerForm {
   name: string;
@@ -125,14 +127,14 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
       </KeyboardAvoidingView>
       {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
           is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
-      <Toast />
+      <Toast config={toastConfig} />
     </Modal>
   );
 }
 
 export default function CustomersScreen(_props: Props) {
   const { hasRole } = useAuth();
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -190,7 +192,7 @@ export default function CustomersScreen(_props: Props) {
           <Text style={s.customerName}>{c.name}</Text>
           <Text style={s.customerSub}>{c.phone}{c.email ? ` · ${c.email}` : ''}</Text>
         </View>
-        <Text style={s.spentText}>₹{(c.totalSpent || 0).toLocaleString('en-IN')}</Text>
+        <Text style={s.spentText}>{formatMoney(c.totalSpent, locale)}</Text>
       </View>
       <View style={s.cardFooter}>
         <View style={s.metaChip}><Ionicons name="car-outline" size={13} color="#6b7280" /><Text style={s.metaChipText}>{c.vehicles?.length || 0} vehicles</Text></View>

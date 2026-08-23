@@ -1,7 +1,10 @@
 import React, { useState, useEffect, ComponentProps } from 'react';
+import { useGarage } from '../context/GarageContext';
+import { formatDate as fmtDate } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, Modal, KeyboardAvoidingView, Platform, KeyboardTypeOptions
+  ActivityIndicator, Modal, KeyboardAvoidingView, Platform, KeyboardTypeOptions,
+  SafeAreaView, StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -17,6 +20,22 @@ import { getErrorMessage } from '../utils/errors';
 
 type Props = RootStackScreenProps<'CreateJobCard'>;
 type IconName = ComponentProps<typeof Ionicons>['name'];
+
+/**
+ * Section heading with a leading icon.
+ *
+ * These headings used to prefix the text with an emoji. Emoji render from the
+ * platform font, so they changed appearance between Android versions and sat
+ * inconsistently next to the Ionicons used everywhere else in the app.
+ */
+function CardTitle({ icon, children }: { icon: IconName; children: React.ReactNode }) {
+  return (
+    <View style={s.cardTitleRow}>
+      <Ionicons name={icon} size={16} color="#3b5ff8" />
+      <Text style={s.cardTitle}>{children}</Text>
+    </View>
+  );
+}
 
 // ─── Pure-JS Calendar Picker (no native modules — works in Expo Go) ───────────
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -268,6 +287,7 @@ interface ComplaintDraft {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CreateJobCardScreen({ navigation }: Props) {
+  const { locale } = useGarage();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -394,25 +414,43 @@ export default function CreateJobCardScreen({ navigation }: Props) {
         internalNotes: internalNotes.trim() || undefined,
       });
 
-      Toast.show({ type: 'success', text1: '✅ Job Card Created!' });
+      Toast.show({ type: 'success', text1: 'Job Card Created!' });
       navigation.goBack();
     } catch (e) {
-      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to create Job Card') });
+      // Split across text1/text2 — the toast renders text1 on a single line,
+      // which would truncate longer server messages (e.g. the "vehicle already
+      // has an open job card (JC-…)" one, hiding the job card number).
+      Toast.show({
+        type: 'error',
+        text1: 'Could not create job card',
+        text2: getErrorMessage(e, 'Please try again'),
+        visibilityTime: 5000,
+      });
     } finally { setLoading(false); }
   };
+
+  const header = (
+    <View style={s.headerInner}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+        <Ionicons name="close" size={24} color="#111827" />
+      </TouchableOpacity>
+      <Text style={s.headerTitle}>New Job Card</Text>
+      <View style={{ width: 32 }} />
+    </View>
+  );
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ResponsiveScreen>
       <View style={s.container}>
-        {/* Header */}
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <Ionicons name="close" size={24} color="#111827" />
-          </TouchableOpacity>
-          <Text style={s.headerTitle}>New Job Card</Text>
-          <View style={{ width: 32 }} />
-        </View>
+        {/* Header — SafeAreaView handles the top inset natively on iOS;
+            Android's SafeAreaView is a no-op, so it gets the status bar
+            height added manually. Same pattern as InvoiceViewerScreen. */}
+        {Platform.OS === 'ios' ? (
+          <SafeAreaView style={s.safeHeader}>{header}</SafeAreaView>
+        ) : (
+          <View style={s.header}>{header}</View>
+        )}
 
         {/* Step Pills */}
         <View style={s.stepRow}>
@@ -434,7 +472,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
             <>
               {/* ── CUSTOMER ── */}
               <View style={s.card}>
-                <Text style={s.cardTitle}>👤 Customer</Text>
+                <CardTitle icon="person-outline">Customer</CardTitle>
                 <TabToggle value={custTab} onChange={t => { setCustTab(t); setSelCustomer(null); }} labels={['Existing Customer', 'New Customer']} />
 
                 {custTab === 0 ? (
@@ -459,7 +497,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
               {/* ── VEHICLE ── */}
               <View style={s.card}>
-                <Text style={s.cardTitle}>🚗 Vehicle</Text>
+                <CardTitle icon="car-outline">Vehicle</CardTitle>
                 <TabToggle value={vehTab} onChange={t => { setVehTab(t); setSelVehicle(null); }} labels={['Existing Vehicle', 'New Vehicle']} />
 
                 {vehTab === 0 ? (
@@ -512,7 +550,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
             <>
               {/* ── WORK DETAILS ── */}
               <View style={s.card}>
-                <Text style={s.cardTitle}>🔧 Service Details</Text>
+                <CardTitle icon="construct-outline">Service Details</CardTitle>
 
                 <BottomSheetPicker
                   label="Service Type"
@@ -554,8 +592,13 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                     <TextInput
                       style={s.input}
                       value={odometerAtIntake}
-                      onChangeText={setOdometerAtIntake}
-                      keyboardType="numeric"
+                      // Digits only, hard-capped at 7 (9,999,999 km is beyond
+                      // any real vehicle). Guards against pasted junk, decimal
+                      // separators that `numeric` keyboards allow, and runaway
+                      // values from repeated re-entry after a failed submit.
+                      onChangeText={t => setOdometerAtIntake(t.replace(/[^0-9]/g, '').slice(0, 7))}
+                      keyboardType="number-pad"
+                      maxLength={7}
                       placeholder="e.g. 42000"
                       placeholderTextColor="#9ca3af"
                     />
@@ -571,7 +614,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                       <Ionicons name="calendar-outline" size={16} color={expectedDeliveryDate ? '#1f2937' : '#9ca3af'} />
                       <Text style={{ fontSize: 14, color: expectedDeliveryDate ? '#1f2937' : '#9ca3af', flex: 1 }}>
                         {expectedDeliveryDate
-                          ? expectedDeliveryDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                          ? fmtDate(expectedDeliveryDate, locale, { day: '2-digit', month: 'short', year: 'numeric' })
                           : 'Select date'}
                       </Text>
                       {expectedDeliveryDate && (
@@ -595,7 +638,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
               {/* ── COMPLAINTS ── */}
               <View style={s.card}>
                 <View style={s.complaintHeader}>
-                  <Text style={s.cardTitle}>⚠️ Customer Complaints *</Text>
+                  <CardTitle icon="alert-circle-outline">Customer Complaints *</CardTitle>
                   <TouchableOpacity style={s.addComplaintBtn} onPress={addComplaint}>
                     <Ionicons name="add" size={16} color="#3b5ff8" />
                     <Text style={s.addComplaintText}>Add</Text>
@@ -641,7 +684,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
               {/* ── INTERNAL NOTES ── */}
               <View style={s.card}>
-                <Text style={s.cardTitle}>📝 Internal Notes</Text>
+                <CardTitle icon="document-text-outline">Internal Notes</CardTitle>
                 <TextInput
                   style={[s.input, { height: 80, textAlignVertical: 'top' }]}
                   value={internalNotes}
@@ -718,7 +761,9 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fdfcfb' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: Platform.OS === 'ios' ? 54 : 16, paddingBottom: 14, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  safeHeader: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, paddingHorizontal: 16, paddingTop: 4 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: (StatusBar.currentHeight || 24) + 10, paddingBottom: 14, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
   // Steps
@@ -736,7 +781,8 @@ const s = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 40 },
   // Card
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827', marginBottom: 14 },
+  cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
+  cardTitle: { fontSize: 16, fontWeight: "bold", color: "#111827" },
   // Tabs
   tabs: { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 16, padding: 3, marginBottom: 14 },
   tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 16 },

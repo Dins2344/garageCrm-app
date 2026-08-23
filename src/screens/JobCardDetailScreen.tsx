@@ -1,27 +1,36 @@
 import React, { useState, useCallback } from 'react';
+import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getJobCard, updateJobCard, approveJobCardEstimation } from '../api/jobCardService';
 import { createInvoice } from '../api/invoiceService';
+import { getMechanics } from '../api/userService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import StatusStepper from '../components/StatusStepper';
+import BottomSheetPicker from '../components/BottomSheetPicker';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
-import type { JobCard } from '../types/models';
+import type { JobCard, User, AssignedStaff } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
 
 type Props = RootStackScreenProps<'JobCardDetail'>;
 
+/** Turns 'ready_for_pickup' into 'Ready For Pickup'. */
+const humanize = (value?: string | null) =>
+  value ? value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
+
 export default function JobCardDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const { hasRole } = useAuth();
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
   const [jobCard, setJobCard] = useState<JobCard | null>(null);
+  const [mechanics, setMechanics] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [assigningMechanic, setAssigningMechanic] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -35,13 +44,44 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const fetchMechanics = async () => {
+    try {
+      setMechanics(await getMechanics());
+    } catch {
+      // Non-critical: the mechanic name still renders, only reassignment is
+      // unavailable. Never block the whole screen on the staff list.
+    }
+  };
+
   // Re-fetch whenever this screen comes into focus (e.g. returning from estimation editor)
   useFocusEffect(
     useCallback(() => {
       fetchData();
+      fetchMechanics();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, activeGarageId])
   );
+
+  const assignMechanic = async (mechanicId: string) => {
+    setAssigningMechanic(true);
+    try {
+      await updateJobCard(id, { assignedMechanic: mechanicId || null });
+      // Re-fetch rather than adopting the PUT's response: that endpoint
+      // populates a narrower set of refs than the detail GET (no
+      // assignedAdvisor, no statusHistory.changedBy, no invoice), so using it
+      // here would blank the advisor and the timeline names on this screen.
+      // Same reason the web page re-fetches after assigning.
+      await fetchData();
+      Toast.show({
+        type: 'success',
+        text1: mechanicId ? 'Mechanic assigned' : 'Mechanic unassigned',
+      });
+    } catch (e) {
+      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to assign mechanic') });
+    } finally {
+      setAssigningMechanic(false);
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === 'cancelled') {
@@ -153,6 +193,11 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
     : null;
   const customer = typeof jobCard?.customer === 'object' ? jobCard.customer : null;
   const vehicle = typeof jobCard?.vehicle === 'object' ? jobCard.vehicle : null;
+  const assignedMechanic = (typeof jobCard?.assignedMechanic === 'object' ? jobCard.assignedMechanic : null) as AssignedStaff | null;
+  const assignedAdvisor = (typeof jobCard?.assignedAdvisor === 'object' ? jobCard.assignedAdvisor : null) as AssignedStaff | null;
+  // Same roles the web app allows to reassign work.
+  const canAssignMechanic = hasRole('owner', 'admin', 'service_advisor');
+  const timeline = (jobCard?.statusHistory || []).slice().reverse();
 
   return (
     <ResponsiveScreen>
@@ -199,7 +244,10 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               <Ionicons name="car-outline" size={20} color="#6b7280" />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoTitle}>{vehicle?.licensePlate}</Text>
-                <Text style={styles.infoSubtitle}>{vehicle?.make} {vehicle?.model}</Text>
+                <Text style={styles.infoSubtitle}>
+                  {[vehicle?.make, vehicle?.model].filter(Boolean).join(' ')}
+                  {vehicle?.year ? ` (${vehicle.year})` : ''}
+                </Text>
               </View>
             </View>
           </View>
@@ -209,26 +257,69 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Service Details</Text>
           <View style={styles.infoCard}>
-            {/* Odometer + Expected Delivery */}
+            {/* Service type, odometer, advisor, delivery date — the same set
+                the web detail page shows, so the two don't disagree. */}
             <View style={styles.detailsGrid}>
+              {!!jobCard?.serviceType && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Service Type</Text>
+                  <Text style={styles.detailValue}>{humanize(jobCard.serviceType)}</Text>
+                </View>
+              )}
               {!!jobCard?.odometerAtIntake && jobCard.odometerAtIntake > 0 && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Odometer</Text>
-                  <Text style={styles.detailValue}>{jobCard.odometerAtIntake?.toLocaleString('en-IN')} km</Text>
+                  <Text style={styles.detailValue}>{formatNumber(jobCard.odometerAtIntake, locale)} km</Text>
                 </View>
               )}
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Service Advisor</Text>
+                <Text style={styles.detailValue}>{assignedAdvisor?.name || 'Unassigned'}</Text>
+              </View>
               {jobCard?.expectedDeliveryDate && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Expected Delivery</Text>
                   <Text style={styles.detailValue}>
-                    {new Date(jobCard.expectedDeliveryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {fmtDate(jobCard.expectedDeliveryDate, locale, { day: '2-digit', month: 'short', year: 'numeric' })}
                   </Text>
                 </View>
               )}
             </View>
 
+            <View style={styles.divider} />
+
+            {/* Mechanic — editable inline for the roles that own scheduling,
+                read-only for everyone else (a mechanic shouldn't be able to
+                reassign their own job). */}
+            {canAssignMechanic ? (
+              <View style={styles.mechanicBlock}>
+                <BottomSheetPicker
+                  label="Assigned Mechanic"
+                  placeholder="Unassigned"
+                  disabled={assigningMechanic}
+                  selectedValue={assignedMechanic?._id || ''}
+                  onValueChange={assignMechanic}
+                  options={[
+                    { value: '', label: 'Unassigned' },
+                    ...mechanics.map(m => ({ value: m._id, label: m.name })),
+                  ]}
+                />
+                {assigningMechanic && (
+                  <View style={styles.mechanicSaving}>
+                    <ActivityIndicator size="small" color="#3b5ff8" />
+                    <Text style={styles.mechanicSavingText}>Saving…</Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Assigned Mechanic</Text>
+                <Text style={styles.detailValue}>{assignedMechanic?.name || 'Unassigned'}</Text>
+              </View>
+            )}
+
             {/* Complaints */}
-            {((jobCard?.odometerAtIntake ?? 0) > 0 || jobCard?.expectedDeliveryDate) && <View style={styles.divider} />}
+            <View style={styles.divider} />
             <Text style={styles.subLabel}>Complaints</Text>
             {jobCard?.complaints?.map((c, idx) => {
               const priorityColor = c.priority === 'urgent' ? '#7c3aed' : c.priority === 'high' ? '#ef4444' : c.priority === 'medium' ? '#f59e0b' : '#10b981';
@@ -280,9 +371,9 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                     <View key={i} style={styles.estItemRow}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.estItemName}>{p.partName}</Text>
-                        <Text style={styles.estItemMeta}>{p.quantity} × ₹{p.unitPrice?.toLocaleString('en-IN')}</Text>
+                        <Text style={styles.estItemMeta}>{p.quantity} × {formatMoney(p.unitPrice, locale)}</Text>
                       </View>
-                      <Text style={styles.estItemTotal}>₹{p.total?.toLocaleString('en-IN')}</Text>
+                      <Text style={styles.estItemTotal}>{formatMoney(p.total, locale)}</Text>
                     </View>
                   ))}
                 </View>
@@ -296,9 +387,9 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                     <View key={i} style={styles.estItemRow}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.estItemName}>{l.description}</Text>
-                        <Text style={styles.estItemMeta}>{l.hours}h × ₹{l.ratePerHour?.toLocaleString('en-IN')}/hr</Text>
+                        <Text style={styles.estItemMeta}>{l.hours}h × {formatMoney(l.ratePerHour, locale)}/hr</Text>
                       </View>
-                      <Text style={styles.estItemTotal}>₹{l.total?.toLocaleString('en-IN')}</Text>
+                      <Text style={styles.estItemTotal}>{formatMoney(l.total, locale)}</Text>
                     </View>
                   ))}
                 </View>
@@ -309,22 +400,22 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               {/* Summary totals */}
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Subtotal</Text>
-                <Text style={styles.summaryValue}>₹{(est.subtotal || 0).toLocaleString('en-IN')}</Text>
+                <Text style={styles.summaryValue}>{formatMoney(est.subtotal, locale)}</Text>
               </View>
               {est.discount > 0 && (
                 <View style={styles.summaryRow}>
                   <Text style={[styles.summaryLabel, { color: '#10b981' }]}>Discount</Text>
-                  <Text style={[styles.summaryValue, { color: '#10b981' }]}>-₹{est.discount?.toLocaleString('en-IN')}</Text>
+                  <Text style={[styles.summaryValue, { color: '#10b981' }]}>−{formatMoney(est.discount, locale)}</Text>
                 </View>
               )}
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Tax ({est.taxRate || 0}%)</Text>
-                <Text style={styles.summaryValue}>₹{(est.taxAmount || 0).toLocaleString('en-IN')}</Text>
+                <Text style={styles.summaryLabel}>{locale.taxLabel} ({est.taxRate || 0}%)</Text>
+                <Text style={styles.summaryValue}>{formatMoney(est.taxAmount, locale)}</Text>
               </View>
               <View style={styles.divider} />
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabelBold}>Grand Total</Text>
-                <Text style={styles.summaryValueBold}>₹{(est.grandTotal || 0).toLocaleString('en-IN')}</Text>
+                <Text style={styles.summaryValueBold}>{formatMoney(est.grandTotal, locale)}</Text>
               </View>
 
               {/* Approved badge */}
@@ -403,6 +494,47 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
           )}
         </View>
 
+        {/* ── TIMELINE ── */}
+        {/* Newest first, matching the web detail page. This is the audit trail
+            for who moved the job and when — previously mobile-only users had
+            no way to see it at all. */}
+        {timeline.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Timeline</Text>
+            {/* testID so tests can scope to this list — the status names also
+                appear in the StatusStepper above. */}
+            <View style={styles.infoCard} testID="status-timeline">
+              {timeline.map((entry, index) => {
+                const changedBy = typeof entry.changedBy === 'object' ? entry.changedBy : null;
+                const isLatest = index === 0;
+                return (
+                  <View key={`${entry.changedAt}-${index}`} style={styles.timelineRow}>
+                    <View style={styles.timelineRail}>
+                      <View style={[styles.timelineDot, isLatest && styles.timelineDotActive]} />
+                      {index < timeline.length - 1 && <View style={styles.timelineLine} />}
+                    </View>
+                    <View style={styles.timelineBody}>
+                      <View style={styles.timelineHeader}>
+                        <Text style={[styles.timelineStatus, isLatest && styles.timelineStatusActive]}>
+                          {humanize(entry.status)}
+                        </Text>
+                        <Text style={styles.timelineDate}>
+                          {fmtDate(entry.changedAt, locale, { day: 'numeric', month: 'short' })}
+                        </Text>
+                      </View>
+                      <Text style={styles.timelineMeta}>
+                        {fmtDate(entry.changedAt, locale, { hour: '2-digit', minute: '2-digit' })}
+                        {changedBy?.name ? ` · ${changedBy.name}` : ''}
+                      </Text>
+                      {entry.notes ? <Text style={styles.timelineNotes}>{entry.notes}</Text> : null}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
       </ScrollView>
     </View>
     </ResponsiveScreen>
@@ -448,6 +580,29 @@ const styles = StyleSheet.create({
   notesBox: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
   notesTitle: { fontSize: 12, fontWeight: 'bold', color: '#6b7280', marginBottom: 4 },
   notesText: { fontSize: 14, color: '#374151', fontStyle: 'italic' },
+
+  // Mechanic assignment
+  mechanicBlock: { marginBottom: 4 },
+  mechanicSaving: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -4, marginBottom: 8 },
+  mechanicSavingText: { fontSize: 12, fontWeight: '600', color: '#6b7280' },
+
+  // Timeline
+  timelineRow: { flexDirection: 'row', gap: 12 },
+  timelineRail: { alignItems: 'center', width: 16 },
+  timelineDot: {
+    width: 10, height: 10, borderRadius: 5, marginTop: 4,
+    backgroundColor: '#fff', borderWidth: 2, borderColor: '#d1d5db',
+  },
+  timelineDotActive: { borderColor: '#3b5ff8', backgroundColor: '#3b5ff8' },
+  // Fills the gap between one dot and the next; the last entry has none.
+  timelineLine: { flex: 1, width: 1.5, backgroundColor: '#f3f4f6', marginVertical: 4 },
+  timelineBody: { flex: 1, paddingBottom: 16 },
+  timelineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  timelineStatus: { fontSize: 14, fontWeight: '700', color: '#374151' },
+  timelineStatusActive: { color: '#3b5ff8' },
+  timelineDate: { fontSize: 11, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase' },
+  timelineMeta: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
+  timelineNotes: { fontSize: 13, color: '#4b5563', marginTop: 6, fontStyle: 'italic' },
 
   // Estimation header
   estHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },

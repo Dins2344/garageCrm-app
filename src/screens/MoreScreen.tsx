@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { openWebApp } from '../utils/webApp';
 import ResponsiveScreen from '../components/ResponsiveScreen';
+import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Role } from '../types/models';
 
@@ -38,12 +39,13 @@ export default function MoreScreen({ navigation }: Props) {
 
   const menuItems: MenuItem[] = [
     {
-      title: 'Vehicles',
-      subtitle: 'Browse all registered vehicles',
-      icon: 'car-outline',
-      iconBg: '#eff2ff',
-      iconColor: '#3b5ff8',
-      onPress: () => navigation.navigate('Vehicles'),
+      title: 'Customers',
+      subtitle: 'View and manage your customers',
+      icon: 'person-outline',
+      iconBg: '#fffbeb',
+      iconColor: '#f59e0b',
+      onPress: () => navigation.navigate('Customers'),
+      roles: ['owner', 'admin', 'service_advisor', 'receptionist'],
     },
     {
       title: 'Invoices',
@@ -98,6 +100,8 @@ export default function MoreScreen({ navigation }: Props) {
   };
   const getRoleLabel = (role?: Role) => (role && ROLE_LABEL[role]) || role || '';
 
+  const visibleMenuItems = menuItems.filter(item => !item.roles || (user && item.roles.includes(user.role)));
+
   return (
     <ResponsiveScreen>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -124,12 +128,12 @@ export default function MoreScreen({ navigation }: Props) {
 
       {/* Menu */}
       <View style={styles.menuGroup}>
-        {menuItems.map((item, index) => (
+        {visibleMenuItems.map((item, index) => (
           <TouchableOpacity
             key={index}
             style={[
               styles.menuItem,
-              index === menuItems.length - 1 && styles.lastMenuItem,
+              index === visibleMenuItems.length - 1 && styles.lastMenuItem,
               item.disabled && styles.menuItemDisabled,
             ]}
             onPress={item.disabled ? undefined : item.onPress}
@@ -173,7 +177,8 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 40,
+    // Extra clearance for the floating dock tab bar.
+    paddingBottom: TAB_BAR_CLEARANCE + 20,
   },
   profileSection: {
     flexDirection: 'row',

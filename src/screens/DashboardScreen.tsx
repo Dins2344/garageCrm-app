@@ -1,23 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { formatMoney } from '../utils/format';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { getDashboardStats, DashboardStats } from '../api/dashboardService';
-import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import Toast from 'react-native-toast-message';
-import WebAppBanner from '../components/WebAppBanner';
 import ResponsiveScreen from '../components/ResponsiveScreen';
+import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 
 type Props = MainTabScreenProps<'Dashboard'>;
+
+// Mirrors StatusStepper's color scheme so a job status means the same
+// color everywhere in the app.
+const STATUS_LABELS: Record<string, string> = {
+  new: 'New',
+  estimation_sent: 'Estimation Sent',
+  approved: 'Approved',
+  in_progress: 'In Progress',
+  quality_check: 'Quality Check',
+  ready_for_pickup: 'Ready for Pickup',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  new: '#3b82f6',
+  estimation_sent: '#f59e0b',
+  approved: '#8b5cf6',
+  in_progress: '#ec4899',
+  quality_check: '#06b6d4',
+  ready_for_pickup: '#10b981',
+  delivered: '#6b7280',
+  cancelled: '#ef4444',
+};
+
+const BAR_MAX_HEIGHT = 110;
 
 export default function DashboardScreen(_props: Props) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { user } = useAuth();
-  const { activeGarageId } = useGarage();
+  const { activeGarageId, locale } = useGarage();
 
-  const fetchDashboard = async () => {
+  const fetchStats = async () => {
     try {
       const { data } = await getDashboardStats();
       setStats(data);
@@ -29,14 +55,18 @@ export default function DashboardScreen(_props: Props) {
     }
   };
 
-  useEffect(() => {
-    fetchDashboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeGarageId]);
+  // Refetch on focus so the charts are current every time the tab is opened,
+  // not just on first mount — same rationale as HomeScreen.
+  useFocusEffect(
+    useCallback(() => {
+      fetchStats();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeGarageId])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchDashboard();
+    fetchStats();
   };
 
   if (loading) {
@@ -50,63 +80,96 @@ export default function DashboardScreen(_props: Props) {
     );
   }
 
-  const formatCurrency = (amount?: number) => {
-    return `₹${(amount || 0).toLocaleString('en-IN')}`;
-  };
+  const formatCurrency = (amount?: number) => formatMoney(amount, locale);
+
+  const weeklyRevenue = stats?.weeklyRevenue || [];
+  const maxWeekly = Math.max(1, ...weeklyRevenue.map(d => d.revenue));
+
+  const statusEntries = Object.entries(stats?.jobStatusBreakdown || {}).filter(([, count]) => count > 0);
+  const maxStatusCount = Math.max(1, ...statusEntries.map(([, count]) => count));
+
+  const staffAchievement = [...(stats?.staffAchievement || [])]
+    .sort((a, b) => b.totalLabor - a.totalLabor)
+    .slice(0, 6);
+  const maxStaffLabor = Math.max(1, ...staffAchievement.map(s => s.totalLabor));
 
   return (
     <ResponsiveScreen>
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Good Day, {user?.name?.split(' ')[0]} 👋</Text>
-        <Text style={styles.subtitle}>Here is your garage overview</Text>
-      </View>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* ── Weekly Revenue ── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Weekly Revenue</Text>
+          {weeklyRevenue.length === 0 ? (
+            <Text style={styles.emptyText}>No revenue data yet</Text>
+          ) : (
+            <View style={styles.barChartRow}>
+              {weeklyRevenue.map((d, i) => {
+                const barHeight = Math.max(4, (d.revenue / maxWeekly) * BAR_MAX_HEIGHT);
+                return (
+                  <View key={i} style={styles.barCol}>
+                    <Text style={styles.barValue} numberOfLines={1}>
+                      {d.revenue > 0 ? `${locale.currency} ${Math.round(d.revenue / 1000)}k` : ''}
+                    </Text>
+                    <View style={styles.barTrack}>
+                      <View style={[styles.bar, { height: barHeight }]} />
+                    </View>
+                    <Text style={styles.barLabel}>{d.label}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
 
-      <WebAppBanner />
+        {/* ── Job Status Breakdown ── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Job Status Breakdown</Text>
+          {statusEntries.length === 0 ? (
+            <Text style={styles.emptyText}>No job cards yet</Text>
+          ) : (
+            statusEntries.map(([status, count]) => (
+              <View key={status} style={styles.hBarRow}>
+                <Text style={styles.hBarLabel} numberOfLines={1}>{STATUS_LABELS[status] || status}</Text>
+                <View style={styles.hBarTrack}>
+                  <View style={[
+                    styles.hBarFill,
+                    { width: `${(count / maxStatusCount) * 100}%`, backgroundColor: STATUS_COLORS[status] || '#3b5ff8' }
+                  ]} />
+                </View>
+                <Text style={styles.hBarValue}>{count}</Text>
+              </View>
+            ))
+          )}
+        </View>
 
-      <View style={styles.statsGrid}>
-        <View style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}>
-          <Text style={styles.statLabel}>Active Job Cards</Text>
-          <Text style={styles.statValue}>{stats?.overview?.activeJobCards || 0}</Text>
+        {/* ── Staff Performance ── */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Staff Performance</Text>
+          {staffAchievement.length === 0 ? (
+            <Text style={styles.emptyText}>No completed jobs yet</Text>
+          ) : (
+            staffAchievement.map(s => (
+              <View key={s._id} style={styles.staffRow}>
+                <View style={styles.staffHeader}>
+                  <Text style={styles.staffName} numberOfLines={1}>{s.staffName}</Text>
+                  <Text style={styles.staffValue}>{formatCurrency(s.totalLabor)}</Text>
+                </View>
+                <View style={styles.hBarTrack}>
+                  <View style={[
+                    styles.hBarFill,
+                    { width: `${(s.totalLabor / maxStaffLabor) * 100}%`, backgroundColor: '#3b5ff8' }
+                  ]} />
+                </View>
+                <Text style={styles.staffMeta}>{s.jobCount} job{s.jobCount !== 1 ? 's' : ''}</Text>
+              </View>
+            ))
+          )}
         </View>
-        <View style={[styles.statCard, { borderLeftColor: '#10b981', borderLeftWidth: 4 }]}>
-          <Text style={styles.statLabel}>Today's Revenue</Text>
-          <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.today)}</Text>
-        </View>
-        <View style={[styles.statCard, { borderLeftColor: '#8b5cf6', borderLeftWidth: 4 }]}>
-          <Text style={styles.statLabel}>Monthly Revenue</Text>
-          <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.month)}</Text>
-        </View>
-        <View style={[styles.statCard, { borderLeftColor: '#f59e0b', borderLeftWidth: 4 }]}>
-          <Text style={styles.statLabel}>Pending Estimations</Text>
-          <Text style={styles.statValue}>{stats?.overview?.pendingEstimations || 0}</Text>
-        </View>
-      </View>
-
-      {/* Quick Overview List */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Quick Overview</Text>
-        <View style={styles.listItem}>
-          <Text style={styles.listLabel}>Total Customers</Text>
-          <Text style={styles.listValue}>{stats?.overview?.totalCustomers || 0}</Text>
-        </View>
-        <View style={styles.listItem}>
-          <Text style={styles.listLabel}>Total Vehicles</Text>
-          <Text style={styles.listValue}>{stats?.overview?.totalVehicles || 0}</Text>
-        </View>
-        <View style={styles.listItem}>
-          <Text style={styles.listLabel}>Today's New Jobs</Text>
-          <Text style={styles.listValue}>{stats?.overview?.todayJobCards || 0}</Text>
-        </View>
-        <View style={[styles.listItem, { borderBottomWidth: 0 }]}>
-          <Text style={styles.listLabel}>In Progress</Text>
-          <Text style={styles.listValue}>{stats?.overview?.inProgressJobs || 0}</Text>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
     </ResponsiveScreen>
   );
 }
@@ -115,7 +178,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fdfcfb',
+  },
+  content: {
     padding: 16,
+    // Extra clearance for the floating dock tab bar.
+    paddingBottom: TAB_BAR_CLEARANCE + 20,
   },
   loadingContainer: {
     flex: 1,
@@ -126,53 +193,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: '#6b7280',
   },
-  header: {
-    marginBottom: 20,
-    marginTop: 8,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#111827',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 4,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  statCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#6366f1',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  statLabel: {
-    fontSize: 13,
-    color: '#6b7280',
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
+
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
     shadowColor: '#6366f1',
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -180,25 +206,106 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#111827',
     marginBottom: 16,
   },
-  listItem: {
+  emptyText: {
+    fontSize: 13,
+    color: '#9ca3af',
+    textAlign: 'center',
+    paddingVertical: 20,
+  },
+
+  // Weekly revenue bar chart
+  barChartRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    alignItems: 'flex-end',
   },
-  listLabel: {
-    fontSize: 15,
+  barCol: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  barValue: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#3b5ff8',
+    marginBottom: 4,
+  },
+  barTrack: {
+    width: 18,
+    height: BAR_MAX_HEIGHT,
+    justifyContent: 'flex-end',
+  },
+  bar: {
+    width: 18,
+    borderRadius: 6,
+    backgroundColor: '#3b5ff8',
+  },
+  barLabel: {
+    fontSize: 11,
+    color: '#9ca3af',
+    fontWeight: '600',
+    marginTop: 8,
+  },
+
+  // Horizontal bars (job status / staff)
+  hBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  hBarLabel: {
+    width: 96,
+    fontSize: 12,
     color: '#4b5563',
+    fontWeight: '600',
   },
-  listValue: {
-    fontSize: 16,
+  hBarTrack: {
+    flex: 1,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#f3f4f6',
+    overflow: 'hidden',
+  },
+  hBarFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  hBarValue: {
+    width: 28,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#111827',
-  }
+    textAlign: 'right',
+  },
+
+  // Staff performance
+  staffRow: {
+    marginBottom: 16,
+  },
+  staffHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  staffName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    flex: 1,
+  },
+  staffValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#3b5ff8',
+  },
+  staffMeta: {
+    fontSize: 11,
+    color: '#9ca3af',
+    marginTop: 4,
+  },
 });

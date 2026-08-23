@@ -3,9 +3,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
 export type MainTabParamList = {
-  Dashboard: undefined;
   JobCards: undefined;
-  Customers: undefined;
+  Vehicles: undefined;
+  Home: undefined;
+  Dashboard: undefined;
   More: undefined;
 };
 
@@ -16,11 +17,13 @@ export type RootStackParamList = {
   EstimationEditor: { id: string };
   InvoiceViewer: { invoiceId: string };
   CreateJobCard: undefined;
-  Vehicles: undefined;
+  Customers: undefined;
   VehicleDetail: { id: string };
   Invoices: undefined;
   Settings: undefined;
   Staff: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
 };
 
 // Props for a screen that lives directly on the root Stack.Navigator.

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useGarage } from '../context/GarageContext';
+import { formatMoney } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
   ActivityIndicator, KeyboardAvoidingView, Platform, Alert, StatusBar
@@ -27,6 +29,8 @@ interface LaborDraft {
 }
 
 export default function EstimationEditorScreen({ route, navigation }: Props) {
+  const { locale, activeGarage } = useGarage();
+  const money = (n?: number) => formatMoney(n, locale);
   const { id } = route.params;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -35,7 +39,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
   const [parts, setParts] = useState<PartDraft[]>([]);
   const [labor, setLabor] = useState<LaborDraft[]>([]);
   const [discount, setDiscount] = useState('0');
-  const [taxRate, setTaxRate] = useState('18');
+  const [taxRate, setTaxRate] = useState('0');
 
   const fetchData = async () => {
     try {
@@ -47,13 +51,17 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
       // schema, so it can't distinguish "never filled in" from "actually
       // 18" — treat an estimation with no parts/labor yet as new and seed
       // its tax rate from the garage's configured default instead.
+      //
+      // The last-resort value is 0, never 18: on a garage in a country with a
+      // different rate (or none), quietly seeding India's rate puts a wrong
+      // tax line on a quote the customer is about to approve.
       const isNewEstimation = !jc.estimation?.parts?.length && !jc.estimation?.labor?.length;
-      let defaultTaxRate = 18;
+      let defaultTaxRate = activeGarage?.settings?.taxRate ?? 0;
       if (isNewEstimation) {
         try {
           const garageRes = await getGarage();
-          defaultTaxRate = garageRes.data.settings?.taxRate ?? 18;
-        } catch { /* fall back to 18 */ }
+          defaultTaxRate = garageRes.data.settings?.taxRate ?? defaultTaxRate;
+        } catch { /* keep whatever the garage context already gave us */ }
       }
 
       // Populate from existing estimation
@@ -104,7 +112,8 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 
   // ── Labor handlers ──
   const addLabor = () => {
-    setLabor([...labor, { description: '', hours: '1', ratePerHour: '500' }]);
+    // Seeded from the garage's configured rate, not a hardcoded ₹500.
+    setLabor([...labor, { description: '', hours: '1', ratePerHour: String(activeGarage?.settings?.laborRatePerHour ?? 0) }]);
   };
 
   const updateLabor = (index: number, field: keyof LaborDraft, value: string) => {
@@ -120,14 +129,20 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
     ]);
   };
 
-  // ── Totals calculation (matches web logic exactly) ──
+  // ── Totals calculation ──
+  // Mirrors backend/usecases/jobCardUsecase.ts, which is the source of truth —
+  // this is only a live preview. The 2dp rounding matters: without it a
+  // fractional total previews as one value and saves as another a cent away,
+  // which gets reported as a bug. Keep all three in step (web's equivalent is
+  // JobCardDetail.tsx's calculateTotals).
+  const round2 = (n: number) => Math.round(n * 100) / 100;
   const partsTotal = parts.reduce((sum, p) => sum + (parseFloat(p.quantity) || 0) * (parseFloat(p.unitPrice) || 0), 0);
   const laborTotal = labor.reduce((sum, l) => sum + (parseFloat(l.hours) || 0) * (parseFloat(l.ratePerHour) || 0), 0);
   const subtotal = partsTotal + laborTotal;
   const disc = parseFloat(discount) || 0;
   const tax = parseFloat(taxRate) || 0;
-  const taxAmount = ((subtotal - disc) * tax) / 100;
-  const grandTotal = subtotal - disc + taxAmount;
+  const taxAmount = round2(((subtotal - disc) * tax) / 100);
+  const grandTotal = round2(subtotal - disc + ((subtotal - disc) * tax) / 100);
 
   // ── Save ──
   const handleSave = async () => {
@@ -168,7 +183,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
     );
   }
 
-  const fmt = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN');
+  const fmt = (n: number) => money(n);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
@@ -238,7 +253,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                 </View>
                 <View style={{ width: 10 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.fieldLabel}>Unit Price (₹)</Text>
+                  <Text style={s.fieldLabel}>Unit Price ({locale.currency})</Text>
                   <TextInput
                     style={s.input}
                     value={part.unitPrice}
@@ -310,7 +325,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                 </View>
                 <View style={{ width: 10 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.fieldLabel}>Rate/Hr (₹)</Text>
+                  <Text style={s.fieldLabel}>Rate/Hr ({locale.currency})</Text>
                   <TextInput
                     style={s.input}
                     value={l.ratePerHour}
@@ -345,7 +360,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
           <View style={s.itemCard}>
             <View style={s.fieldRow}>
               <View style={{ flex: 1 }}>
-                <Text style={s.fieldLabel}>Discount (₹)</Text>
+                <Text style={s.fieldLabel}>Discount ({locale.currency})</Text>
                 <TextInput
                   style={s.input}
                   value={discount}
@@ -392,7 +407,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
               </View>
             )}
             <View style={s.totalsRow}>
-              <Text style={s.totalsLabel}>Tax ({tax}%)</Text>
+              <Text style={s.totalsLabel}>{locale.taxLabel} ({tax}%)</Text>
               <Text style={s.totalsValue}>{fmt(taxAmount)}</Text>
             </View>
             <View style={s.totalsDivider} />

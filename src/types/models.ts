@@ -19,15 +19,59 @@ export interface User {
   garage: string;
   avatar?: string;
   isActive: boolean;
+  /**
+   * The user's home-garage locale, resolved server-side on every auth
+   * response. This is the ONLY path a non-owner has to it — GarageContext
+   * fetches branches for owners only.
+   */
+  locale?: ResolvedLocale;
   createdAt?: string;
   updatedAt?: string;
 }
 
 export interface GarageSettings {
+  /** '' means "inherit from the garage's country" — see ResolvedLocale. */
   currency: string;
   taxRate: number;
   laborRatePerHour: number;
   serviceReminderDays: number;
+  locale?: string;
+  taxLabel?: string;
+  timezone?: string;
+}
+
+/**
+ * Everything needed to render a garage's money, dates and labels.
+ *
+ * Resolved on the SERVER (backend/utils/locale.ts) and attached to garage and
+ * auth payloads, so no client ever hardcodes a currency symbol or a tax name.
+ * It follows the garage, never the device: a UK garage's staff on a phone set
+ * to Hindi must still see GBP and "VAT".
+ */
+export interface ResolvedLocale {
+  country: string;
+  currency: string;
+  locale: string;
+  taxLabel: string;
+  taxIdLabel: string;
+  postalLabel: string;
+  postalInputMode: 'numeric' | 'text';
+  phoneExample: string;
+  timezone: string;
+}
+
+/** One row of GET /api/meta/countries — powers the signup/settings pickers. */
+export interface CountryOption {
+  code: string;
+  name: string;
+  currency: string;
+  taxLabel: string;
+  taxIdLabel: string;
+  postalLabel: string;
+  postalInputMode: 'numeric' | 'text';
+  phoneExample: string;
+  /** True when the country spans several zones and the owner must pick one. */
+  requiresTimezoneChoice: boolean;
 }
 
 export interface Garage {
@@ -38,8 +82,12 @@ export interface Garage {
   email?: string;
   gstNumber?: string;
   logo?: string;
+  /** ISO alpha-2. Absent on garages created before country support shipped. */
+  country?: string;
   owner?: string | { _id: string; name: string; email: string; phone: string; role: Role };
   settings?: GarageSettings;
+  /** Server-resolved; present on garage and auth payloads. */
+  locale?: ResolvedLocale;
   createdAt?: string;
   updatedAt?: string;
 }
