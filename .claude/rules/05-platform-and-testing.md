@@ -56,7 +56,7 @@ Tests use **Jest** (`jest-expo` preset) + **React Native Testing Library** + its
 
 ### Where tests live
 - **Colocated with the file they test**: `StatusStepper.tsx` → `StatusStepper.test.tsx`, `customerService.ts` → `customerService.test.ts`, right next to each other — same reasoning as the web frontend (tests are single-file-scoped, so colocation keeps them moving/deleting with the code they verify).
-- `jest.config.js` — `preset: 'jest-expo'`, `setupFilesAfterEnv: ['./jest.setup.ts']`.
+- `jest.config.js` — `preset: 'jest-expo'`, `setupFilesAfterEnv: ['./jest.setup.ts']`, `testTimeout: 20000` (see **Timeouts** below).
 - `jest.setup.ts` — global mocks every test needs: `@expo/vector-icons` (mocked to a plain `Text`, since the real one pulls in `expo-font`/`expo-asset` native asset-loading machinery that Jest can't run) and `@react-native-async-storage/async-storage` (mocked via the package's own official `.../jest/async-storage-mock`).
 
 ### Rules
@@ -65,6 +65,34 @@ Tests use **Jest** (`jest-expo` preset) + **React Native Testing Library** + its
 - **`AuthContext` only calls `getMe()` to re-validate a session already persisted in `AsyncStorage`** (unlike the web app, which always calls `getMe()` on mount) — tests exercising that path must seed `AsyncStorage.setItem('garagepulse_token', ...)` / `garagepulse_user` first, and `AsyncStorage.clear()` in `beforeEach` so tests don't leak state into each other.
 - Priority order for new work: hooks and context (pure logic, cheap to test), the service-layer contract for any new/changed service module, one presentational-component test for anything with real branching (like `StatusStepper`), and one fetch → render (+ primary action) test per new screen — not exhaustive coverage.
 - Prefer `getByText`/`getByPlaceholderText`/`getByRole` queries over `testID` where the element already has visible, accessible text. Add `testID` (and, where it doubles as a real accessibility improvement, `accessibilityLabel`) only for icon-only controls with no discoverable text — see the `add-customer-fab` button in `CustomersScreen.tsx`.
+
+### Timeouts — 20s, and why it is not 5s
+
+`jest.config.js` sets `testTimeout: 20000`. Jest's 5s default is a Node
+unit-test number and does not survive React Native component tests.
+
+Mounting a large screen through jest-expo costs most of a second even warm and
+idle, and that cost is dominated by first render and module resolution — both
+of which balloon under parallel load. Measured on one machine, same commit,
+`SettingsScreen.country.test.tsx`'s first test ran in **756ms, then 1134ms,
+then 3174ms**. A 4x spread on identical code. On a shared CI runner it crossed
+5s and failed the build; nothing was broken.
+
+If a test times out, check for that pattern before assuming a regression:
+
+- Is it the **first** test in its file? It pays the module-load and
+  first-render cost the rest of the file reuses.
+- Does it pass in isolation (`npx jest path/to/file`) but fail in the full
+  run? That is contention, not a bug.
+- Run it three times. A wide spread means timing; a consistent failure at the
+  same assertion means the code.
+
+20s is deliberately generous: long enough that load never fails a passing test,
+short enough that a genuine hang — an unresolved promise, a `waitFor` on
+something that never renders — still fails instead of stalling CI.
+
+`garageCrm-be` reached the same conclusion independently: `vitest.config.mts`
+runs `testTimeout: 30000`, `hookTimeout: 60000`.
 
 ### Running tests
 ```bash
