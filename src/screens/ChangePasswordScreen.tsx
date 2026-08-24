@@ -6,6 +6,7 @@ import { Field, PrimaryBtn } from '../components/FormControls';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import { getErrorMessage } from '../utils/errors';
+import { colors, radius } from '../theme';
 
 type Props = RootStackScreenProps<'ChangePassword'>;
 
@@ -48,10 +49,10 @@ export default function ChangePasswordScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
+  container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16 },
   card: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
 });

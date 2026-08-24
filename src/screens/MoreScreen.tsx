@@ -7,6 +7,7 @@ import ResponsiveScreen from '../components/ResponsiveScreen';
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Role } from '../types/models';
+import { colors, palette, radius } from '../theme';
 
 type Props = MainTabScreenProps<'More'>;
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -42,8 +43,8 @@ export default function MoreScreen({ navigation }: Props) {
       title: 'Customers',
       subtitle: 'View and manage your customers',
       icon: 'person-outline',
-      iconBg: '#fffbeb',
-      iconColor: '#f59e0b',
+      iconBg: colors.warningSoft,
+      iconColor: colors.warning,
       onPress: () => navigation.navigate('Customers'),
       roles: ['owner', 'admin', 'service_advisor', 'receptionist'],
     },
@@ -51,16 +52,16 @@ export default function MoreScreen({ navigation }: Props) {
       title: 'Invoices',
       subtitle: 'View billing & invoices',
       icon: 'document-text-outline',
-      iconBg: '#fef3c7',
-      iconColor: '#f59e0b',
+      iconBg: palette.amber100,
+      iconColor: colors.warning,
       onPress: () => navigation.navigate('Invoices'),
     },
     {
       title: 'Staff',
       subtitle: 'Manage team members',
       icon: 'people-outline',
-      iconBg: '#f0fdf4',
-      iconColor: '#10b981',
+      iconBg: palette.green50,
+      iconColor: colors.success,
       onPress: () => navigation.navigate('Staff'),
       roles: ['owner', 'admin'],
     },
@@ -68,8 +69,8 @@ export default function MoreScreen({ navigation }: Props) {
       title: 'Inventory',
       subtitle: 'Parts & stock management',
       icon: 'cube-outline',
-      iconBg: '#f3f4f6',
-      iconColor: '#6b7280',
+      iconBg: colors.surfaceMuted,
+      iconColor: colors.textMuted,
       disabled: true,
       comingSoon: true,
     },
@@ -77,16 +78,16 @@ export default function MoreScreen({ navigation }: Props) {
       title: 'Settings',
       subtitle: 'Profile & preferences',
       icon: 'settings-outline',
-      iconBg: '#f3f4f6',
-      iconColor: '#6b7280',
+      iconBg: colors.surfaceMuted,
+      iconColor: colors.textMuted,
       onPress: () => navigation.navigate('Settings'),
     },
     {
       title: 'Web App',
       subtitle: 'Open the full app in your browser',
       icon: 'globe-outline',
-      iconBg: '#eff6ff',
-      iconColor: '#3b82f6',
+      iconBg: colors.infoSoft,
+      iconColor: colors.info,
       onPress: openWebApp,
     },
   ];
@@ -122,7 +123,7 @@ export default function MoreScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('Settings')}
           activeOpacity={0.7}
         >
-          <Ionicons name="pencil-outline" size={18} color="#3b5ff8" />
+          <Ionicons name="pencil-outline" size={18} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -153,7 +154,7 @@ export default function MoreScreen({ navigation }: Props) {
                 <Text style={styles.comingSoonText}>Soon</Text>
               </View>
             ) : (
-              <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+              <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
             )}
           </TouchableOpacity>
         ))}
@@ -161,7 +162,7 @@ export default function MoreScreen({ navigation }: Props) {
 
       {/* Logout */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-        <Ionicons name="log-out-outline" size={22} color="#ef4444" />
+        <Ionicons name="log-out-outline" size={22} color={colors.danger} />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -173,7 +174,7 @@ export default function MoreScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fdfcfb',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 16,
@@ -183,23 +184,23 @@ const styles = StyleSheet.create({
   profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     padding: 20,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     marginBottom: 20,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   avatar: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: '#3b5ff8',
+    borderRadius: radius.xxl,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
   },
   avatarText: {
-    color: '#fff',
+    color: colors.textOnPrimary,
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -209,47 +210,47 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   email: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textFaint,
     marginTop: 2,
   },
   roleBadge: {
-    backgroundColor: '#eff2ff',
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 160,
+    borderRadius: radius.pill,
     alignSelf: 'flex-start',
     marginTop: 6,
   },
   roleText: {
-    color: '#3b5ff8',
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '700',
   },
   editBtn: {
     width: 36,
     height: 36,
-    borderRadius: 16,
-    backgroundColor: '#eff2ff',
+    borderRadius: radius.lg,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuGroup: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     overflow: 'hidden',
     marginBottom: 20,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.surfaceMuted,
     gap: 12,
   },
   lastMenuItem: {
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
   menuIconContainer: {
     width: 42,
     height: 42,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -270,25 +271,25 @@ const styles = StyleSheet.create({
   },
   menuTitle: {
     fontSize: 16,
-    color: '#111827',
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   menuTitleDisabled: {
-    color: '#9ca3af',
+    color: colors.textFaint,
   },
   menuSubtitle: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textFaint,
     marginTop: 2,
   },
   comingSoonBadge: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: palette.amber100,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 160,
+    borderRadius: radius.pill,
   },
   comingSoonText: {
-    color: '#d97706',
+    color: palette.amber600,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -296,13 +297,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fee2e2',
+    backgroundColor: palette.red100,
     padding: 16,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     gap: 8,
   },
   logoutText: {
-    color: '#ef4444',
+    color: colors.danger,
     fontSize: 16,
     fontWeight: 'bold',
   },

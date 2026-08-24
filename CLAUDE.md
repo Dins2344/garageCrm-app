@@ -31,6 +31,37 @@ and this app must tolerate fields it does not know about.
 6. **Install dependencies under Node 20 / npm 10** — a lock file from a newer
    npm fails CI's `npm ci`.
 
+## Everything visual comes from `src/theme.ts`
+
+There are **zero hex literals outside that file**. Colour, radius, spacing,
+type scale and elevation are all tokens:
+
+```javascript
+import { colors, radius, spacing, type, elevation } from '../theme';
+```
+
+The app runs the same **Service Counter** palette as the web client — warm
+bone grounds, ink for dark bands — but deliberately keeps a small corner
+radius (`radius.lg` = 10) and real Android elevation, where web is square and
+flat. Zero radius reads as deliberate on a web page and as unfinished against
+Material's conventions.
+
+Three things that bite:
+
+1. **`colors.border` divides; `colors.borderStrong` is a control edge.** An
+   input bordered with `border` sits at ~1.2:1 against its ground — invisible.
+   Anything operable uses `borderStrong`.
+2. **`colors.primary` (blue) is the in-app action; `colors.accent` (orange) is
+   the one action that completes a flow.** One `accent` per screen, at most.
+3. **Spread `elevation.card`, don't hand-write shadows.** iOS reads the
+   `shadow*` props and Android reads `elevation`; the preset carries both, and
+   a hand-written shadow usually forgets the Android half.
+
+The theme was extracted from 908 inlined literals in a refactor proved
+value-for-value against a snapshot, *then* the values were changed. Keeping
+those two steps apart is what made a 21-screen restyle one readable diff — do
+the same for the next one.
+
 ## Layering
 
 Screens own data fetching and local state, and define `StyleSheet.create()` at

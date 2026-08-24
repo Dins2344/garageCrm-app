@@ -13,6 +13,7 @@ import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { JobCard } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'EstimationEditor'>;
 
@@ -177,7 +178,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
     return (
       <ResponsiveScreen>
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b5ff8" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </ResponsiveScreen>
     );
@@ -192,14 +193,14 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
         {/* Header */}
         <View style={s.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-            <Ionicons name="close" size={24} color="#111827" />
+            <Ionicons name="close" size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <Text style={s.headerTitle}>Edit Estimation</Text>
             <Text style={s.headerSub}>{jobCard?.jobCardNumber}</Text>
           </View>
           <TouchableOpacity onPress={handleSave} disabled={saving} style={[s.saveHeaderBtn, saving && { opacity: 0.5 }]}>
-            {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.saveHeaderText}>Save</Text>}
+            {saving ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveHeaderText}>Save</Text>}
           </TouchableOpacity>
         </View>
 
@@ -207,17 +208,17 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 
           {/* ── PARTS SECTION ── */}
           <View style={s.sectionHeader}>
-            <Ionicons name="cube-outline" size={18} color="#3b5ff8" />
+            <Ionicons name="cube-outline" size={18} color={colors.primary} />
             <Text style={s.sectionTitle}>Parts</Text>
             <TouchableOpacity onPress={addPart} style={s.addBtn}>
-              <Ionicons name="add" size={16} color="#3b5ff8" />
+              <Ionicons name="add" size={16} color={colors.primary} />
               <Text style={s.addBtnText}>Add Part</Text>
             </TouchableOpacity>
           </View>
 
           {parts.length === 0 && (
             <View style={s.emptyState}>
-              <Ionicons name="cube-outline" size={32} color="#e5e7eb" />
+              <Ionicons name="cube-outline" size={32} color={colors.border} />
               <Text style={s.emptyText}>No parts added yet</Text>
             </View>
           )}
@@ -233,7 +234,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                     value={part.partName}
                     onChangeText={v => updatePart(i, 'partName', v)}
                     placeholder="e.g. Engine Oil Filter, Brake Pad..."
-                    placeholderTextColor="#9ca3af"
+                    placeholderTextColor={colors.textFaint}
                     autoCapitalize="words"
                   />
                 </View>
@@ -248,7 +249,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                     onChangeText={v => updatePart(i, 'quantity', v)}
                     keyboardType="numeric"
                     placeholder="1"
-                    placeholderTextColor="#9ca3af"
+                    placeholderTextColor={colors.textFaint}
                   />
                 </View>
                 <View style={{ width: 10 }} />
@@ -260,7 +261,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                     onChangeText={v => updatePart(i, 'unitPrice', v)}
                     keyboardType="numeric"
                     placeholder="0"
-                    placeholderTextColor="#9ca3af"
+                    placeholderTextColor={colors.textFaint}
                   />
                 </View>
                 <View style={{ width: 10 }} />
@@ -273,7 +274,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
               </View>
 
               <TouchableOpacity onPress={() => removePart(i)} style={s.removeBtn}>
-                <Ionicons name="trash-outline" size={14} color="#ef4444" />
+                <Ionicons name="trash-outline" size={14} color={colors.danger} />
                 <Text style={s.removeBtnText}>Remove</Text>
               </TouchableOpacity>
             </View>
@@ -281,17 +282,17 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 
           {/* ── LABOR SECTION ── */}
           <View style={[s.sectionHeader, { marginTop: 24 }]}>
-            <Ionicons name="construct-outline" size={18} color="#f59e0b" />
+            <Ionicons name="construct-outline" size={18} color={colors.warning} />
             <Text style={s.sectionTitle}>Labor</Text>
             <TouchableOpacity onPress={addLabor} style={s.addBtn}>
-              <Ionicons name="add" size={16} color="#3b5ff8" />
+              <Ionicons name="add" size={16} color={colors.primary} />
               <Text style={s.addBtnText}>Add Labor</Text>
             </TouchableOpacity>
           </View>
 
           {labor.length === 0 && (
             <View style={s.emptyState}>
-              <Ionicons name="construct-outline" size={32} color="#e5e7eb" />
+              <Ionicons name="construct-outline" size={32} color={colors.border} />
               <Text style={s.emptyText}>No labor items added yet</Text>
             </View>
           )}
@@ -306,7 +307,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                     value={l.description}
                     onChangeText={v => updateLabor(i, 'description', v)}
                     placeholder="Labor description"
-                    placeholderTextColor="#9ca3af"
+                    placeholderTextColor={colors.textFaint}
                   />
                 </View>
               </View>
@@ -320,7 +321,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                     onChangeText={v => updateLabor(i, 'hours', v)}
                     keyboardType="numeric"
                     placeholder="1"
-                    placeholderTextColor="#9ca3af"
+                    placeholderTextColor={colors.textFaint}
                   />
                 </View>
                 <View style={{ width: 10 }} />
@@ -332,7 +333,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                     onChangeText={v => updateLabor(i, 'ratePerHour', v)}
                     keyboardType="numeric"
                     placeholder="500"
-                    placeholderTextColor="#9ca3af"
+                    placeholderTextColor={colors.textFaint}
                   />
                 </View>
                 <View style={{ width: 10 }} />
@@ -345,7 +346,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
               </View>
 
               <TouchableOpacity onPress={() => removeLabor(i)} style={s.removeBtn}>
-                <Ionicons name="trash-outline" size={14} color="#ef4444" />
+                <Ionicons name="trash-outline" size={14} color={colors.danger} />
                 <Text style={s.removeBtnText}>Remove</Text>
               </TouchableOpacity>
             </View>
@@ -353,7 +354,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 
           {/* ── DISCOUNT & TAX ── */}
           <View style={[s.sectionHeader, { marginTop: 24 }]}>
-            <Ionicons name="calculator-outline" size={18} color="#10b981" />
+            <Ionicons name="calculator-outline" size={18} color={colors.success} />
             <Text style={s.sectionTitle}>Discount & Tax</Text>
           </View>
 
@@ -367,7 +368,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                   onChangeText={setDiscount}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor={colors.textFaint}
                 />
               </View>
               <View style={{ width: 10 }} />
@@ -379,7 +380,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
                   onChangeText={setTaxRate}
                   keyboardType="numeric"
                   placeholder="18"
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor={colors.textFaint}
                 />
               </View>
             </View>
@@ -402,8 +403,8 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
             </View>
             {disc > 0 && (
               <View style={s.totalsRow}>
-                <Text style={[s.totalsLabel, { color: '#10b981' }]}>Discount</Text>
-                <Text style={[s.totalsValue, { color: '#10b981' }]}>-{fmt(disc)}</Text>
+                <Text style={[s.totalsLabel, { color: colors.success }]}>Discount</Text>
+                <Text style={[s.totalsValue, { color: colors.success }]}>-{fmt(disc)}</Text>
               </View>
             )}
             <View style={s.totalsRow}>
@@ -425,10 +426,10 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
             activeOpacity={0.85}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.textOnPrimary} />
             ) : (
               <>
-                <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                <Ionicons name="checkmark-circle-outline" size={20} color={colors.textOnPrimary} />
                 <Text style={s.saveBtnText}>Save Estimation</Text>
               </>
             )}
@@ -442,22 +443,22 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
+  container: { flex: 1, backgroundColor: colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingTop: Platform.OS === 'ios' ? 54 : (StatusBar.currentHeight || 24) + 10,
     paddingBottom: 14, paddingHorizontal: 16,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+    backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted,
   },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 17, fontWeight: 'bold', color: '#111827' },
-  headerSub: { fontSize: 12, color: '#6b7280', marginTop: 1 },
+  headerTitle: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary },
+  headerSub: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
   saveHeaderBtn: {
-    backgroundColor: '#3b5ff8', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7,
+    backgroundColor: colors.primary, borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 7,
   },
-  saveHeaderText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  saveHeaderText: { color: colors.textOnPrimary, fontSize: 14, fontWeight: 'bold' },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
@@ -466,64 +467,64 @@ const s = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12,
   },
-  sectionTitle: { flex: 1, fontSize: 14, fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitle: { flex: 1, fontSize: 14, fontWeight: 'bold', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderWidth: 1, borderColor: '#3b5ff8', borderRadius: 16,
+    borderWidth: 1, borderColor: colors.primary, borderRadius: radius.lg,
     paddingHorizontal: 10, paddingVertical: 5, borderStyle: 'dashed',
   },
-  addBtnText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
+  addBtnText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
 
   // Item cards
   itemCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4, borderWidth: 1, borderColor: '#f3f4f6',
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, marginBottom: 10,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4, borderWidth: 1, borderColor: colors.surfaceMuted,
   },
   fieldRow: { flexDirection: 'row', marginBottom: 8 },
-  fieldLabel: { fontSize: 11, fontWeight: '600', color: '#6b7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
+  fieldLabel: { fontSize: 11, fontWeight: '600', color: colors.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
   input: {
-    backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16,
-    paddingHorizontal: 10, height: 40, fontSize: 14, color: '#1f2937',
+    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    paddingHorizontal: 10, height: 40, fontSize: 14, color: colors.textStrong,
   },
   totalBox: {
-    backgroundColor: '#f0f9ff', borderWidth: 1, borderColor: '#bae6fd', borderRadius: 16,
+    backgroundColor: palette.sky50, borderWidth: 1, borderColor: palette.sky100, borderRadius: radius.lg,
     height: 40, justifyContent: 'center', paddingHorizontal: 10,
   },
-  totalText: { fontSize: 14, fontWeight: 'bold', color: '#0369a1' },
+  totalText: { fontSize: 14, fontWeight: 'bold', color: palette.sky700 },
 
   removeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     alignSelf: 'flex-end', marginTop: 4, paddingVertical: 4, paddingHorizontal: 8,
   },
-  removeBtnText: { fontSize: 12, color: '#ef4444', fontWeight: '600' },
+  removeBtnText: { fontSize: 12, color: colors.danger, fontWeight: '600' },
 
   // Empty
   emptyState: {
     alignItems: 'center', paddingVertical: 24, gap: 8,
-    backgroundColor: '#fff', borderRadius: 16, marginBottom: 10,
-    borderWidth: 1, borderColor: '#f3f4f6', borderStyle: 'dashed',
+    backgroundColor: colors.surface, borderRadius: radius.lg, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.surfaceMuted, borderStyle: 'dashed',
   },
-  emptyText: { fontSize: 13, color: '#9ca3af' },
+  emptyText: { fontSize: 13, color: colors.textFaint },
 
   // Totals
   totalsCard: {
-    backgroundColor: '#eef2ff', borderRadius: 16, padding: 16, marginTop: 24,
-    borderWidth: 1, borderColor: '#c7d2fe',
+    backgroundColor: colors.primarySoftAlt, borderRadius: radius.lg, padding: 16, marginTop: 24,
+    borderWidth: 1, borderColor: palette.indigo200,
   },
-  totalsTitle: { fontSize: 11, fontWeight: '800', color: '#4338ca', letterSpacing: 1, marginBottom: 12 },
+  totalsTitle: { fontSize: 11, fontWeight: '800', color: palette.indigo700, letterSpacing: 1, marginBottom: 12 },
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5 },
-  totalsLabel: { fontSize: 14, color: '#6b7280' },
-  totalsValue: { fontSize: 14, color: '#111827', fontWeight: '600' },
-  totalsDivider: { height: 1, backgroundColor: '#a5b4fc', marginVertical: 8 },
-  grandLabel: { fontSize: 17, fontWeight: 'bold', color: '#111827' },
-  grandValue: { fontSize: 20, fontWeight: 'bold', color: '#3b5ff8' },
+  totalsLabel: { fontSize: 14, color: colors.textMuted },
+  totalsValue: { fontSize: 14, color: colors.textPrimary, fontWeight: '600' },
+  totalsDivider: { height: 1, backgroundColor: palette.indigo300, marginVertical: 8 },
+  grandLabel: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary },
+  grandValue: { fontSize: 20, fontWeight: 'bold', color: colors.primary },
 
   // Save button
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 16, marginTop: 20,
-    shadowColor: '#3b5ff8', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 16, marginTop: 20,
+    shadowColor: colors.primary, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  saveBtnText: { color: colors.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
 });

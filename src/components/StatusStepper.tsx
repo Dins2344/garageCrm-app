@@ -1,6 +1,7 @@
 import React, { ComponentProps } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, palette, radius } from '../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -12,13 +13,13 @@ interface StatusStep {
 }
 
 const STATUS_FLOW: StatusStep[] = [
-  { value: 'new',              label: 'New',              icon: 'add-circle-outline',    color: '#3b82f6' },
-  { value: 'estimation_sent',  label: 'Estimation Sent',  icon: 'send-outline',          color: '#f59e0b' },
-  { value: 'approved',         label: 'Approved',         icon: 'checkmark-circle-outline', color: '#8b5cf6' },
-  { value: 'in_progress',      label: 'In Progress',      icon: 'construct-outline',     color: '#ec4899' },
-  { value: 'quality_check',    label: 'Quality Check',    icon: 'shield-checkmark-outline', color: '#06b6d4' },
-  { value: 'ready_for_pickup', label: 'Ready for Pickup', icon: 'car-outline',           color: '#10b981' },
-  { value: 'delivered',        label: 'Delivered',        icon: 'checkmark-done-outline', color: '#6b7280' },
+  { value: 'new',              label: 'New',              icon: 'add-circle-outline',    color: colors.info },
+  { value: 'estimation_sent',  label: 'Estimation Sent',  icon: 'send-outline',          color: colors.warning },
+  { value: 'approved',         label: 'Approved',         icon: 'checkmark-circle-outline', color: palette.violet500 },
+  { value: 'in_progress',      label: 'In Progress',      icon: 'construct-outline',     color: palette.pink500 },
+  { value: 'quality_check',    label: 'Quality Check',    icon: 'shield-checkmark-outline', color: palette.cyan500 },
+  { value: 'ready_for_pickup', label: 'Ready for Pickup', icon: 'car-outline',           color: colors.success },
+  { value: 'delivered',        label: 'Delivered',        icon: 'checkmark-done-outline', color: colors.textMuted },
 ];
 
 export interface StatusStepperProps {
@@ -65,12 +66,12 @@ export default function StatusStepper({ currentStatus, onStatusChange, updating,
                   styles.circle,
                   isCurrent && { backgroundColor: step.color, borderColor: step.color },
                   isPast && { backgroundColor: step.color, borderColor: step.color },
-                  isFuture && { backgroundColor: '#f3f4f6', borderColor: '#e5e7eb' },
+                  isFuture && { backgroundColor: colors.surfaceMuted, borderColor: colors.border },
                 ]}>
                   {isPast ? (
-                    <Ionicons name="checkmark" size={14} color="#fff" />
+                    <Ionicons name="checkmark" size={14} color={colors.textOnPrimary} />
                   ) : isCurrent ? (
-                    <Ionicons name={step.icon} size={14} color="#fff" />
+                    <Ionicons name={step.icon} size={14} color={colors.textOnPrimary} />
                   ) : (
                     <View style={styles.futureDot} />
                   )}
@@ -79,7 +80,7 @@ export default function StatusStepper({ currentStatus, onStatusChange, updating,
                 <Text style={[
                   styles.stepLabel,
                   isCurrent && { color: step.color, fontWeight: '700' },
-                  isPast && { color: '#6b7280' },
+                  isPast && { color: colors.textMuted },
                 ]} numberOfLines={2}>
                   {step.label}
                 </Text>
@@ -98,7 +99,7 @@ export default function StatusStepper({ currentStatus, onStatusChange, updating,
       {/* Cancelled state */}
       {isCancelled && (
         <View style={styles.cancelledBanner}>
-          <Ionicons name="close-circle" size={20} color="#ef4444" />
+          <Ionicons name="close-circle" size={20} color={colors.danger} />
           <Text style={styles.cancelledText}>This job card has been cancelled</Text>
         </View>
       )}
@@ -114,12 +115,12 @@ export default function StatusStepper({ currentStatus, onStatusChange, updating,
               activeOpacity={0.8}
             >
               {updating ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={colors.textOnPrimary} size="small" />
               ) : (
                 <>
-                  <Ionicons name={nextStep.icon} size={18} color="#fff" />
+                  <Ionicons name={nextStep.icon} size={18} color={colors.textOnPrimary} />
                   <Text style={styles.nextBtnText}>Move to: {nextStep.label}</Text>
-                  <Ionicons name="arrow-forward" size={16} color="#fff" />
+                  <Ionicons name="arrow-forward" size={16} color={colors.textOnPrimary} />
                 </>
               )}
             </TouchableOpacity>
@@ -127,7 +128,7 @@ export default function StatusStepper({ currentStatus, onStatusChange, updating,
 
           {deliveredBlocked && (
             <View style={styles.blockedBanner}>
-              <Ionicons name="lock-closed-outline" size={18} color="#f59e0b" />
+              <Ionicons name="lock-closed-outline" size={18} color={colors.warning} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.blockedTitle}>Invoice Required</Text>
                 <Text style={styles.blockedSub}>Generate an invoice before marking as delivered</Text>
@@ -142,14 +143,14 @@ export default function StatusStepper({ currentStatus, onStatusChange, updating,
               disabled={updating}
               activeOpacity={0.7}
             >
-              <Ionicons name="close-circle-outline" size={16} color="#ef4444" />
+              <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
               <Text style={styles.cancelBtnText}>Cancel Job</Text>
             </TouchableOpacity>
           )}
 
           {currentStatus === 'delivered' && (
             <View style={styles.completedBanner}>
-              <Ionicons name="checkmark-done-circle" size={22} color="#10b981" />
+              <Ionicons name="checkmark-done-circle" size={22} color={colors.success} />
               <Text style={styles.completedText}>Job completed & delivered</Text>
             </View>
           )}
@@ -161,10 +162,10 @@ export default function StatusStepper({ currentStatus, onStatusChange, updating,
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 14,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: colors.shadowHard,
     shadowOpacity: 0.05,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
   connectorLine: {
     width: 2,
     height: 16,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
     marginLeft: 13,
     borderRadius: 1,
   },
@@ -195,8 +196,8 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#f3f4f6',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -205,12 +206,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#d1d5db',
+    backgroundColor: colors.borderStrong,
   },
 
   stepLabel: {
     fontSize: 13,
-    color: '#d1d5db',
+    color: colors.borderStrong,
     fontWeight: '500',
     flexShrink: 1,
   },
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
   currentBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: radius.xs,
   },
   currentText: {
     fontSize: 10,
@@ -232,12 +233,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#fef2f2',
-    borderRadius: 10,
+    backgroundColor: colors.dangerSoft,
+    borderRadius: radius.sm,
     padding: 12,
     marginTop: 4,
   },
-  cancelledText: { fontSize: 14, color: '#ef4444', fontWeight: '600' },
+  cancelledText: { fontSize: 14, color: colors.danger, fontWeight: '600' },
 
   // Actions
   actions: { gap: 10 },
@@ -248,13 +249,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: radius.md,
     shadowOpacity: 0.2,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  nextBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  nextBtnText: { color: colors.textOnPrimary, fontSize: 15, fontWeight: 'bold' },
 
   cancelBtn: {
     flexDirection: 'row',
@@ -262,34 +263,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fff5f5',
+    borderColor: palette.red200,
+    backgroundColor: palette.redTintSoft,
   },
-  cancelBtnText: { fontSize: 13, fontWeight: '600', color: '#ef4444' },
+  cancelBtnText: { fontSize: 13, fontWeight: '600', color: colors.danger },
 
   blockedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fffbeb',
-    borderRadius: 10,
+    backgroundColor: colors.warningSoft,
+    borderRadius: radius.sm,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: palette.amber200,
   },
-  blockedTitle: { fontSize: 14, fontWeight: '700', color: '#b45309' },
-  blockedSub: { fontSize: 12, color: '#92400e', marginTop: 1 },
+  blockedTitle: { fontSize: 14, fontWeight: '700', color: palette.amber700 },
+  blockedSub: { fontSize: 12, color: palette.amber800, marginTop: 1 },
 
   completedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#ecfdf5',
-    borderRadius: 10,
+    backgroundColor: colors.successSoft,
+    borderRadius: radius.sm,
     padding: 14,
   },
-  completedText: { fontSize: 14, color: '#10b981', fontWeight: '700' },
+  completedText: { fontSize: 14, color: colors.success, fontWeight: '700' },
 });

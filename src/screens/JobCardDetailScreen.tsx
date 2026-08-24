@@ -15,6 +15,7 @@ import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { JobCard, User, AssignedStaff } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'JobCardDetail'>;
 
@@ -172,7 +173,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
     return (
       <ResponsiveScreen>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b5ff8" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </ResponsiveScreen>
     );
@@ -204,7 +205,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Job Card {jobCard?.jobCardNumber}</Text>
         <View style={{ width: 24 }} />
@@ -228,7 +229,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
           <Text style={styles.sectionTitle}>Customer & Vehicle</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
-              <Ionicons name="person-outline" size={20} color="#6b7280" />
+              <Ionicons name="person-outline" size={20} color={colors.textMuted} />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoTitle}>{customer?.name}</Text>
                 <Text style={styles.infoSubtitle}>{customer?.phone}</Text>
@@ -241,7 +242,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
             </View>
             <View style={styles.divider} />
             <View style={styles.infoRow}>
-              <Ionicons name="car-outline" size={20} color="#6b7280" />
+              <Ionicons name="car-outline" size={20} color={colors.textMuted} />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoTitle}>{vehicle?.licensePlate}</Text>
                 <Text style={styles.infoSubtitle}>
@@ -306,7 +307,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                 />
                 {assigningMechanic && (
                   <View style={styles.mechanicSaving}>
-                    <ActivityIndicator size="small" color="#3b5ff8" />
+                    <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={styles.mechanicSavingText}>Saving…</Text>
                   </View>
                 )}
@@ -322,7 +323,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
             <View style={styles.divider} />
             <Text style={styles.subLabel}>Complaints</Text>
             {jobCard?.complaints?.map((c, idx) => {
-              const priorityColor = c.priority === 'urgent' ? '#7c3aed' : c.priority === 'high' ? '#ef4444' : c.priority === 'medium' ? '#f59e0b' : '#10b981';
+              const priorityColor = c.priority === 'urgent' ? palette.violet600 : c.priority === 'high' ? colors.danger : c.priority === 'medium' ? colors.warning : colors.success;
               return (
                 <View key={idx} style={styles.complaintRow}>
                   <View style={[styles.priorityDot, { backgroundColor: `${priorityColor}20`, borderColor: `${priorityColor}50` }]}>
@@ -355,7 +356,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                 style={styles.editEstBtn}
                 onPress={() => navigation.navigate('EstimationEditor', { id })}
               >
-                <Ionicons name="pencil-outline" size={14} color="#3b5ff8" />
+                <Ionicons name="pencil-outline" size={14} color={colors.primary} />
                 <Text style={styles.editEstText}>{hasEstimation ? 'Edit' : 'Add'}</Text>
               </TouchableOpacity>
             )}
@@ -404,8 +405,8 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               </View>
               {est.discount > 0 && (
                 <View style={styles.summaryRow}>
-                  <Text style={[styles.summaryLabel, { color: '#10b981' }]}>Discount</Text>
-                  <Text style={[styles.summaryValue, { color: '#10b981' }]}>−{formatMoney(est.discount, locale)}</Text>
+                  <Text style={[styles.summaryLabel, { color: colors.success }]}>Discount</Text>
+                  <Text style={[styles.summaryValue, { color: colors.success }]}>−{formatMoney(est.discount, locale)}</Text>
                 </View>
               )}
               <View style={styles.summaryRow}>
@@ -421,7 +422,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               {/* Approved badge */}
               {est.approvedByCustomer && (
                 <View style={styles.approvedBanner}>
-                  <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                   <Text style={styles.approvedText}>Estimation Approved</Text>
                 </View>
               )}
@@ -429,7 +430,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               {/* Approve button */}
               {canApprove && (
                 <TouchableOpacity style={styles.approveBtn} onPress={handleApproveEstimation} activeOpacity={0.8}>
-                  <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                  <Ionicons name="checkmark-circle-outline" size={18} color={colors.textOnPrimary} />
                   <Text style={styles.approveBtnText}>Approve Estimation</Text>
                 </TouchableOpacity>
               )}
@@ -437,14 +438,14 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
           ) : (
             <View style={styles.infoCard}>
               <View style={styles.noEstimation}>
-                <Ionicons name="document-text-outline" size={36} color="#e5e7eb" />
+                <Ionicons name="document-text-outline" size={36} color={colors.border} />
                 <Text style={styles.noEstText}>No estimation yet</Text>
                 {canEditEstimation && (
                   <TouchableOpacity
                     style={styles.addEstBtn}
                     onPress={() => navigation.navigate('EstimationEditor', { id })}
                   >
-                    <Ionicons name="add-circle-outline" size={18} color="#3b5ff8" />
+                    <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
                     <Text style={styles.addEstBtnText}>Add Estimation</Text>
                   </TouchableOpacity>
                 )}
@@ -463,7 +464,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
               activeOpacity={0.85}
             >
               <View style={styles.invoiceIcon}>
-                <Ionicons name="receipt-outline" size={24} color="#3b5ff8" />
+                <Ionicons name="receipt-outline" size={24} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.invoiceNumber}>
@@ -471,17 +472,17 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                 </Text>
                 <Text style={styles.invoiceSub}>Tap to view full invoice details</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+              <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
             </TouchableOpacity>
           ) : canGenerateInvoice ? (
             <TouchableOpacity style={styles.generateBtn} onPress={handleGenerateInvoice} activeOpacity={0.85}>
-              <Ionicons name="document-text-outline" size={20} color="#fff" />
+              <Ionicons name="document-text-outline" size={20} color={colors.textOnPrimary} />
               <Text style={styles.generateBtnText}>Generate Invoice</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.infoCard}>
               <View style={styles.noEstimation}>
-                <Ionicons name="receipt-outline" size={32} color="#e5e7eb" />
+                <Ionicons name="receipt-outline" size={32} color={colors.border} />
                 <Text style={styles.noEstText}>
                   {!hasEstimation
                     ? 'Add an estimation first'
@@ -542,141 +543,141 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
+  container: { flex: 1, backgroundColor: colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingTop: 50, paddingBottom: 16, paddingHorizontal: 16,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+    backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted,
   },
   backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   scrollView: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
   section: { marginBottom: 24 },
   sectionTitle: {
-    fontSize: 14, fontWeight: 'bold', color: '#4b5563', marginBottom: 12,
+    fontSize: 14, fontWeight: 'bold', color: palette.gray600, marginBottom: 12,
     textTransform: 'uppercase', letterSpacing: 0.5,
   },
   infoCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   infoRow: { flexDirection: 'row', alignItems: 'center' },
   infoTextContainer: { marginLeft: 12 },
-  infoTitle: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
-  infoSubtitle: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  divider: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 12 },
+  infoTitle: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
+  infoSubtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  divider: { height: 1, backgroundColor: colors.surfaceMuted, marginVertical: 12 },
   complaintRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10, gap: 8 },
   priorityDot: { borderRadius: 4, borderWidth: 1, paddingHorizontal: 5, paddingVertical: 2, minWidth: 36, alignItems: 'center' },
   priorityLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  complaintText: { fontSize: 14, color: '#374151', flex: 1 },
-  subLabel: { fontSize: 11, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  complaintText: { fontSize: 14, color: colors.textSecondary, flex: 1 },
+  subLabel: { fontSize: 11, fontWeight: '700', color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   detailsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 4 },
   detailItem: { flex: 1, minWidth: '45%' },
-  detailLabel: { fontSize: 11, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 2 },
-  detailValue: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  emptyText: { fontSize: 14, color: '#9ca3af', fontStyle: 'italic' },
-  notesBox: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  notesTitle: { fontSize: 12, fontWeight: 'bold', color: '#6b7280', marginBottom: 4 },
-  notesText: { fontSize: 14, color: '#374151', fontStyle: 'italic' },
+  detailLabel: { fontSize: 11, fontWeight: '700', color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 2 },
+  detailValue: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  emptyText: { fontSize: 14, color: colors.textFaint, fontStyle: 'italic' },
+  notesBox: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
+  notesTitle: { fontSize: 12, fontWeight: 'bold', color: colors.textMuted, marginBottom: 4 },
+  notesText: { fontSize: 14, color: colors.textSecondary, fontStyle: 'italic' },
 
   // Mechanic assignment
   mechanicBlock: { marginBottom: 4 },
   mechanicSaving: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -4, marginBottom: 8 },
-  mechanicSavingText: { fontSize: 12, fontWeight: '600', color: '#6b7280' },
+  mechanicSavingText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
 
   // Timeline
   timelineRow: { flexDirection: 'row', gap: 12 },
   timelineRail: { alignItems: 'center', width: 16 },
   timelineDot: {
     width: 10, height: 10, borderRadius: 5, marginTop: 4,
-    backgroundColor: '#fff', borderWidth: 2, borderColor: '#d1d5db',
+    backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.borderStrong,
   },
-  timelineDotActive: { borderColor: '#3b5ff8', backgroundColor: '#3b5ff8' },
+  timelineDotActive: { borderColor: colors.primary, backgroundColor: colors.primary },
   // Fills the gap between one dot and the next; the last entry has none.
-  timelineLine: { flex: 1, width: 1.5, backgroundColor: '#f3f4f6', marginVertical: 4 },
+  timelineLine: { flex: 1, width: 1.5, backgroundColor: colors.surfaceMuted, marginVertical: 4 },
   timelineBody: { flex: 1, paddingBottom: 16 },
   timelineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  timelineStatus: { fontSize: 14, fontWeight: '700', color: '#374151' },
-  timelineStatusActive: { color: '#3b5ff8' },
-  timelineDate: { fontSize: 11, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase' },
-  timelineMeta: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
-  timelineNotes: { fontSize: 13, color: '#4b5563', marginTop: 6, fontStyle: 'italic' },
+  timelineStatus: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
+  timelineStatusActive: { color: colors.primary },
+  timelineDate: { fontSize: 11, fontWeight: '700', color: colors.textFaint, textTransform: 'uppercase' },
+  timelineMeta: { fontSize: 12, color: colors.textFaint, marginTop: 2 },
+  timelineNotes: { fontSize: 13, color: palette.gray600, marginTop: 6, fontStyle: 'italic' },
 
   // Estimation header
   estHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   editEstBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#eef2ff', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: colors.primarySoftAlt, borderRadius: radius.lg, paddingHorizontal: 10, paddingVertical: 5,
   },
-  editEstText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
+  editEstText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
 
   // Estimation items
   estSubheading: {
-    fontSize: 11, fontWeight: '700', color: '#6b7280', textTransform: 'uppercase',
+    fontSize: 11, fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase',
     letterSpacing: 0.5, marginBottom: 8,
   },
   estItemRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#f9fafb',
+    paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.surfaceSunken,
   },
-  estItemName: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  estItemMeta: { fontSize: 12, color: '#9ca3af', marginTop: 1 },
-  estItemTotal: { fontSize: 14, fontWeight: 'bold', color: '#111827' },
+  estItemName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  estItemMeta: { fontSize: 12, color: colors.textFaint, marginTop: 1 },
+  estItemTotal: { fontSize: 14, fontWeight: 'bold', color: colors.textPrimary },
 
   // Summary
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  summaryLabel: { fontSize: 14, color: '#6b7280' },
-  summaryValue: { fontSize: 14, color: '#111827' },
-  summaryLabelBold: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
-  summaryValueBold: { fontSize: 18, fontWeight: 'bold', color: '#3b5ff8' },
+  summaryLabel: { fontSize: 14, color: colors.textMuted },
+  summaryValue: { fontSize: 14, color: colors.textPrimary },
+  summaryLabelBold: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
+  summaryValueBold: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
 
   // Approved
   approvedBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 12, paddingVertical: 10, borderRadius: 16,
-    backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#bbf7d0',
+    marginTop: 12, paddingVertical: 10, borderRadius: radius.lg,
+    backgroundColor: colors.successSoft, borderWidth: 1, borderColor: palette.green200,
   },
-  approvedText: { fontSize: 14, fontWeight: '700', color: '#10b981' },
+  approvedText: { fontSize: 14, fontWeight: '700', color: colors.success },
 
   // Approve button
   approveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 12, paddingVertical: 12, borderRadius: 16,
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 3,
+    marginTop: 12, paddingVertical: 12, borderRadius: radius.lg,
+    backgroundColor: colors.success,
+    shadowColor: colors.success, shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
-  approveBtnText: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
+  approveBtnText: { fontSize: 15, fontWeight: 'bold', color: colors.textOnPrimary },
 
   // No estimation
   noEstimation: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  noEstText: { fontSize: 14, color: '#9ca3af', fontWeight: '500' },
+  noEstText: { fontSize: 14, color: colors.textFaint, fontWeight: '500' },
   addEstBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4,
-    borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#3b5ff8',
-    borderRadius: 16, paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.primary,
+    borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 8,
   },
-  addEstBtnText: { fontSize: 14, color: '#3b5ff8', fontWeight: '600' },
+  addEstBtnText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
 
   // Invoice
   invoiceCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
-    borderWidth: 1, borderColor: '#eef2ff',
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    borderWidth: 1, borderColor: colors.primarySoftAlt,
   },
   invoiceIcon: {
-    width: 44, height: 44, borderRadius: 16, backgroundColor: '#eef2ff',
+    width: 44, height: 44, borderRadius: radius.lg, backgroundColor: colors.primarySoftAlt,
     justifyContent: 'center', alignItems: 'center',
   },
-  invoiceNumber: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
-  invoiceSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  invoiceNumber: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
+  invoiceSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   generateBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#f59e0b', borderRadius: 16, paddingVertical: 14,
-    shadowColor: '#f59e0b', shadowOpacity: 0.3, shadowRadius: 8,
+    backgroundColor: colors.warning, borderRadius: radius.lg, paddingVertical: 14,
+    shadowColor: colors.warning, shadowOpacity: 0.3, shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 }, elevation: 4,
   },
-  generateBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  generateBtnText: { color: colors.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
 });

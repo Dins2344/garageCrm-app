@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SHEET_MAX_WIDTH } from './ResponsiveScreen';
+import { colors, radius } from '../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -60,8 +61,8 @@ export default function BottomSheetPicker({
         activeOpacity={0.7}
       >
         {selected?.icon ? (
-          <View style={[styles.optIcon, { backgroundColor: (selected.color || '#3b5ff8') + '18' }]}>
-            <Ionicons name={selected.icon} size={16} color={selected.color || '#3b5ff8'} />
+          <View style={[styles.optIcon, { backgroundColor: (selected.color || colors.primary) + '18' }]}>
+            <Ionicons name={selected.icon} size={16} color={selected.color || colors.primary} />
           </View>
         ) : null}
 
@@ -73,7 +74,7 @@ export default function BottomSheetPicker({
           {selected ? selected.label : placeholder}
         </Text>
 
-        <Ionicons name="chevron-down" size={18} color="#9ca3af" />
+        <Ionicons name="chevron-down" size={18} color={colors.textFaint} />
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
@@ -85,19 +86,19 @@ export default function BottomSheetPicker({
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{label || 'Select Option'}</Text>
               <TouchableOpacity onPress={() => { setVisible(false); setQuery(''); }}>
-                <Ionicons name="close" size={24} color="#6b7280" />
+                <Ionicons name="close" size={24} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
             {searchable ? (
               <View style={styles.searchRow}>
-                <Ionicons name="search" size={16} color="#9ca3af" />
+                <Ionicons name="search" size={16} color={colors.textFaint} />
                 <TextInput
                   style={styles.searchInput}
                   value={query}
                   onChangeText={setQuery}
                   placeholder="Search..."
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor={colors.textFaint}
                   autoFocus
                 />
               </View>
@@ -118,8 +119,8 @@ export default function BottomSheetPicker({
                     activeOpacity={0.6}
                   >
                     {opt.icon ? (
-                      <View style={[styles.optIcon, { backgroundColor: (opt.color || '#3b5ff8') + '18' }]}>
-                        <Ionicons name={opt.icon} size={16} color={opt.color || '#3b5ff8'} />
+                      <View style={[styles.optIcon, { backgroundColor: (opt.color || colors.primary) + '18' }]}>
+                        <Ionicons name={opt.icon} size={16} color={opt.color || colors.primary} />
                       </View>
                     ) : opt.color ? (
                       <View style={[styles.dot, { backgroundColor: opt.color }]} />
@@ -130,7 +131,7 @@ export default function BottomSheetPicker({
                     </Text>
 
                     {isSelected && (
-                      <Ionicons name="checkmark-circle" size={20} color="#3b5ff8" />
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                     )}
                   </TouchableOpacity>
                 );
@@ -148,22 +149,22 @@ export default function BottomSheetPicker({
 
 const styles = StyleSheet.create({
   wrapper: { marginBottom: 2 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
 
   trigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.surfaceSunken,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
     paddingHorizontal: 14,
     height: 48,
     gap: 10,
   },
   triggerDisabled: { opacity: 0.5 },
-  triggerText: { flex: 1, fontSize: 15, color: '#1f2937', fontWeight: '500' },
-  placeholder: { color: '#9ca3af', fontWeight: '400' },
+  triggerText: { flex: 1, fontSize: 15, color: colors.textStrong, fontWeight: '500' },
+  placeholder: { color: colors.textFaint, fontWeight: '400' },
 
   dot: { width: 10, height: 10, borderRadius: 5 },
   optIcon: { width: 30, height: 30, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
   // Sheet
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '65%',
@@ -181,30 +182,30 @@ const styles = StyleSheet.create({
   },
   handle: {
     width: 40, height: 4, borderRadius: 2,
-    backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12,
+    backgroundColor: colors.border, alignSelf: 'center', marginTop: 12,
   },
   sheetHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+    padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted,
   },
-  sheetTitle: { fontSize: 17, fontWeight: 'bold', color: '#111827' },
+  sheetTitle: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary },
 
   searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    margin: 16, backgroundColor: '#f9fafb',
-    borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 10,
+    margin: 16, backgroundColor: colors.surfaceSunken,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm,
     paddingHorizontal: 12, height: 44,
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#1f2937' },
+  searchInput: { flex: 1, fontSize: 15, color: colors.textStrong },
 
   list: { paddingHorizontal: 8 },
   option: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 14, paddingHorizontal: 12,
-    borderRadius: 10, marginVertical: 1,
+    borderRadius: radius.sm, marginVertical: 1,
   },
-  optionSelected: { backgroundColor: '#eef2ff' },
-  optLabel: { flex: 1, fontSize: 15, color: '#374151', fontWeight: '500' },
-  optLabelSelected: { color: '#3b5ff8', fontWeight: '700' },
-  emptyText: { textAlign: 'center', color: '#9ca3af', marginTop: 32, fontSize: 14 },
+  optionSelected: { backgroundColor: colors.primarySoftAlt },
+  optLabel: { flex: 1, fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
+  optLabelSelected: { color: colors.primary, fontWeight: '700' },
+  emptyText: { textAlign: 'center', color: colors.textFaint, marginTop: 32, fontSize: 14 },
 });

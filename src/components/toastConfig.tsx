@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ToastConfig, ToastConfigParams } from 'react-native-toast-message';
 import { SHEET_MAX_WIDTH } from './ResponsiveScreen';
+import { colors, palette, radius } from '../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -12,14 +13,14 @@ interface Variant {
   icon: IconName;
 }
 
-// Colours reuse the app's existing semantic palette: primary #3b5ff8,
-// success #10b981, danger #ef4444, warning #f59e0b — with the same
+// Colours reuse the app's semantic tokens from src/theme.ts: colors.primary,
+// colors.success, colors.danger, colors.warning — with the same
 // tint-behind-icon treatment used for icon containers elsewhere.
 const VARIANTS: Record<string, Variant> = {
-  success: { accent: '#10b981', tint: '#ecfdf5', icon: 'checkmark-circle' },
-  error:   { accent: '#ef4444', tint: '#fef2f2', icon: 'alert-circle' },
-  info:    { accent: '#3b5ff8', tint: '#eff2ff', icon: 'information-circle' },
-  warning: { accent: '#f59e0b', tint: '#fffbeb', icon: 'warning' },
+  success: { accent: colors.success, tint: colors.successSoft, icon: 'checkmark-circle' },
+  error:   { accent: colors.danger, tint: colors.dangerSoft, icon: 'alert-circle' },
+  info:    { accent: colors.primary, tint: colors.primarySoft, icon: 'information-circle' },
+  warning: { accent: colors.warning, tint: colors.warningSoft, icon: 'warning' },
 };
 
 // Fallback headline when a caller supplied only one string. Deliberately
@@ -75,7 +76,7 @@ function ThemedToast({ text1, text2, variant, hide }: ThemedToastProps) {
         style={styles.closeBtn}
         accessibilityLabel="Dismiss notification"
       >
-        <Ionicons name="close" size={16} color="#9ca3af" />
+        <Ionicons name="close" size={16} color={colors.textFaint} />
       </TouchableOpacity>
     </View>
   );
@@ -104,15 +105,15 @@ const styles = StyleSheet.create({
     width: '92%',
     maxWidth: SHEET_MAX_WIDTH,
     minHeight: 60,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#f0f1f7',
+    borderColor: palette.boneCooler,
     paddingVertical: 12,
     paddingRight: 10,
     overflow: 'hidden',
     // The app's signature indigo elevation, same as cards everywhere else.
-    shadowColor: '#6366f1',
+    shadowColor: colors.shadowAmbient,
     shadowOpacity: 0.18,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -138,11 +139,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   message: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textMuted,
     lineHeight: 17,
     marginTop: 2,
   },

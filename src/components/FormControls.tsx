@@ -1,6 +1,7 @@
 import React, { useState, ComponentProps } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, KeyboardTypeOptions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { colors, radius } from '../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -30,7 +31,7 @@ export function Field({ label, value, onChangeText, placeholder, keyboardType, a
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textFaint}
           keyboardType={keyboardType || 'default'}
           autoCapitalize={autoCapitalize || 'sentences'}
           editable={editable}
@@ -38,7 +39,7 @@ export function Field({ label, value, onChangeText, placeholder, keyboardType, a
         />
         {isPwd && (
           <TouchableOpacity onPress={() => setShow(s => !s)} style={{ padding: 4 }}>
-            <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+            <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textFaint} />
           </TouchableOpacity>
         )}
       </View>
@@ -56,8 +57,8 @@ interface PrimaryBtnProps {
 export function PrimaryBtn({ label, icon, onPress, loading }: PrimaryBtnProps) {
   return (
     <TouchableOpacity style={[styles.primaryBtn, loading && { opacity: 0.6 }]} onPress={onPress} disabled={loading} activeOpacity={0.8}>
-      {loading ? <ActivityIndicator color="#fff" size="small" /> : (
-        <><Ionicons name={icon} size={17} color="#fff" /><Text style={styles.primaryBtnText}>{label}</Text></>
+      {loading ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : (
+        <><Ionicons name={icon} size={17} color={colors.textOnPrimary} /><Text style={styles.primaryBtnText}>{label}</Text></>
       )}
     </TouchableOpacity>
   );
@@ -65,17 +66,17 @@ export function PrimaryBtn({ label, icon, onPress, loading }: PrimaryBtnProps) {
 
 const styles = StyleSheet.create({
   fieldWrap: { marginBottom: 14 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12,
+    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: 12,
   },
   inputDimmed: { opacity: 0.55 },
-  inputField: { flex: 1, height: 44, fontSize: 15, color: '#1f2937' },
+  inputField: { flex: 1, height: 44, fontSize: 15, color: colors.textStrong },
 
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 13, marginTop: 6,
+    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 13, marginTop: 6,
   },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  primaryBtnText: { color: colors.textOnPrimary, fontSize: 15, fontWeight: 'bold' },
 });

@@ -3,11 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { colors, palette } from '../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
-const ACTIVE = '#3b5ff8';
-const INACTIVE = '#9ca3af';
+const ACTIVE = colors.primary;
+const INACTIVE = colors.textFaint;
 
 /**
  * Vertical space the floating dock occupies, worst-case (tallest home
@@ -111,15 +112,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 64,
     borderRadius: 24,
-    // Clean white surface, separated from the near-white page (#fdfcfb) by
-    // the app's signature indigo shadow (#6366f1 — used on every card here)
+    // Clean white surface, separated from the near-white page
+    // (colors.background) by the app's signature indigo shadow
+    // (colors.shadowAmbient — used on every card here)
     // plus a cool hairline border, rather than a muddy grey fill. A tinted
     // shadow reads as premium where a flat grey one reads as generic.
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#f0f1f7',
+    borderColor: palette.boneCooler,
     paddingHorizontal: 6,
-    shadowColor: '#6366f1',
+    shadowColor: colors.shadowAmbient,
     shadowOpacity: 0.2,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 10 },

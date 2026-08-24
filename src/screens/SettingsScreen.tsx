@@ -17,6 +17,7 @@ import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Garage, Role, User } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'Settings'>;
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -35,7 +36,7 @@ function SectionCard({ title, icon, children, action }: SectionCardProps) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
-          <View style={styles.cardIcon}><Ionicons name={icon} size={18} color="#3b5ff8" /></View>
+          <View style={styles.cardIcon}><Ionicons name={icon} size={18} color={colors.primary} /></View>
           <Text style={styles.cardTitle}>{title}</Text>
         </View>
         {action}
@@ -104,7 +105,7 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
           <View style={branchModalStyles.handle} />
           <View style={branchModalStyles.header}>
             <Text style={branchModalStyles.title}>Add Branch</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView style={branchModalStyles.body} keyboardShouldPersistTaps="handled">
             <Field label="Branch Name *" value={name} onChangeText={setName} placeholder="e.g. Downtown Branch" />
@@ -115,7 +116,7 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
               <Text style={branchModalStyles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[branchModalStyles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={branchModalStyles.saveBtnText}>Add Branch</Text>}
+              {saving ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={branchModalStyles.saveBtnText}>Add Branch</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -129,16 +130,16 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
 
 const branchModalStyles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  title: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
+  title: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   body: { padding: 20 },
-  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#f3f4f6' },
-  cancelBtnText: { color: '#374151', fontWeight: '600' },
-  saveBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#3b5ff8' },
-  saveBtnText: { color: '#fff', fontWeight: '700' },
+  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
+  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.surfaceMuted },
+  cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
+  saveBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.primary },
+  saveBtnText: { color: colors.textOnPrimary, fontWeight: '700' },
 });
 
 interface DeleteBranchModalProps {
@@ -198,11 +199,11 @@ function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm 
           <View style={branchModalStyles.handle} />
           <View style={branchModalStyles.header}>
             <Text style={branchModalStyles.title} numberOfLines={1}>Delete "{branch.name}"?</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView style={branchModalStyles.body} keyboardShouldPersistTaps="handled">
             {checking ? (
-              <ActivityIndicator color="#3b5ff8" style={{ paddingVertical: 20 }} />
+              <ActivityIndicator color={colors.primary} style={{ paddingVertical: 20 }} />
             ) : staff.length === 0 ? (
               <Text style={deleteBranchStyles.warningText}>
                 This will permanently delete this branch and all of its customers, vehicles, job cards,
@@ -219,7 +220,7 @@ function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm 
                   activeOpacity={0.7}
                   onPress={() => setStaffChoice('reassign')}
                 >
-                  <Ionicons name={staffChoice === 'reassign' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'reassign' ? '#3b5ff8' : '#9ca3af'} />
+                  <Ionicons name={staffChoice === 'reassign' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'reassign' ? colors.primary : colors.textFaint} />
                   <Text style={deleteBranchStyles.choiceText}>Reassign them to another branch</Text>
                 </TouchableOpacity>
                 {staffChoice === 'reassign' && (
@@ -231,7 +232,7 @@ function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm 
                         activeOpacity={0.7}
                         onPress={() => setReassignTarget(g._id)}
                       >
-                        <Ionicons name={reassignTarget === g._id ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={reassignTarget === g._id ? '#3b5ff8' : '#9ca3af'} />
+                        <Ionicons name={reassignTarget === g._id ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={reassignTarget === g._id ? colors.primary : colors.textFaint} />
                         <Text style={deleteBranchStyles.targetText}>{g.name}</Text>
                       </TouchableOpacity>
                     ))}
@@ -242,7 +243,7 @@ function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm 
                   activeOpacity={0.7}
                   onPress={() => setStaffChoice('delete')}
                 >
-                  <Ionicons name={staffChoice === 'delete' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'delete' ? '#3b5ff8' : '#9ca3af'} />
+                  <Ionicons name={staffChoice === 'delete' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'delete' ? colors.primary : colors.textFaint} />
                   <Text style={deleteBranchStyles.choiceText}>Delete their accounts too</Text>
                 </TouchableOpacity>
                 <Text style={deleteBranchStyles.footnote}>
@@ -261,7 +262,7 @@ function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm 
               onPress={handleConfirm}
               disabled={checking || deleting}
             >
-              {deleting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={branchModalStyles.saveBtnText}>Delete Branch</Text>}
+              {deleting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={branchModalStyles.saveBtnText}>Delete Branch</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -272,14 +273,14 @@ function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm 
 }
 
 const deleteBranchStyles = StyleSheet.create({
-  warningText: { fontSize: 14, color: '#374151', lineHeight: 20, marginBottom: 16 },
-  choiceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  choiceText: { fontSize: 14, fontWeight: '600', color: '#1f2937', flex: 1 },
+  warningText: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 16 },
+  choiceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
+  choiceText: { fontSize: 14, fontWeight: '600', color: colors.textStrong, flex: 1 },
   targetList: { paddingLeft: 30, gap: 4, marginBottom: 4 },
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
-  targetText: { fontSize: 14, color: '#374151' },
-  footnote: { fontSize: 12, color: '#9ca3af', marginTop: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 12 },
-  deleteBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#ef4444' },
+  targetText: { fontSize: 14, color: colors.textSecondary },
+  footnote: { fontSize: 12, color: colors.textFaint, marginTop: 12, borderTopWidth: 1, borderTopColor: colors.surfaceMuted, paddingTop: 12 },
+  deleteBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.danger },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -423,7 +424,7 @@ export default function SettingsScreen({ navigation }: Props) {
             </View>
           </View>
           <View style={styles.garageChip}>
-            <Ionicons name="business-outline" size={12} color="#3b5ff8" />
+            <Ionicons name="business-outline" size={12} color={colors.primary} />
             <Text style={styles.garageChipText} numberOfLines={1}>{garage?.name || '...'}</Text>
           </View>
         </View>
@@ -437,13 +438,13 @@ export default function SettingsScreen({ navigation }: Props) {
               if (editingGarage && garage) { populateGarageForm(garage); }
               setEditingGarage(e => !e);
             }}>
-              <Ionicons name={editingGarage ? 'close-outline' : 'pencil-outline'} size={16} color="#3b5ff8" />
+              <Ionicons name={editingGarage ? 'close-outline' : 'pencil-outline'} size={16} color={colors.primary} />
               <Text style={styles.editToggleText}>{editingGarage ? 'Cancel' : 'Edit'}</Text>
             </TouchableOpacity>
           ) : null}
         >
           {garageLoading ? (
-            <ActivityIndicator color="#3b5ff8" style={{ paddingVertical: 20 }} />
+            <ActivityIndicator color={colors.primary} style={{ paddingVertical: 20 }} />
           ) : editingGarage ? (
             <>
               <Field label="Garage Name *" value={garageName} onChangeText={setGarageName} placeholder="Your garage name" />
@@ -513,7 +514,7 @@ export default function SettingsScreen({ navigation }: Props) {
         {isOwner && (
           <SectionCard title="My Branches" icon="git-branch-outline">
             {garagesLoading ? (
-              <ActivityIndicator color="#3b5ff8" style={{ paddingVertical: 20 }} />
+              <ActivityIndicator color={colors.primary} style={{ paddingVertical: 20 }} />
             ) : garages.map(g => (
               <View key={g._id} style={styles.branchRow}>
                 <TouchableOpacity
@@ -524,20 +525,20 @@ export default function SettingsScreen({ navigation }: Props) {
                   <Ionicons
                     name={g._id === activeGarageId ? 'radio-button-on' : 'radio-button-off'}
                     size={20}
-                    color={g._id === activeGarageId ? '#3b5ff8' : '#9ca3af'}
+                    color={g._id === activeGarageId ? colors.primary : colors.textFaint}
                   />
                   <Text style={styles.branchRowText}>{g.name}</Text>
                   {g._id === activeGarageId && <Text style={styles.branchActiveLabel}>Active</Text>}
                 </TouchableOpacity>
                 {garages.length > 1 && (
                   <TouchableOpacity onPress={() => setDeleteBranchTarget(g)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
                   </TouchableOpacity>
                 )}
               </View>
             ))}
             <TouchableOpacity style={styles.addBranchRow} onPress={() => setAddBranchVisible(true)}>
-              <Ionicons name="add-circle-outline" size={20} color="#3b5ff8" />
+              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
               <Text style={styles.addBranchRowText}>Add Branch</Text>
             </TouchableOpacity>
           </SectionCard>
@@ -546,37 +547,37 @@ export default function SettingsScreen({ navigation }: Props) {
         {/* ── STAFF MANAGEMENT SHORTCUT ── */}
         <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('Staff')}>
           <View style={styles.staffShortcutLeft}>
-            <View style={styles.staffShortcutIcon}><Ionicons name="people-outline" size={22} color="#3b5ff8" /></View>
+            <View style={styles.staffShortcutIcon}><Ionicons name="people-outline" size={22} color={colors.primary} /></View>
             <View>
               <Text style={styles.staffShortcutTitle}>Staff Management</Text>
               <Text style={styles.staffShortcutSub}>Add, edit and manage your team</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+          <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
         </TouchableOpacity>
 
         {/* ── MY PROFILE SHORTCUT ── */}
         <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('EditProfile')}>
           <View style={styles.staffShortcutLeft}>
-            <View style={styles.staffShortcutIcon}><Ionicons name="person-outline" size={22} color="#3b5ff8" /></View>
+            <View style={styles.staffShortcutIcon}><Ionicons name="person-outline" size={22} color={colors.primary} /></View>
             <View>
               <Text style={styles.staffShortcutTitle}>Edit My Profile</Text>
               <Text style={styles.staffShortcutSub}>Update your name and phone number</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+          <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
         </TouchableOpacity>
 
         {/* ── CHANGE PASSWORD SHORTCUT ── */}
         <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('ChangePassword')}>
           <View style={styles.staffShortcutLeft}>
-            <View style={styles.staffShortcutIcon}><Ionicons name="lock-closed-outline" size={22} color="#3b5ff8" /></View>
+            <View style={styles.staffShortcutIcon}><Ionicons name="lock-closed-outline" size={22} color={colors.primary} /></View>
             <View>
               <Text style={styles.staffShortcutTitle}>Change Password</Text>
               <Text style={styles.staffShortcutSub}>Update your account password</Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#d1d5db" />
+          <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
         </TouchableOpacity>
 
         {/* ── APP INFO ── */}
@@ -588,7 +589,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
-          <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
@@ -620,91 +621,91 @@ export default function SettingsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
+  container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16 },
 
   // Hero
   profileHero: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: '#3b5ff8', borderRadius: 16, padding: 20, marginBottom: 16,
-    shadowColor: '#3b5ff8', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
+    backgroundColor: colors.primary, borderRadius: radius.lg, padding: 20, marginBottom: 16,
+    shadowColor: colors.primary, shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
   },
   heroAvatar: {
-    width: 56, height: 56, borderRadius: 28,
+    width: 56, height: 56, borderRadius: radius.xxl,
     backgroundColor: 'rgba(255,255,255,0.22)', justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)',
   },
-  heroAvatarText: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
-  heroName: { fontSize: 17, fontWeight: 'bold', color: '#fff' },
+  heroAvatarText: { color: colors.textOnPrimary, fontSize: 24, fontWeight: 'bold' },
+  heroName: { fontSize: 17, fontWeight: 'bold', color: colors.textOnPrimary },
   heroEmail: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
   heroRoleBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 160, alignSelf: 'flex-start', marginTop: 5,
+    borderRadius: radius.pill, alignSelf: 'flex-start', marginTop: 5,
   },
-  heroRoleText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  heroRoleText: { color: colors.textOnPrimary, fontSize: 11, fontWeight: '600' },
   garageChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 5,
-    borderRadius: 16, maxWidth: 90,
+    backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 5,
+    borderRadius: radius.lg, maxWidth: 90,
   },
-  garageChipText: { fontSize: 10, fontWeight: '700', color: '#3b5ff8' },
+  garageChipText: { fontSize: 10, fontWeight: '700', color: colors.primary },
 
   // Card
   card: {
-    backgroundColor: '#fff', borderRadius: 16, marginBottom: 16,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderRadius: radius.lg, marginBottom: 16,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
     overflow: 'hidden',
   },
   cardHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+    paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted,
   },
   cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  cardIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
-  cardTitle: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
+  cardIcon: { width: 32, height: 32, borderRadius: radius.lg, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center' },
+  cardTitle: { fontSize: 15, fontWeight: 'bold', color: colors.textPrimary },
   cardBody: { padding: 16 },
 
-  editToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: '#eff2ff' },
-  editToggleText: { fontSize: 13, fontWeight: '600', color: '#3b5ff8' },
+  editToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.lg, backgroundColor: colors.primarySoft },
+  editToggleText: { fontSize: 13, fontWeight: '600', color: colors.primary },
 
   // Branches
   branchRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted,
   },
   branchRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  branchRowText: { fontSize: 15, color: '#111827', fontWeight: '500' },
-  branchActiveLabel: { fontSize: 12, fontWeight: '600', color: '#3b5ff8' },
+  branchRowText: { fontSize: 15, color: colors.textPrimary, fontWeight: '500' },
+  branchActiveLabel: { fontSize: 12, fontWeight: '600', color: colors.primary },
   addBranchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
-  addBranchRowText: { fontSize: 15, fontWeight: '600', color: '#3b5ff8' },
+  addBranchRowText: { fontSize: 15, fontWeight: '600', color: colors.primary },
 
   // Staff shortcut
   staffShortcut: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, marginBottom: 16,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   staffShortcutLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  staffShortcutIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
-  staffShortcutTitle: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  staffShortcutSub: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
+  staffShortcutIcon: { width: 44, height: 44, borderRadius: radius.lg, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center' },
+  staffShortcutTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  staffShortcutSub: { fontSize: 12, color: colors.textFaint, marginTop: 2 },
 
   // Form
   row: { flexDirection: 'row' },
-  subLabel: { fontSize: 13, fontWeight: '700', color: '#6b7280', marginBottom: 8, marginTop: 4 },
+  subLabel: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 8, marginTop: 4 },
 
   // Info display rows
   infoRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#f9fafb',
+    paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.surfaceSunken,
   },
-  infoLabel: { fontSize: 14, color: '#6b7280' },
-  infoValue: { fontSize: 14, fontWeight: '600', color: '#111827', textAlign: 'right', flex: 1, marginLeft: 12 },
+  infoLabel: { fontSize: 14, color: colors.textMuted },
+  infoValue: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, textAlign: 'right', flex: 1, marginLeft: 12 },
 
   // Logout
   logoutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#fee2e2', borderRadius: 16, padding: 16, marginTop: 4,
+    backgroundColor: palette.red100, borderRadius: radius.lg, padding: 16, marginTop: 4,
   },
-  logoutText: { color: '#ef4444', fontSize: 16, fontWeight: 'bold' },
+  logoutText: { color: colors.danger, fontSize: 16, fontWeight: 'bold' },
 });

@@ -15,15 +15,16 @@ import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScree
 import type { RootStackScreenProps } from '../types/navigation';
 import type { User, Role } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'Staff'>;
 
 const ROLE_CONFIG: Record<Role, { label: string; color: string; bg: string }> = {
-  owner:          { label: 'Owner',          color: '#3b5ff8', bg: '#eff2ff' },
-  admin:          { label: 'Admin',           color: '#7c3aed', bg: '#f5f3ff' },
-  service_advisor:{ label: 'Service Advisor', color: '#10b981', bg: '#f0fdf4' },
-  mechanic:       { label: 'Mechanic',        color: '#f59e0b', bg: '#fef3c7' },
-  receptionist:   { label: 'Receptionist',    color: '#0f766e', bg: '#f0fdfa' },
+  owner:          { label: 'Owner',          color: colors.primary, bg: colors.primarySoft },
+  admin:          { label: 'Admin',           color: palette.violet600, bg: palette.violet50 },
+  service_advisor:{ label: 'Service Advisor', color: colors.success, bg: palette.green50 },
+  mechanic:       { label: 'Mechanic',        color: colors.warning, bg: palette.amber100 },
+  receptionist:   { label: 'Receptionist',    color: palette.teal700, bg: palette.teal50 },
 };
 
 interface StaffFormDraft {
@@ -37,7 +38,7 @@ interface StaffFormDraft {
 const BLANK_FORM: StaffFormDraft = { name: '', email: '', phone: '', password: '', role: 'mechanic' };
 
 function RoleBadge({ role }: { role: Role }) {
-  const cfg = ROLE_CONFIG[role] || { label: role, color: '#6b7280', bg: '#f3f4f6' };
+  const cfg = ROLE_CONFIG[role] || { label: role, color: colors.textMuted, bg: colors.surfaceMuted };
   return (
     <View style={[styles.roleBadge, { backgroundColor: cfg.bg }]}>
       <Text style={[styles.roleBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
@@ -69,7 +70,7 @@ function Field({ label, value, onChange, placeholder, keyboardType, autoCapitali
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={colors.textFaint}
         keyboardType={keyboardType || 'default'}
         autoCapitalize={autoCapitalize || 'sentences'}
         secureTextEntry={secureTextEntry}
@@ -133,7 +134,7 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
           <View style={styles.modalHandle} />
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{editingUser ? 'Edit Staff Member' : 'Add Staff Member'}</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
             <Field label="Full Name *" value={form.name} onChange={v => set('name', v)} placeholder="Staff member's name" />
@@ -151,10 +152,10 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
               label="Role"
               required
               options={[
-                { value: 'mechanic', label: 'Mechanic', icon: 'hammer-outline', color: '#f59e0b' },
-                { value: 'service_advisor', label: 'Service Advisor', icon: 'clipboard-outline', color: '#10b981' },
-                { value: 'receptionist', label: 'Receptionist', icon: 'desktop-outline', color: '#0f766e' },
-                ...(canSetAdmin ? [{ value: 'admin', label: 'Admin', icon: 'shield-outline' as const, color: '#7c3aed' }] : []),
+                { value: 'mechanic', label: 'Mechanic', icon: 'hammer-outline', color: colors.warning },
+                { value: 'service_advisor', label: 'Service Advisor', icon: 'clipboard-outline', color: colors.success },
+                { value: 'receptionist', label: 'Receptionist', icon: 'desktop-outline', color: palette.teal700 },
+                ...(canSetAdmin ? [{ value: 'admin', label: 'Admin', icon: 'shield-outline' as const, color: palette.violet600 }] : []),
               ]}
               selectedValue={form.role}
               onValueChange={v => set('role', v as Role)}
@@ -165,7 +166,7 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>{editingUser ? 'Save Changes' : 'Add Staff'}</Text>}
+              {saving ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={styles.saveBtnText}>{editingUser ? 'Save Changes' : 'Add Staff'}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -295,15 +296,15 @@ export default function StaffScreen(_props: Props) {
     return (
       <View style={styles.card}>
         <View style={styles.cardTop}>
-          <View style={[styles.avatar, { backgroundColor: ROLE_CONFIG[item.role]?.bg || '#f3f4f6' }]}>
-            <Text style={[styles.avatarText, { color: ROLE_CONFIG[item.role]?.color || '#6b7280' }]}>
+          <View style={[styles.avatar, { backgroundColor: ROLE_CONFIG[item.role]?.bg || colors.surfaceMuted }]}>
+            <Text style={[styles.avatarText, { color: ROLE_CONFIG[item.role]?.color || colors.textMuted }]}>
               {item.name?.charAt(0)?.toUpperCase()}
             </Text>
           </View>
           <View style={styles.cardInfo}>
             <View style={styles.nameRow}>
               <Text style={styles.staffName}>{item.name}{isSelf ? ' (You)' : ''}</Text>
-              <View style={[styles.statusDot, { backgroundColor: item.isActive ? '#10b981' : '#d1d5db' }]} />
+              <View style={[styles.statusDot, { backgroundColor: item.isActive ? colors.success : colors.borderStrong }]} />
             </View>
             <Text style={styles.staffEmail}>{item.email}</Text>
             <Text style={styles.staffPhone}>{item.phone}</Text>
@@ -314,19 +315,19 @@ export default function StaffScreen(_props: Props) {
         {canManage && !isOwner && !isSelf && (
           <View style={styles.cardActions}>
             <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(item)}>
-              <Ionicons name="pencil-outline" size={16} color="#3b5ff8" />
-              <Text style={[styles.actionText, { color: '#3b5ff8' }]}>Edit</Text>
+              <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+              <Text style={[styles.actionText, { color: colors.primary }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => handleToggleActive(item)}>
-              <Ionicons name={item.isActive ? 'pause-circle-outline' : 'play-circle-outline'} size={16} color={item.isActive ? '#f59e0b' : '#10b981'} />
-              <Text style={[styles.actionText, { color: item.isActive ? '#f59e0b' : '#10b981' }]}>
+              <Ionicons name={item.isActive ? 'pause-circle-outline' : 'play-circle-outline'} size={16} color={item.isActive ? colors.warning : colors.success} />
+              <Text style={[styles.actionText, { color: item.isActive ? colors.warning : colors.success }]}>
                 {item.isActive ? 'Deactivate' : 'Activate'}
               </Text>
             </TouchableOpacity>
             {hasRole('owner') && (
               <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item)}>
-                <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
+                <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                <Text style={[styles.actionText, { color: colors.danger }]}>Delete</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -342,7 +343,7 @@ export default function StaffScreen(_props: Props) {
     <ResponsiveScreen>
     <View style={styles.container}>
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator size="large" color="#3b5ff8" /></View>
+        <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <FlatList
           data={filteredStaff}
@@ -356,19 +357,19 @@ export default function StaffScreen(_props: Props) {
             <View>
               {/* Search bar */}
               <View style={styles.searchRow}>
-                <Ionicons name="search-outline" size={18} color="#9ca3af" style={styles.searchIcon} />
+                <Ionicons name="search-outline" size={18} color={colors.textFaint} style={styles.searchIcon} />
                 <TextInput
                   style={styles.searchInput}
                   value={staffSearch}
                   onChangeText={setStaffSearch}
                   placeholder="Search by name, email or phone..."
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor={colors.textFaint}
                   returnKeyType="search"
                   clearButtonMode="while-editing"
                 />
                 {staffSearch.length > 0 && (
                   <TouchableOpacity onPress={() => setStaffSearch('')} style={styles.searchClear}>
-                    <Ionicons name="close-circle" size={18} color="#9ca3af" />
+                    <Ionicons name="close-circle" size={18} color={colors.textFaint} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -419,7 +420,7 @@ export default function StaffScreen(_props: Props) {
               <Ionicons
                 name={staff.length === 0 ? 'people-outline' : 'search-outline'}
                 size={48}
-                color="#e5e7eb"
+                color={colors.border}
               />
               <Text style={styles.emptyText}>
                 {staff.length === 0
@@ -442,7 +443,7 @@ export default function StaffScreen(_props: Props) {
 
       {canManage && (
         <TouchableOpacity style={styles.fab} onPress={openAdd}>
-          <Ionicons name="add" size={28} color="#fff" />
+          <Ionicons name="add" size={28} color={colors.textOnPrimary} />
         </TouchableOpacity>
       )}
 
@@ -459,77 +460,77 @@ export default function StaffScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
+  container: { flex: 1, backgroundColor: colors.background },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 16, paddingBottom: 100 },
 
   // Search
   searchRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb',
-    borderRadius: 16, marginBottom: 10, paddingHorizontal: 10,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, marginBottom: 10, paddingHorizontal: 10,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, height: 44, fontSize: 14, color: '#1f2937' },
+  searchInput: { flex: 1, height: 44, fontSize: 14, color: colors.textStrong },
   searchClear: { padding: 4 },
 
   // Role chips
   chipScroll: { marginBottom: 10 },
   chipContainer: { gap: 6, paddingRight: 4 },
   chip: {
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#e5e7eb',
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.xl,
+    backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border,
   },
-  chipActive: { backgroundColor: '#3b5ff8', borderColor: '#3b5ff8' },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
-  chipTextActive: { color: '#fff' },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  chipTextActive: { color: colors.textOnPrimary },
 
   // Summary row
   summary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  summaryText: { fontSize: 13, color: '#9ca3af', fontWeight: '500' },
-  clearText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
+  summaryText: { fontSize: 13, color: colors.textFaint, fontWeight: '500' },
+  clearText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
   card: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, marginBottom: 12,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   cardTop: { flexDirection: 'row', gap: 12 },
-  avatar: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  avatar: { width: 48, height: 48, borderRadius: radius.lg, justifyContent: 'center', alignItems: 'center' },
   avatarText: { fontSize: 20, fontWeight: 'bold' },
   cardInfo: { flex: 1, gap: 3 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  staffName: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
+  staffName: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  staffEmail: { fontSize: 13, color: '#6b7280' },
-  staffPhone: { fontSize: 13, color: '#6b7280' },
-  roleBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 160, marginTop: 4 },
+  staffEmail: { fontSize: 13, color: colors.textMuted },
+  staffPhone: { fontSize: 13, color: colors.textMuted },
+  roleBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, marginTop: 4 },
   roleBadgeText: { fontSize: 11, fontWeight: '700' },
-  cardActions: { flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: '#fdfcfb' },
+  cardActions: { flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.lg, backgroundColor: colors.background },
   actionText: { fontSize: 13, fontWeight: '600' },
   empty: { alignItems: 'center', marginTop: 60, gap: 8 },
-  emptyText: { fontSize: 16, color: '#9ca3af' },
-  clearBtn: { marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16, backgroundColor: '#eff2ff' },
-  clearBtnText: { fontSize: 14, fontWeight: '700', color: '#3b5ff8' },
+  emptyText: { fontSize: 16, color: colors.textFaint },
+  clearBtn: { marginTop: 8, paddingHorizontal: 16, paddingVertical: 8, borderRadius: radius.lg, backgroundColor: colors.primarySoft },
+  clearBtnText: { fontSize: 14, fontWeight: '700', color: colors.primary },
   fab: {
-    position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#3b5ff8', justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#3b5ff8', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6,
+    position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: radius.xxl,
+    backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
+    shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
   // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  modalSheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  modalSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   modalBody: { padding: 20 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
   fieldWrap: { marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  input: { backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
+  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
 
-  cancelBtn: { flex: 1, padding: 14, borderRadius: 16, backgroundColor: '#f3f4f6', alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
-  saveBtn: { flex: 1, padding: 14, borderRadius: 16, backgroundColor: '#3b5ff8', alignItems: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
+  cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
+  cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
+  saveBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center' },
+  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: colors.textOnPrimary },
 });

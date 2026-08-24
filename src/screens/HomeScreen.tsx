@@ -15,6 +15,7 @@ import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScree
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Garage, Role } from '../types/models';
+import { colors, palette, radius } from '../theme';
 
 type Props = MainTabScreenProps<'Home'>;
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -64,13 +65,13 @@ function BranchSwitcher({ garages, activeGarageId, onSwitch }: BranchSwitcherPro
     <>
       <TouchableOpacity style={styles.branchSwitcher} activeOpacity={0.7} onPress={() => setVisible(true)}>
         <View style={styles.branchSwitcherIcon}>
-          <Ionicons name="business" size={16} color="#3b5ff8" />
+          <Ionicons name="business" size={16} color={colors.primary} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.branchSwitcherLabel}>Active Branch</Text>
           <Text style={styles.branchSwitcherName} numberOfLines={1}>{activeGarage?.name || 'Select branch'}</Text>
         </View>
-        <Ionicons name="chevron-down" size={18} color="#9ca3af" />
+        <Ionicons name="chevron-down" size={18} color={colors.textFaint} />
       </TouchableOpacity>
 
       <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
@@ -81,7 +82,7 @@ function BranchSwitcher({ garages, activeGarageId, onSwitch }: BranchSwitcherPro
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Switch Branch</Text>
               <TouchableOpacity onPress={() => setVisible(false)}>
-                <Ionicons name="close" size={24} color="#6b7280" />
+                <Ionicons name="close" size={24} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.sheetList} keyboardShouldPersistTaps="handled">
@@ -94,7 +95,7 @@ function BranchSwitcher({ garages, activeGarageId, onSwitch }: BranchSwitcherPro
                     onPress={() => { onSwitch(g._id); setVisible(false); }}
                     activeOpacity={0.6}
                   >
-                    <Ionicons name={isActive ? 'radio-button-on' : 'radio-button-off'} size={20} color={isActive ? '#3b5ff8' : '#9ca3af'} />
+                    <Ionicons name={isActive ? 'radio-button-on' : 'radio-button-off'} size={20} color={isActive ? colors.primary : colors.textFaint} />
                     <Text style={[styles.branchOptionText, isActive && styles.branchOptionTextActive]} numberOfLines={1}>
                       {g.name}
                     </Text>
@@ -148,7 +149,7 @@ export default function HomeScreen({ navigation }: Props) {
     return (
       <ResponsiveScreen>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b5ff8" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </ResponsiveScreen>
@@ -166,14 +167,14 @@ export default function HomeScreen({ navigation }: Props) {
   // fastest way into a section even when the dock also has it, and the row
   // wraps, so extra entries cost nothing but a second line.
   const quickActions: ShortcutItem[] = [
-    { label: 'New Job Card', icon: 'add-circle', color: '#3b5ff8', bg: '#eff2ff', onPress: () => navigation.navigate('CreateJobCard'), roles: ['owner', 'admin', 'service_advisor'] },
-    { label: 'Job Cards', icon: 'clipboard', color: '#8b5cf6', bg: '#f5f3ff', onPress: () => navigation.navigate('JobCards') },
-    { label: 'Vehicles', icon: 'car-sport', color: '#10b981', bg: '#f0fdf4', onPress: () => navigation.navigate('Vehicles') },
-    { label: 'Customers', icon: 'people', color: '#f59e0b', bg: '#fffbeb', onPress: () => navigation.navigate('Customers'), roles: ['owner', 'admin', 'service_advisor', 'receptionist'] },
-    { label: 'Invoices', icon: 'document-text', color: '#ec4899', bg: '#fdf2f8', onPress: () => navigation.navigate('Invoices') },
-    { label: 'Dashboard', icon: 'bar-chart', color: '#0ea5e9', bg: '#f0f9ff', onPress: () => navigation.navigate('Dashboard') },
-    { label: 'Staff', icon: 'people-circle', color: '#06b6d4', bg: '#ecfeff', onPress: () => navigation.navigate('Staff'), roles: ['owner', 'admin'] },
-    { label: 'Settings', icon: 'settings', color: '#6b7280', bg: '#f3f4f6', onPress: () => navigation.navigate('Settings') },
+    { label: 'New Job Card', icon: 'add-circle', color: colors.primary, bg: colors.primarySoft, onPress: () => navigation.navigate('CreateJobCard'), roles: ['owner', 'admin', 'service_advisor'] },
+    { label: 'Job Cards', icon: 'clipboard', color: palette.violet500, bg: palette.violet50, onPress: () => navigation.navigate('JobCards') },
+    { label: 'Vehicles', icon: 'car-sport', color: colors.success, bg: palette.green50, onPress: () => navigation.navigate('Vehicles') },
+    { label: 'Customers', icon: 'people', color: colors.warning, bg: colors.warningSoft, onPress: () => navigation.navigate('Customers'), roles: ['owner', 'admin', 'service_advisor', 'receptionist'] },
+    { label: 'Invoices', icon: 'document-text', color: palette.pink500, bg: palette.pink50, onPress: () => navigation.navigate('Invoices') },
+    { label: 'Dashboard', icon: 'bar-chart', color: palette.sky500, bg: palette.sky50, onPress: () => navigation.navigate('Dashboard') },
+    { label: 'Staff', icon: 'people-circle', color: palette.cyan500, bg: palette.cyan50, onPress: () => navigation.navigate('Staff'), roles: ['owner', 'admin'] },
+    { label: 'Settings', icon: 'settings', color: colors.textMuted, bg: colors.surfaceMuted, onPress: () => navigation.navigate('Settings') },
   ];
 
   const visibleQuickActions = quickActions.filter(item => !item.roles || hasRole(...item.roles));
@@ -198,7 +199,7 @@ export default function HomeScreen({ navigation }: Props) {
       key: 'estimations',
       show: pendingEstimations > 0,
       icon: 'alert-circle',
-      color: '#f59e0b',
+      color: colors.warning,
       title: `${pendingEstimations} estimation${pendingEstimations > 1 ? 's' : ''} awaiting approval`,
       subtitle: 'Follow up so the work can start',
       onPress: () => navigation.navigate('JobCards'),
@@ -207,7 +208,7 @@ export default function HomeScreen({ navigation }: Props) {
       key: 'pickup',
       show: readyForPickup > 0,
       icon: 'checkmark-done-circle',
-      color: '#10b981',
+      color: colors.success,
       title: `${readyForPickup} vehicle${readyForPickup > 1 ? 's' : ''} ready for pickup`,
       subtitle: 'Let the customer know it’s done',
       onPress: () => navigation.navigate('JobCards'),
@@ -216,7 +217,7 @@ export default function HomeScreen({ navigation }: Props) {
       key: 'unpaid',
       show: unpaidCount > 0,
       icon: 'card',
-      color: '#ef4444',
+      color: colors.danger,
       title: `${unpaidCount} unpaid invoice${unpaidCount > 1 ? 's' : ''}`,
       subtitle: `${formatCurrency(unpaidTotal)} outstanding`,
       onPress: () => navigation.navigate('Invoices'),
@@ -225,7 +226,7 @@ export default function HomeScreen({ navigation }: Props) {
       key: 'reminders',
       show: remindersCount > 0,
       icon: 'calendar',
-      color: '#8b5cf6',
+      color: palette.violet500,
       title: `${remindersCount} service${remindersCount > 1 ? 's' : ''} due soon`,
       // No destination: there is no reminders screen in the app yet, and a row
       // that looks tappable but goes nowhere is worse than a plain one.
@@ -271,8 +272,8 @@ export default function HomeScreen({ navigation }: Props) {
           what that hero contributed that this block didn't. */}
       {attentionItems.length === 0 ? (
         <View style={styles.allClearCard} testID="all-clear">
-          <View style={[styles.attentionIcon, { backgroundColor: '#10b98118' }]}>
-            <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+          <View style={[styles.attentionIcon, { backgroundColor: palette.successWash }]}>
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.attentionTitle}>All clear</Text>
@@ -301,7 +302,7 @@ export default function HomeScreen({ navigation }: Props) {
                   <Text style={styles.attentionSub}>{item.subtitle}</Text>
                 </View>
                 {/* Chevron only where tapping actually goes somewhere. */}
-                {item.onPress && <Ionicons name="chevron-forward" size={18} color="#c7cbd4" />}
+                {item.onPress && <Ionicons name="chevron-forward" size={18} color={palette.grayBorderSoft} />}
               </>
             );
 
@@ -336,7 +337,7 @@ export default function HomeScreen({ navigation }: Props) {
       <Text style={styles.sectionTitle}>Today</Text>
       <View style={styles.statsGrid}>
         <TouchableOpacity
-          style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}
+          style={[styles.statCard, { borderLeftColor: colors.info, borderLeftWidth: 4 }]}
           activeOpacity={0.7}
           onPress={() => navigation.navigate('JobCards')}
         >
@@ -344,18 +345,18 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.statValue}>{activeJobCards}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.statCard, { borderLeftColor: '#8b5cf6', borderLeftWidth: 4 }]}
+          style={[styles.statCard, { borderLeftColor: palette.violet500, borderLeftWidth: 4 }]}
           activeOpacity={0.7}
           onPress={() => navigation.navigate('JobCards')}
         >
           <Text style={styles.statLabel}>New Jobs Today</Text>
           <Text style={styles.statValue}>{stats?.overview?.todayJobCards || 0}</Text>
         </TouchableOpacity>
-        <View style={[styles.statCard, { borderLeftColor: '#10b981', borderLeftWidth: 4 }]}>
+        <View style={[styles.statCard, { borderLeftColor: colors.success, borderLeftWidth: 4 }]}>
           <Text style={styles.statLabel}>Today's Revenue</Text>
           <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.today)}</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: '#f59e0b', borderLeftWidth: 4 }]}>
+        <View style={[styles.statCard, { borderLeftColor: colors.warning, borderLeftWidth: 4 }]}>
           <Text style={styles.statLabel}>This Month</Text>
           <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.month)}</Text>
         </View>
@@ -370,7 +371,7 @@ export default function HomeScreen({ navigation }: Props) {
           activeOpacity={0.7}
           onPress={() => navigation.navigate('Customers')}
         >
-          <Ionicons name="people-outline" size={18} color="#6b7280" />
+          <Ionicons name="people-outline" size={18} color={colors.textMuted} />
           <Text style={styles.totalValue}>{formatNumber(stats?.overview?.totalCustomers, locale)}</Text>
           <Text style={styles.totalLabel}>Customers</Text>
         </TouchableOpacity>
@@ -380,7 +381,7 @@ export default function HomeScreen({ navigation }: Props) {
           activeOpacity={0.7}
           onPress={() => navigation.navigate('Vehicles')}
         >
-          <Ionicons name="car-outline" size={18} color="#6b7280" />
+          <Ionicons name="car-outline" size={18} color={colors.textMuted} />
           <Text style={styles.totalValue}>{formatNumber(stats?.overview?.totalVehicles, locale)}</Text>
           <Text style={styles.totalLabel}>Vehicles</Text>
         </TouchableOpacity>
@@ -401,12 +402,12 @@ const styles = StyleSheet.create({
   // pattern as InvoiceViewerScreen's header.
   safeArea: {
     flex: 1,
-    backgroundColor: '#fdfcfb',
+    backgroundColor: colors.background,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#fdfcfb',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 16,
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#6b7280',
+    color: colors.textMuted,
   },
 
   // Header
@@ -432,26 +433,26 @@ const styles = StyleSheet.create({
   },
   greetingSmall: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   greetingBold: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
     marginTop: 2,
   },
   avatar: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#3b5ff8',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
   },
   avatarText: {
-    color: '#fff',
+    color: colors.textOnPrimary,
     fontSize: 17,
     fontWeight: 'bold',
   },
@@ -461,10 +462,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 16,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
     paddingHorizontal: 12,
     height: 56,
     marginBottom: 16,
@@ -472,19 +473,19 @@ const styles = StyleSheet.create({
   branchSwitcherIcon: {
     width: 32,
     height: 32,
-    borderRadius: 12,
-    backgroundColor: '#eff2ff',
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
   branchSwitcherLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: colors.textFaint,
     fontWeight: '600',
   },
   branchSwitcherName: {
     fontSize: 14,
-    color: '#111827',
+    color: colors.textPrimary,
     fontWeight: '700',
     marginTop: 1,
   },
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   sheet: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '70%',
@@ -506,7 +507,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
     alignSelf: 'center',
     marginTop: 12,
   },
@@ -516,12 +517,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.surfaceMuted,
   },
   sheetTitle: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   sheetList: {
     paddingHorizontal: 12,
@@ -533,20 +534,20 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    borderRadius: 12,
+    borderRadius: radius.md,
     marginVertical: 2,
   },
   branchOptionActive: {
-    backgroundColor: '#eef2ff',
+    backgroundColor: colors.primarySoftAlt,
   },
   branchOptionText: {
     flex: 1,
     fontSize: 15,
-    color: '#374151',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   branchOptionTextActive: {
-    color: '#3b5ff8',
+    color: colors.primary,
     fontWeight: '700',
   },
 
@@ -555,7 +556,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
     marginBottom: 12,
     marginTop: 4,
   },
@@ -582,7 +583,7 @@ const styles = StyleSheet.create({
   shortcutLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#374151',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 
@@ -592,15 +593,15 @@ const styles = StyleSheet.create({
   // only thing on the screen you couldn't tap; this is a neutral card whose
   // rows carry their own colour, so several can coexist without competing.
   attentionCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 4,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f1f2f4',
-    shadowColor: '#6366f1',
+    borderColor: palette.boneCool,
+    shadowColor: colors.shadowAmbient,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -612,13 +613,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     padding: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#f1f2f4',
-    shadowColor: '#6366f1',
+    borderColor: palette.boneCool,
+    shadowColor: colors.shadowAmbient,
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -627,7 +628,7 @@ const styles = StyleSheet.create({
   attentionHeading: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#9ca3af',
+    color: colors.textFaint,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 10,
@@ -638,7 +639,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f6f7f8',
+    borderBottomColor: palette.boneAlt,
   },
   attentionRowLast: {
     borderBottomWidth: 0,
@@ -653,11 +654,11 @@ const styles = StyleSheet.create({
   attentionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   attentionSub: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textFaint,
     marginTop: 2,
   },
 
@@ -665,10 +666,10 @@ const styles = StyleSheet.create({
   totalsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#f1f2f4',
+    borderColor: palette.boneCool,
     paddingVertical: 16,
     marginBottom: 20,
   },
@@ -680,16 +681,16 @@ const styles = StyleSheet.create({
   totalDivider: {
     width: 1,
     alignSelf: 'stretch',
-    backgroundColor: '#f1f2f4',
+    backgroundColor: palette.boneCool,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   totalLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textFaint,
     fontWeight: '600',
   },
 
@@ -701,11 +702,11 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#6366f1',
+    shadowColor: colors.shadowAmbient,
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -713,13 +714,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textMuted,
     fontWeight: '500',
     marginBottom: 8,
   },
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: colors.textStrong,
   },
 });

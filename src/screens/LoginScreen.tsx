@@ -15,6 +15,7 @@ import BottomSheetPicker from '../components/BottomSheetPicker';
 import { useCountries } from '../hooks/useCountries';
 import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'Login'>;
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -54,13 +55,13 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <View style={styles.inputRow}>
-        <Ionicons name={icon} size={18} color="#9ca3af" style={{ marginRight: 10 }} />
+        <Ionicons name={icon} size={18} color={colors.textFaint} style={{ marginRight: 10 }} />
         <TextInput
           style={styles.inputField}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textFaint}
           keyboardType={keyboardType || 'default'}
           autoCapitalize={autoCapitalize || 'sentences'}
           secureTextEntry={isPwd ? !show : false}
@@ -68,7 +69,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
         />
         {isPwd && (
           <TouchableOpacity onPress={() => setShow(s => !s)} style={{ padding: 4 }}>
-            <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+            <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textFaint} />
           </TouchableOpacity>
         )}
       </View>
@@ -120,7 +121,7 @@ function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
           <View style={forgotPwdStyles.handle} />
           <View style={forgotPwdStyles.header}>
             <Text style={forgotPwdStyles.title}>Forgot Password</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
 
           {/* ── Step 1: confirm role ── */}
@@ -165,7 +166,7 @@ function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
                   <Text style={forgotPwdStyles.cancelBtnText}>Back</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[forgotPwdStyles.submitBtn, submitting && { opacity: 0.6 }]} onPress={handleSubmit} disabled={submitting}>
-                  {submitting ? <ActivityIndicator color="#fff" size="small" /> : <Text style={forgotPwdStyles.submitBtnText}>Send Link</Text>}
+                  {submitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={forgotPwdStyles.submitBtnText}>Send Link</Text>}
                 </TouchableOpacity>
               </View>
             </>
@@ -181,26 +182,26 @@ function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
 
 const forgotPwdStyles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  title: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
+  title: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   body: { padding: 20 },
-  helperText: { fontSize: 14, color: '#6b7280', lineHeight: 20, marginBottom: 16 },
-  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#f3f4f6' },
-  cancelBtnText: { color: '#374151', fontWeight: '600' },
-  submitBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', backgroundColor: '#3b5ff8' },
-  submitBtnText: { color: '#fff', fontWeight: '700' },
-  noticeBox: { backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fde68a', borderRadius: 12, padding: 16 },
-  noticeText: { fontSize: 14, color: '#374151', lineHeight: 20 },
+  helperText: { fontSize: 14, color: colors.textMuted, lineHeight: 20, marginBottom: 16 },
+  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
+  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.surfaceMuted },
+  cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
+  submitBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.primary },
+  submitBtnText: { color: colors.textOnPrimary, fontWeight: '700' },
+  noticeBox: { backgroundColor: colors.warningSoft, borderWidth: 1, borderColor: palette.amber200, borderRadius: radius.md, padding: 16 },
+  noticeText: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
   // Standalone full-width choice buttons (confirm/not-owner steps) — deliberately
   // NOT flex:1 like submitBtn/cancelBtn above, which only works inside the
   // row-direction footer; flex:1 in a plain column View collapses to zero height.
-  choiceBtnPrimary: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#3b5ff8' },
-  choiceBtnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  choiceBtnSecondary: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6', marginTop: 10 },
-  choiceBtnSecondaryText: { color: '#374151', fontWeight: '600', fontSize: 15 },
+  choiceBtnPrimary: { width: '100%', paddingVertical: 14, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  choiceBtnPrimaryText: { color: colors.textOnPrimary, fontWeight: '700', fontSize: 15 },
+  choiceBtnSecondary: { width: '100%', paddingVertical: 14, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceMuted, marginTop: 10 },
+  choiceBtnSecondaryText: { color: colors.textSecondary, fontWeight: '600', fontSize: 15 },
 });
 
 // ─── Features list (shown on register) ────────────────────────────────────────
@@ -313,8 +314,8 @@ export default function LoginScreen(_props: Props) {
   // ────────────────────────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <StatusBar barStyle="light-content" backgroundColor="#3b5ff8" />
-      <ResponsiveScreen backgroundColor="#3b5ff8">
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+      <ResponsiveScreen backgroundColor={colors.primary}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -355,8 +356,8 @@ export default function LoginScreen(_props: Props) {
                 onPress={handleLogin} disabled={loading} activeOpacity={0.85}
               >
                 {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <><Ionicons name="log-in-outline" size={20} color="#fff" /><Text style={styles.primaryBtnText}>Sign In</Text></>
+                  ? <ActivityIndicator color={colors.textOnPrimary} />
+                  : <><Ionicons name="log-in-outline" size={20} color={colors.textOnPrimary} /><Text style={styles.primaryBtnText}>Sign In</Text></>
                 }
               </TouchableOpacity>
 
@@ -376,7 +377,7 @@ export default function LoginScreen(_props: Props) {
               <View style={styles.progressRow}>
                 <View style={styles.stepWrap}>
                   <View style={[styles.stepDot, styles.stepDotActive]}><Text style={styles.stepDotNum}>1</Text></View>
-                  <Text style={[styles.stepLabel, { color: '#3b5ff8' }]}>Your Info</Text>
+                  <Text style={[styles.stepLabel, { color: colors.primary }]}>Your Info</Text>
                 </View>
                 <View style={styles.stepLine} />
                 <View style={styles.stepWrap}>
@@ -421,7 +422,7 @@ export default function LoginScreen(_props: Props) {
 
               <TouchableOpacity style={styles.primaryBtn} onPress={handleNextStep} activeOpacity={0.85}>
                 <Text style={styles.primaryBtnText}>Continue</Text>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                <Ionicons name="arrow-forward" size={20} color={colors.textOnPrimary} />
               </TouchableOpacity>
 
               <View style={styles.switchRow}>
@@ -440,14 +441,14 @@ export default function LoginScreen(_props: Props) {
               <View style={styles.progressRow}>
                 <View style={styles.stepWrap}>
                   <View style={[styles.stepDot, styles.stepDotDone]}>
-                    <Ionicons name="checkmark" size={14} color="#fff" />
+                    <Ionicons name="checkmark" size={14} color={colors.textOnPrimary} />
                   </View>
                   <Text style={styles.stepLabel}>Your Info</Text>
                 </View>
-                <View style={[styles.stepLine, { backgroundColor: '#3b5ff8' }]} />
+                <View style={[styles.stepLine, { backgroundColor: colors.primary }]} />
                 <View style={styles.stepWrap}>
                   <View style={[styles.stepDot, styles.stepDotActive]}><Text style={styles.stepDotNum}>2</Text></View>
-                  <Text style={[styles.stepLabel, { color: '#3b5ff8' }]}>Garage Info</Text>
+                  <Text style={[styles.stepLabel, { color: colors.primary }]}>Garage Info</Text>
                 </View>
               </View>
 
@@ -463,7 +464,7 @@ export default function LoginScreen(_props: Props) {
                 <View style={styles.featureGrid}>
                   {FEATURES.map((f, i) => (
                     <View key={i} style={styles.featurePill}>
-                      <Ionicons name={f.icon} size={14} color="#3b5ff8" />
+                      <Ionicons name={f.icon} size={14} color={colors.primary} />
                       <Text style={styles.featureText}>{f.label}</Text>
                     </View>
                   ))}
@@ -472,7 +473,7 @@ export default function LoginScreen(_props: Props) {
 
               <View style={styles.stepBtns}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => setStep(1)} activeOpacity={0.8}>
-                  <Ionicons name="arrow-back" size={18} color="#6b7280" />
+                  <Ionicons name="arrow-back" size={18} color={colors.textMuted} />
                   <Text style={styles.backBtnText}>Back</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -480,8 +481,8 @@ export default function LoginScreen(_props: Props) {
                   onPress={handleRegister} disabled={loading} activeOpacity={0.85}
                 >
                   {loading
-                    ? <ActivityIndicator color="#fff" />
-                    : <><Ionicons name="checkmark-circle-outline" size={20} color="#fff" /><Text style={styles.primaryBtnText}>Create Garage</Text></>
+                    ? <ActivityIndicator color={colors.textOnPrimary} />
+                    : <><Ionicons name="checkmark-circle-outline" size={20} color={colors.textOnPrimary} /><Text style={styles.primaryBtnText}>Create Garage</Text></>
                   }
                 </TouchableOpacity>
               </View>
@@ -498,7 +499,7 @@ export default function LoginScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#3b5ff8' },
+  container: { flex: 1, backgroundColor: colors.primary },
   content: { flexGrow: 1, paddingBottom: 32 },
 
   // Banner
@@ -507,83 +508,83 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24, position: 'relative', overflow: 'hidden',
   },
   bannerCircle1: {
-    position: 'absolute', width: 300, height: 300, borderRadius: 150,
+    position: 'absolute', width: 300, height: 300, borderRadius: radius.pill,
     backgroundColor: 'rgba(255,255,255,0.06)', top: -80, right: -60,
   },
   bannerCircle2: {
-    position: 'absolute', width: 200, height: 200, borderRadius: 160,
+    position: 'absolute', width: 200, height: 200, borderRadius: radius.pill,
     backgroundColor: 'rgba(255,255,255,0.06)', bottom: 0, left: -40,
   },
   logoWrap: {
     backgroundColor: 'rgba(255,255,255,0.18)', justifyContent: 'center', alignItems: 'center',
     marginBottom: 14, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
   },
-  bannerTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff', letterSpacing: 0.5 },
+  bannerTitle: { fontSize: 28, fontWeight: 'bold', color: colors.textOnPrimary, letterSpacing: 0.5 },
   bannerSub: { fontSize: 14, color: 'rgba(255,255,255,0.75)', marginTop: 6, textAlign: 'center' },
 
   // Card
   card: {
-    backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
     marginHorizontal: 16, padding: 24,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
-  cardTitle: { fontSize: 22, fontWeight: 'bold', color: '#111827', marginBottom: 4 },
-  cardSub: { fontSize: 14, color: '#6b7280', marginBottom: 24 },
+  cardTitle: { fontSize: 22, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 4 },
+  cardSub: { fontSize: 14, color: colors.textMuted, marginBottom: 24 },
 
   // Progress stepper
   progressRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   stepWrap: { alignItems: 'center', gap: 4 },
   stepDot: {
-    width: 28, height: 28, borderRadius: 16, backgroundColor: '#e5e7eb',
+    width: 28, height: 28, borderRadius: radius.lg, backgroundColor: colors.border,
     justifyContent: 'center', alignItems: 'center',
   },
-  stepDotActive: { backgroundColor: '#3b5ff8' },
-  stepDotDone: { backgroundColor: '#10b981' },
-  stepDotNum: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  stepLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '600' },
-  stepLine: { flex: 1, height: 2, backgroundColor: '#e5e7eb', marginHorizontal: 8, marginBottom: 12 },
+  stepDotActive: { backgroundColor: colors.primary },
+  stepDotDone: { backgroundColor: colors.success },
+  stepDotNum: { color: colors.textOnPrimary, fontSize: 12, fontWeight: 'bold' },
+  stepLabel: { fontSize: 11, color: colors.textFaint, fontWeight: '600' },
+  stepLine: { flex: 1, height: 2, backgroundColor: colors.border, marginHorizontal: 8, marginBottom: 12 },
 
   // Form fields
   fieldWrap: { marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fdfcfb', borderWidth: 1.5, borderColor: '#e5e7eb',
-    borderRadius: 16, paddingHorizontal: 14, height: 50,
+    backgroundColor: colors.background, borderWidth: 1.5, borderColor: colors.border,
+    borderRadius: radius.lg, paddingHorizontal: 14, height: 50,
   },
-  inputField: { flex: 1, fontSize: 15, color: '#1f2937' },
+  inputField: { flex: 1, fontSize: 15, color: colors.textStrong },
 
   // Forgot password link
   forgotPwdRow: { alignSelf: 'flex-end', marginTop: -8, marginBottom: 4 },
-  forgotPwdLink: { fontSize: 13, fontWeight: '600', color: '#3b5ff8' },
+  forgotPwdLink: { fontSize: 13, fontWeight: '600', color: colors.primary },
 
   // Buttons
   primaryBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 15, marginTop: 8,
-    shadowColor: '#3b5ff8', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 5,
+    backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 15, marginTop: 8,
+    shadowColor: colors.primary, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 5,
   },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  primaryBtnText: { color: colors.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
   stepBtns: { flexDirection: 'row', gap: 10, marginTop: 8 },
   backBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingVertical: 15, paddingHorizontal: 16, borderRadius: 16,
-    backgroundColor: '#f3f4f6',
+    paddingVertical: 15, paddingHorizontal: 16, borderRadius: radius.lg,
+    backgroundColor: colors.surfaceMuted,
   },
-  backBtnText: { fontSize: 15, fontWeight: '600', color: '#6b7280' },
+  backBtnText: { fontSize: 15, fontWeight: '600', color: colors.textMuted },
 
   // Switch link
   switchRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20 },
-  switchText: { fontSize: 14, color: '#6b7280' },
-  switchLink: { fontSize: 14, fontWeight: 'bold', color: '#3b5ff8' },
+  switchText: { fontSize: 14, color: colors.textMuted },
+  switchLink: { fontSize: 14, fontWeight: 'bold', color: colors.primary },
 
   // Features
-  featuresWrap: { backgroundColor: '#fdfcfb', borderRadius: 16, padding: 16, marginVertical: 16 },
-  featuresLabel: { fontSize: 12, fontWeight: '700', color: '#9ca3af', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  featuresWrap: { backgroundColor: colors.background, borderRadius: radius.lg, padding: 16, marginVertical: 16 },
+  featuresLabel: { fontSize: 12, fontWeight: '700', color: colors.textFaint, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  featurePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', borderRadius: 160, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: '#e5e7eb' },
-  featureText: { fontSize: 12, fontWeight: '600', color: '#374151' },
+  featurePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: colors.border },
+  featureText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
 
   footer: { textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 24, paddingHorizontal: 24 },
 });
