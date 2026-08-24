@@ -581,11 +581,11 @@ export default function SettingsScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* ── APP INFO ── */}
-        <SectionCard title="App Info" icon="information-circle-outline">
+        {/* <SectionCard title="App Info" icon="information-circle-outline">
           <InfoRow label="App" value="GaragePulse" />
           <InfoRow label="Version" value="1.0.0" />
           <InfoRow label="Platform" value={Platform.OS === 'ios' ? 'iOS' : 'Android'} last />
-        </SectionCard>
+        </SectionCard> */}
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
