@@ -306,7 +306,7 @@ const s = StyleSheet.create({
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderColor: colors.border, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.borderStrong, marginBottom: 12,
     shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   searchInput: { flex: 1, fontSize: 14, color: colors.textPrimary, paddingVertical: 0 },

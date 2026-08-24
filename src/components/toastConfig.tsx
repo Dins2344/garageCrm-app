@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { ToastConfig, ToastConfigParams } from 'react-native-toast-message';
 import { SHEET_MAX_WIDTH } from './ResponsiveScreen';
-import { colors, palette, radius } from '../theme';
+import { colors, radius } from '../theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -108,11 +108,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: palette.boneCooler,
+    borderColor: colors.border,
     paddingVertical: 12,
     paddingRight: 10,
     overflow: 'hidden',
-    // The app's signature indigo elevation, same as cards everywhere else.
+    // Same warm ambient elevation as cards everywhere else.
     shadowColor: colors.shadowAmbient,
     shadowOpacity: 0.18,
     shadowRadius: 16,

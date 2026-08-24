@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   inputRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.background, borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.background, borderWidth: 1.5, borderColor: colors.borderStrong,
     borderRadius: radius.lg, paddingHorizontal: 14, height: 50,
   },
   inputField: { flex: 1, fontSize: 15, color: colors.textStrong },

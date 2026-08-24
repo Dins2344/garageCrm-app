@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     paddingHorizontal: 12,
   },
   searchIcon: {

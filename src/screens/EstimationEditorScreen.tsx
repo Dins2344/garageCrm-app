@@ -483,7 +483,7 @@ const s = StyleSheet.create({
   fieldRow: { flexDirection: 'row', marginBottom: 8 },
   fieldLabel: { fontSize: 11, fontWeight: '600', color: colors.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.3 },
   input: {
-    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg,
     paddingHorizontal: 10, height: 40, fontSize: 14, color: colors.textStrong,
   },
   totalBox: {

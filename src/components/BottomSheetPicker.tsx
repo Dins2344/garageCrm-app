@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     margin: 16, backgroundColor: colors.surfaceSunken,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.sm,
     paddingHorizontal: 12, height: 44,
   },
   searchInput: { flex: 1, fontSize: 15, color: colors.textStrong },

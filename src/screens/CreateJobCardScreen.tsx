@@ -207,7 +207,7 @@ const ms = StyleSheet.create({
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
   title: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: 12, height: 44 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44 },
   searchInput: { flex: 1, fontSize: 15, color: colors.textStrong },
   list: { paddingHorizontal: 16, paddingBottom: 32 },
   option: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.surfaceSunken },
@@ -802,7 +802,7 @@ const s = StyleSheet.create({
   // Form
   field: { marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
-  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
+  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
 
   rowFields: { flexDirection: 'row' },
   // Date picker trigger button (looks like an input)
