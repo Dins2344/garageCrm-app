@@ -5,6 +5,8 @@ import {
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
   KeyboardTypeOptions, ListRenderItem
 } from 'react-native';
+import { useForm, useController, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../api/customerService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -13,49 +15,52 @@ import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
-import type { Customer, Address } from '../types/models';
+import type { Customer } from '../types/models';
+import { customerSchema, type CustomerFormValues } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
 import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'Customers'>;
 
-interface CustomerForm {
-  name: string;
-  phone: string;
-  email: string;
-  notes: string;
-  address: Address;
-}
+const BLANK: CustomerFormValues = { name: '', phone: '', email: '', notes: '', address: { street: '', city: '', state: '', pincode: '' } };
 
-const BLANK: CustomerForm = { name: '', phone: '', email: '', notes: '', address: { street: '', city: '', state: '', pincode: '' } };
-
-interface FProps {
+interface FProps<T extends FieldValues> {
+  control: Control<T>;
+  name: FieldPath<T>;
   label: string;
-  value: string;
-  onChange: (v: string) => void;
   placeholder?: string;
   keyboard?: KeyboardTypeOptions;
   cap?: 'none' | 'sentences' | 'words' | 'characters';
   multiline?: boolean;
 }
 
-// Defined at module scope, not inside CustomerModal — a component defined
-// inside another component's render body gets a new type identity on every
-// re-render, which makes React unmount+remount its TextInput on every
-// keystroke (losing all but the first typed character). See CONTRIBUTING.md
-// Performance Conventions.
-function F({ label, value, onChange, placeholder, keyboard, cap, multiline }: FProps) {
+// Two things about this component are load-bearing:
+//
+// 1. It is at module scope, not inside CustomerModal. A component defined in
+//    another component's render body gets a new type identity every re-render,
+//    so React unmounts and remounts its TextInput on every keystroke — losing
+//    all but the first character typed.
+// 2. It binds through `useController`, not `register`. A TextInput has no DOM
+//    ref and emits no native change event, so `register` typechecks here and
+//    then never sees a keystroke. Same reason as ControlledField in
+//    components/FormControls.tsx.
+function F<T extends FieldValues>({ control, name, label, placeholder, keyboard, cap, multiline }: FProps<T>) {
+  const { field, fieldState } = useController({ control, name });
+  const value = field.value == null ? '' : String(field.value);
+  const invalid = !!fieldState.error;
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
       {multiline ? (
-        <TextInput style={[s.input, { height: 72, textAlignVertical: 'top' }]} value={value} onChangeText={onChange}
+        <TextInput accessibilityLabel={label} style={[s.input, invalid && s.inputError, { height: 72, textAlignVertical: 'top' }]} value={value}
+          onChangeText={field.onChange} onBlur={field.onBlur}
           placeholder={placeholder} placeholderTextColor={colors.textFaint} multiline />
       ) : (
-        <TextInput style={s.input} value={value} onChangeText={onChange} placeholder={placeholder}
-          placeholderTextColor={colors.textFaint} keyboardType={keyboard || 'default'}
+        <TextInput accessibilityLabel={label} style={[s.input, invalid && s.inputError]} value={value} onChangeText={field.onChange} onBlur={field.onBlur}
+          placeholder={placeholder} placeholderTextColor={colors.textFaint} keyboardType={keyboard || 'default'}
           autoCapitalize={cap || 'sentences'} />
       )}
+      {invalid ? <Text style={s.fieldError}>{fieldState.error?.message}</Text> : null}
     </View>
   );
 }
@@ -63,37 +68,43 @@ function F({ label, value, onChange, placeholder, keyboard, cap, multiline }: FP
 interface CustomerModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (form: CustomerForm) => Promise<void>;
+  onSave: (form: CustomerFormValues) => Promise<void>;
   editing: Customer | null;
 }
 
 function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps) {
-  const [form, setForm] = useState<CustomerForm>(BLANK);
-  const [saving, setSaving] = useState(false);
-  const set = (k: keyof Omit<CustomerForm, 'address'>, v: string) => setForm(f => ({ ...f, [k]: v }));
-  const setAddr = (k: keyof Address, v: string) => setForm(f => ({ ...f, address: { ...f.address, [k]: v } }));
+  // The postal rule follows the garage's country, so the schema is built from
+  // the live locale rather than a fixed one — a UK garage must be able to
+  // enter "SW1A 1AA".
+  const { locale } = useGarage();
+  const {
+    control, handleSubmit, reset,
+    formState: { isSubmitting },
+  } = useForm<CustomerFormValues>({
+    resolver: zodResolver(customerSchema(locale)),
+    defaultValues: BLANK,
+  });
 
   useEffect(() => {
     if (visible) {
-      setForm(editing ? {
+      reset(editing ? {
         name: editing.name || '', phone: editing.phone || '', email: editing.email || '',
         notes: editing.notes || '',
-        address: editing.address || { street: '', city: '', state: '', pincode: '' }
+        address: {
+          street: editing.address?.street || '', city: editing.address?.city || '',
+          state: editing.address?.state || '', pincode: editing.address?.pincode || '',
+        },
       } : BLANK);
     }
-  }, [visible, editing]);
+  }, [visible, editing, reset]);
 
-  const handleSave = async () => {
-    if (!form.name.trim() || !form.phone.trim()) {
-      Toast.show({ type: 'error', text1: 'Name and phone are required' }); return;
-    }
-    setSaving(true);
+  const handleSave = async (values: CustomerFormValues) => {
     try {
-      await onSave(form);
+      await onSave(values);
       onClose();
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to save customer') });
-    } finally { setSaving(false); }
+    }
   };
 
   return (
@@ -106,22 +117,27 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView style={s.sheetBody} keyboardShouldPersistTaps="handled">
-            <F label="Full Name *" value={form.name} onChange={v => set('name', v)} placeholder="John Doe" />
-            <F label="Phone Number *" value={form.phone} onChange={v => set('phone', v)} placeholder="9876543210" keyboard="phone-pad" cap="none" />
-            <F label="Email" value={form.email} onChange={v => set('email', v)} placeholder="customer@email.com (optional)" keyboard="email-address" cap="none" />
+            <F control={control} name="name" label="Full Name *" placeholder="John Doe" />
+            <F control={control} name="phone" label="Phone Number *" placeholder={locale.phoneExample} keyboard="phone-pad" cap="none" />
+            <F control={control} name="email" label="Email" placeholder="customer@email.com (optional)" keyboard="email-address" cap="none" />
             <View style={s.row}>
-              <View style={{ flex: 1 }}><F label="City" value={form.address.city || ''} onChange={v => setAddr('city', v)} placeholder="City" /></View>
+              <View style={{ flex: 1 }}><F control={control} name="address.city" label="City" placeholder="City" /></View>
               <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}><F label="Pincode" value={form.address.pincode || ''} onChange={v => setAddr('pincode', v)} placeholder="560001" keyboard="numeric" cap="none" /></View>
+              {/* Label, keypad and example all follow the garage's country —
+                  this used to be hardcoded to an Indian pincode. */}
+              <View style={{ flex: 1 }}>
+                <F control={control} name="address.pincode" label={locale.postalLabel} placeholder={locale.postalLabel}
+                  keyboard={locale.postalInputMode === 'numeric' ? 'numeric' : 'default'} cap="characters" />
+              </View>
             </View>
-            <F label="Notes" value={form.notes} onChange={v => set('notes', v)} placeholder="Any notes..." multiline />
+            <F control={control} name="notes" label="Notes" placeholder="Any notes..." multiline />
           </ScrollView>
           <View style={s.footer}>
             <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
               <Text style={s.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Customer'}</Text>}
+            <TouchableOpacity style={[s.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Customer'}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -158,7 +174,7 @@ export default function CustomersScreen(_props: Props) {
 
   useEffect(() => { setPage(1); setLoading(true); fetchCustomers(1); }, [fetchCustomers, activeGarageId]);
 
-  const handleSave = async (form: CustomerForm) => {
+  const handleSave = async (form: CustomerFormValues) => {
     if (editing) {
       await updateCustomer(editing._id, form);
       Toast.show({ type: 'success', text1: 'Customer updated!' });
@@ -295,6 +311,8 @@ const s = StyleSheet.create({
   field: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
+  inputError: { borderColor: colors.danger },
+  fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
   row: { flexDirection: 'row' },
   cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
   cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },

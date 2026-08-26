@@ -16,6 +16,7 @@ import BottomSheetPicker from '../components/BottomSheetPicker';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer, Vehicle, User, FuelType, ServiceType, ComplaintPriority } from '../types/models';
+import { customerSchema, vehicleSchema } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
 import { colors, palette, radius } from '../theme';
 
@@ -329,6 +330,9 @@ export default function CreateJobCardScreen({ navigation }: Props) {
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [odometerAtIntake, setOdometerAtIntake] = useState('');
+  // The first thing wrong with the current step, or null. Cleared whenever a
+  // step is passed, so a stale message never sits under a fixed form.
+  const [stepError, setStepError] = useState<string | null>(null);
   const [internalNotes, setInternalNotes] = useState('');
 
   useEffect(() => {
@@ -363,19 +367,60 @@ export default function CreateJobCardScreen({ navigation }: Props) {
     { value: 'urgent', label: 'Urgent', color: palette.violet600 },
   ];
 
+  // ── Step validation ──
+  //
+  // This is a wizard, not a single form: each step gates a button rather than
+  // submitting, so instead of react-hook-form it runs the same zod schemas
+  // through `safeParse`. The rules stay in `utils/validation.ts` with every
+  // other form and are not re-written by hand here.
+  //
+  // Each gate returns *why* it failed. The message renders above the button
+  // rather than as a toast: a toast about a field is gone before the user has
+  // scrolled back to it.
+
+  const step1Problem = (): string | null => {
+    if (custTab === 0) {
+      if (!selCustomer) return 'Select a customer';
+    } else {
+      const r = customerSchema(locale).safeParse({
+        name: newCustName, phone: newCustPhone, email: newCustEmail, notes: '',
+        address: { street: newCustPlace, city: newCustCity, state: '', pincode: '' },
+      });
+      if (!r.success) return r.error.issues[0].message;
+    }
+    if (vehTab === 0) {
+      if (!selVehicle) return 'Select a vehicle';
+    } else {
+      // `customer` is resolved at submit time, so satisfy it here.
+      const r = vehicleSchema.safeParse({
+        licensePlate: newPlate, make: newMake, model: newModel,
+        year: newYear, color: '', fuelType: newFuel, customer: 'pending',
+      });
+      if (!r.success) return r.error.issues[0].message;
+    }
+    return null;
+  };
+
+  const step2Problem = (): string | null => {
+    if (!advisorId) return 'Assign a service advisor';
+    if (!odometerAtIntake.trim()) return 'Enter the odometer reading at intake';
+    if (!/^\d+$/.test(odometerAtIntake.trim())) return 'Odometer must be a whole number';
+    if (!complaints.some(c => c.description.trim())) return 'Add at least one complaint';
+    return null;
+  };
+
   const handleNext = () => {
-    if (custTab === 0 && !selCustomer) { Toast.show({ type: 'error', text1: 'Please select a customer' }); return; }
-    if (custTab === 1 && (!newCustName.trim() || !newCustPhone.trim())) { Toast.show({ type: 'error', text1: 'Customer name and phone are required' }); return; }
-    if (vehTab === 0 && !selVehicle) { Toast.show({ type: 'error', text1: 'Please select a vehicle' }); return; }
-    if (vehTab === 1 && (!newPlate.trim() || !newMake.trim() || !newModel.trim())) { Toast.show({ type: 'error', text1: 'License plate, make and model are required' }); return; }
+    const problem = step1Problem();
+    if (problem) { setStepError(problem); return; }
+    setStepError(null);
     setStep(2);
   };
 
   const handleSubmit = async () => {
-    if (!advisorId) { Toast.show({ type: 'error', text1: 'Please assign a Service Advisor' }); return; }
-    if (!odometerAtIntake.trim()) { Toast.show({ type: 'error', text1: 'Please enter the odometer reading' }); return; }
+    const problem = step2Problem();
+    if (problem) { setStepError(problem); return; }
+    setStepError(null);
     const validComplaints = complaints.filter(c => c.description.trim());
-    if (validComplaints.length === 0) { Toast.show({ type: 'error', text1: 'Please add at least one complaint' }); return; }
 
     setLoading(true);
     try {
@@ -542,6 +587,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                 )}
               </View>
 
+              {stepError ? <Text style={s.stepError}>{stepError}</Text> : null}
               <TouchableOpacity style={s.primaryBtn} onPress={handleNext} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Next: Work Details</Text>
                 <Ionicons name="arrow-forward" size={18} color={colors.textOnPrimary} />
@@ -709,6 +755,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                 </View>
               </View>
 
+              {stepError ? <Text style={s.stepError}>{stepError}</Text> : null}
               <View style={s.btnRow}>
                 <TouchableOpacity style={s.backBtn2} onPress={() => setStep(1)}>
                   <Ionicons name="arrow-back" size={18} color={colors.textSecondary} />
@@ -803,6 +850,7 @@ const s = StyleSheet.create({
   field: { marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
+  stepError: { fontSize: 13, color: colors.danger, marginTop: 12, textAlign: 'center' },
 
   rowFields: { flexDirection: 'row' },
   // Date picker trigger button (looks like an input)

@@ -12,6 +12,7 @@ import { getGarage } from '../api/garageService';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { JobCard } from '../types/models';
+import { estimationSchema, describeEstimationIssue } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
 import { colors, palette, radius } from '../theme';
 
@@ -41,6 +42,8 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
   const [labor, setLabor] = useState<LaborDraft[]>([]);
   const [discount, setDiscount] = useState('0');
   const [taxRate, setTaxRate] = useState('0');
+  // The first thing wrong with the estimation, shown next to Save.
+  const [estimationError, setEstimationError] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -147,23 +150,35 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
 
   // ── Save ──
   const handleSave = async () => {
+    const payload = {
+      parts: parts.map(p => ({
+        partName: p.partName,
+        quantity: parseFloat(p.quantity) || 0,
+        unitPrice: parseFloat(p.unitPrice) || 0,
+        // No inventoryItem — manual entry mode
+      })),
+      labor: labor.map(l => ({
+        description: l.description,
+        hours: parseFloat(l.hours) || 0,
+        ratePerHour: parseFloat(l.ratePerHour) || 0,
+      })),
+      discount: disc,
+      taxRate: tax,
+    };
+
+    // Validated against the same schema the web editor uses, on the payload
+    // rather than the drafts — the numbers here are already coerced. The
+    // message names the offending row ("Part 2: ..."), which a toast could not
+    // usefully do because it disappears before the user scrolls to it.
+    const parsed = estimationSchema.safeParse(payload);
+    if (!parsed.success) {
+      setEstimationError(describeEstimationIssue(parsed.error.issues[0]));
+      return;
+    }
+    setEstimationError(null);
+
     setSaving(true);
     try {
-      const payload = {
-        parts: parts.map(p => ({
-          partName: p.partName,
-          quantity: parseFloat(p.quantity) || 0,
-          unitPrice: parseFloat(p.unitPrice) || 0,
-          // No inventoryItem — manual entry mode
-        })),
-        labor: labor.map(l => ({
-          description: l.description,
-          hours: parseFloat(l.hours) || 0,
-          ratePerHour: parseFloat(l.ratePerHour) || 0,
-        })),
-        discount: disc,
-        taxRate: tax,
-      };
       await saveJobCardEstimation(id, payload);
       Toast.show({ type: 'success', text1: 'Estimation saved!' });
       navigation.goBack();
@@ -419,6 +434,7 @@ export default function EstimationEditorScreen({ route, navigation }: Props) {
           </View>
 
           {/* Save button at bottom */}
+          {estimationError ? <Text style={s.estimationError}>{estimationError}</Text> : null}
           <TouchableOpacity
             style={[s.saveBtn, saving && { opacity: 0.6 }]}
             onPress={handleSave}
@@ -520,6 +536,7 @@ const s = StyleSheet.create({
   grandValue: { fontSize: 20, fontWeight: 'bold', color: colors.primary },
 
   // Save button
+  estimationError: { fontSize: 13, color: colors.danger, marginTop: 16, textAlign: 'center' },
   saveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 16, marginTop: 20,

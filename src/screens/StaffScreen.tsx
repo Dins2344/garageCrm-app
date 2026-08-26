@@ -5,7 +5,9 @@ import {
   TextInput, KeyboardAvoidingView, Platform, ListRenderItem,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import BottomSheetPicker from '../components/BottomSheetPicker';
+import { useForm, useController, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ControlledPicker } from '../components/FormControls';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +16,7 @@ import { getUsers, createUser, updateUser, deleteUser } from '../api/userService
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { User, Role } from '../types/models';
+import { staffSchema, type StaffFormValues } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
 import { colors, palette, radius } from '../theme';
 
@@ -27,15 +30,7 @@ const ROLE_CONFIG: Record<Role, { label: string; color: string; bg: string }> = 
   receptionist:   { label: 'Receptionist',    color: palette.teal700, bg: palette.teal50 },
 };
 
-interface StaffFormDraft {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-  role: Role;
-}
-
-const BLANK_FORM: StaffFormDraft = { name: '', email: '', phone: '', password: '', role: 'mechanic' };
+const BLANK_FORM: StaffFormValues = { name: '', email: '', phone: '', password: '', role: 'mechanic' };
 
 function RoleBadge({ role }: { role: Role }) {
   const cfg = ROLE_CONFIG[role] || { label: role, color: colors.textMuted, bg: colors.surfaceMuted };
@@ -46,35 +41,44 @@ function RoleBadge({ role }: { role: Role }) {
   );
 }
 
-interface FieldProps {
+interface FieldProps<T extends FieldValues> {
+  control: Control<T>;
+  name: FieldPath<T>;
   label: string;
-  value: string;
-  onChange: (v: string) => void;
   placeholder?: string;
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences';
   secureTextEntry?: boolean;
 }
 
-// Defined at module scope, not inside StaffModal — a component defined
-// inside another component's render body gets a new type identity on every
-// re-render, which makes React unmount+remount its TextInput on every
-// keystroke (losing all but the first typed character). See CONTRIBUTING.md
-// Performance Conventions.
-function Field({ label, value, onChange, placeholder, keyboardType, autoCapitalize, secureTextEntry }: FieldProps) {
+// Two things about this component are load-bearing:
+//
+// 1. It is at module scope, not inside StaffModal. A component defined in
+//    another component's render body gets a new type identity every re-render,
+//    so React unmounts and remounts its TextInput on every keystroke — losing
+//    all but the first character typed.
+// 2. It binds through `useController`, not `register`. A TextInput has no DOM
+//    ref and emits no native change event, so `register` typechecks here and
+//    then never sees a keystroke.
+function Field<T extends FieldValues>({ control, name, label, placeholder, keyboardType, autoCapitalize, secureTextEntry }: FieldProps<T>) {
+  const { field, fieldState } = useController({ control, name });
+  const invalid = !!fieldState.error;
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
-        style={styles.input}
-        value={value}
-        onChangeText={onChange}
+        accessibilityLabel={label}
+        style={[styles.input, invalid && styles.inputError]}
+        value={field.value == null ? '' : String(field.value)}
+        onChangeText={field.onChange}
+        onBlur={field.onBlur}
         placeholder={placeholder}
         placeholderTextColor={colors.textFaint}
         keyboardType={keyboardType || 'default'}
         autoCapitalize={autoCapitalize || 'sentences'}
         secureTextEntry={secureTextEntry}
       />
+      {invalid ? <Text style={styles.fieldError}>{fieldState.error?.message}</Text> : null}
     </View>
   );
 }
@@ -82,7 +86,7 @@ function Field({ label, value, onChange, placeholder, keyboardType, autoCapitali
 interface StaffModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (payload: Partial<StaffFormDraft>) => Promise<void>;
+  onSave: (payload: Partial<User> & { password?: string }) => Promise<void>;
   editingUser: User | null;
   canSetAdmin: boolean;
 }
@@ -91,39 +95,43 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
   // The phone placeholder has to follow the garage's country — a UK garage
   // adding staff was being shown an Indian 10-digit example.
   const { locale } = useGarage();
-  const [form, setForm] = useState<StaffFormDraft>(BLANK_FORM);
-  const [saving, setSaving] = useState(false);
+  const {
+    control, handleSubmit, reset, setError,
+    formState: { isSubmitting },
+  } = useForm<StaffFormValues>({
+    resolver: zodResolver(staffSchema),
+    defaultValues: BLANK_FORM,
+  });
 
   useEffect(() => {
     if (visible) {
-      setForm(editingUser
+      reset(editingUser
         ? { name: editingUser.name, email: editingUser.email, phone: editingUser.phone, password: '', role: editingUser.role }
         : BLANK_FORM
       );
     }
-  }, [visible, editingUser]);
+  }, [visible, editingUser, reset]);
 
-  const set = <K extends keyof StaffFormDraft>(key: K, val: StaffFormDraft[K]) => setForm(f => ({ ...f, [key]: val }));
-
-  const handleSave = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
-      Toast.show({ type: 'error', text1: 'Name, email and phone are required' });
+  const handleSave = async (values: StaffFormValues) => {
+    // `staffSchema` allows a blank password so the *edit* form can leave it
+    // unchanged. Creating a staff member is the one case where it is required,
+    // and that depends on a prop the schema cannot see — so it is checked here
+    // and reported on the field, not through a toast.
+    if (!editingUser && !values.password) {
+      setError('password', { message: 'Password must be at least 6 characters' });
       return;
     }
-    if (!editingUser && form.password.length < 6) {
-      Toast.show({ type: 'error', text1: 'Password must be at least 6 characters' });
-      return;
-    }
-    setSaving(true);
     try {
-      const payload: Partial<StaffFormDraft> = { name: form.name, email: form.email, phone: form.phone, role: form.role };
-      if (!editingUser || form.password) payload.password = form.password;
+      // `role` is a plain string on the schema (the option list is built at
+      // the picker, not in validation.ts), so it is narrowed to Role here.
+      const payload: Partial<User> & { password?: string } = {
+        name: values.name, email: values.email, phone: values.phone, role: values.role as Role,
+      };
+      if (!editingUser || values.password) payload.password = values.password;
       await onSave(payload);
       onClose();
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to save staff member') });
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -137,18 +145,20 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
-            <Field label="Full Name *" value={form.name} onChange={v => set('name', v)} placeholder="Staff member's name" />
-            <Field label="Email *" value={form.email} onChange={v => set('email', v)} placeholder="email@example.com" keyboardType="email-address" autoCapitalize="none" />
-            <Field label="Phone *" value={form.phone} onChange={v => set('phone', v)} placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
+            <Field control={control} name="name" label="Full Name *" placeholder="Staff member's name" />
+            <Field control={control} name="email" label="Email *" placeholder="email@example.com" keyboardType="email-address" autoCapitalize="none" />
+            <Field control={control} name="phone" label="Phone *" placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
             <Field
+              control={control}
+              name="password"
               label={editingUser ? 'New Password (leave blank to keep)' : 'Password *'}
-              value={form.password}
-              onChange={v => set('password', v)}
               placeholder="Min. 6 characters"
               secureTextEntry
               autoCapitalize="none"
             />
-            <BottomSheetPicker
+            <ControlledPicker
+              control={control}
+              name="role"
               label="Role"
               required
               options={[
@@ -157,16 +167,14 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
                 { value: 'receptionist', label: 'Receptionist', icon: 'desktop-outline', color: palette.teal700 },
                 ...(canSetAdmin ? [{ value: 'admin', label: 'Admin', icon: 'shield-outline' as const, color: palette.violet600 }] : []),
               ]}
-              selectedValue={form.role}
-              onValueChange={v => set('role', v as Role)}
             />
           </ScrollView>
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={styles.saveBtnText}>{editingUser ? 'Save Changes' : 'Add Staff'}</Text>}
+            <TouchableOpacity style={[styles.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={styles.saveBtnText}>{editingUser ? 'Save Changes' : 'Add Staff'}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -240,12 +248,12 @@ export default function StaffScreen(_props: Props) {
   const openAdd = () => { setEditingUser(null); setModalVisible(true); };
   const openEdit = (u: User) => { setEditingUser(u); setModalVisible(true); };
 
-  const handleSave = async (payload: Partial<StaffFormDraft>) => {
+  const handleSave = async (payload: Partial<User> & { password?: string }) => {
     if (editingUser) {
       await updateUser(editingUser._id, payload);
       Toast.show({ type: 'success', text1: 'Staff member updated!' });
     } else {
-      await createUser(payload as Required<Pick<StaffFormDraft, 'name' | 'email' | 'phone' | 'password' | 'role'>>);
+      await createUser(payload as Required<Pick<User, 'name' | 'email' | 'phone' | 'role'>> & { password: string });
       Toast.show({ type: 'success', text1: 'Staff member added!' });
     }
     fetchStaff();
@@ -441,8 +449,16 @@ export default function StaffScreen(_props: Props) {
         />
       )}
 
+      {/* The FAB is icon-only, so it needs a label: without one a screen reader
+          announces an unnamed button. Matches `add-customer-fab` on
+          CustomersScreen. */}
       {canManage && (
-        <TouchableOpacity style={styles.fab} onPress={openAdd}>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={openAdd}
+          testID="add-staff-fab"
+          accessibilityLabel="Add staff member"
+        >
           <Ionicons name="add" size={28} color={colors.textOnPrimary} />
         </TouchableOpacity>
       )}
@@ -528,6 +544,8 @@ const styles = StyleSheet.create({
   fieldWrap: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
+  inputError: { borderColor: colors.danger },
+  fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
 
   cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
   cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },

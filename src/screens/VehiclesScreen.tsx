@@ -4,7 +4,9 @@ import {
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
   KeyboardTypeOptions, ListRenderItem
 } from 'react-native';
-import BottomSheetPicker from '../components/BottomSheetPicker';
+import { useForm, useController, Controller, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ControlledPicker } from '../components/FormControls';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '../components/toastConfig';
@@ -16,6 +18,7 @@ import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScree
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Customer, Vehicle, FuelType } from '../types/models';
+import { vehicleSchema, type VehicleFormValues, type VehicleFormOutput } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
 import { colors, palette, radius } from '../theme';
 
@@ -23,26 +26,17 @@ type Props = MainTabScreenProps<'Vehicles'>;
 
 const FUEL_COLOR: Partial<Record<FuelType, string>> = { petrol: colors.danger, diesel: colors.info, electric: colors.success, hybrid: palette.violet500, cng: colors.warning };
 
-interface VehicleForm {
-  licensePlate: string;
-  make: string;
-  model: string;
-  year: string;
-  color: string;
-  fuelType: FuelType;
-  customer: string;
-}
-
-const BLANK: VehicleForm = { licensePlate: '', make: '', model: '', year: '', color: '', fuelType: 'petrol', customer: '' };
+const BLANK: VehicleFormValues = { licensePlate: '', make: '', model: '', year: '', color: '', fuelType: 'petrol', customer: '' };
 
 // ─── Customer Search Picker ────────────────────────────────────────────────────
 interface CustomerPickerProps {
   customers: Customer[];
   value: string;
   onChange: (id: string) => void;
+  error?: string;
 }
 
-function CustomerPicker({ customers, value, onChange }: CustomerPickerProps) {
+function CustomerPicker({ customers, value, onChange, error }: CustomerPickerProps) {
   const [query, setQuery] = useState('');
   const filtered = customers.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) || c.phone.includes(query)
@@ -73,6 +67,7 @@ function CustomerPicker({ customers, value, onChange }: CustomerPickerProps) {
           <TouchableOpacity onPress={() => onChange('')}><Ionicons name="close-circle" size={14} color={colors.textFaint} /></TouchableOpacity>
         </View>
       )}
+      {error ? <Text style={s.fieldError}>{error}</Text> : null}
     </View>
   );
 }
@@ -86,13 +81,15 @@ interface VehicleModalProps {
   customers: Customer[];
 }
 
-interface FProps {
+interface FProps<T extends FieldValues> {
+  control: Control<T>;
+  name: FieldPath<T>;
   label: string;
-  value: string;
-  onChange: (v: string) => void;
   placeholder?: string;
   keyboard?: KeyboardTypeOptions;
   cap?: 'none' | 'sentences' | 'words' | 'characters';
+  /** Applied to every keystroke — the plate is stored upper-case. */
+  transform?: (v: string) => string;
 }
 
 // Defined at module scope, not inside VehicleModal — a component defined
@@ -100,25 +97,37 @@ interface FProps {
 // re-render, which makes React unmount+remount its TextInput on every
 // keystroke (losing all but the first typed character). See CONTRIBUTING.md
 // Performance Conventions.
-function F({ label, value, onChange, placeholder, keyboard, cap }: FProps) {
+function F<T extends FieldValues>({ control, name, label, placeholder, keyboard, cap, transform }: FProps<T>) {
+  const { field, fieldState } = useController({ control, name });
+  const invalid = !!fieldState.error;
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
-      <TextInput style={s.input} value={value} onChangeText={onChange} placeholder={placeholder}
+      <TextInput accessibilityLabel={label} style={[s.input, invalid && s.inputError]}
+        value={field.value == null ? '' : String(field.value)}
+        onChangeText={v => field.onChange(transform ? transform(v) : v)}
+        onBlur={field.onBlur} placeholder={placeholder}
         placeholderTextColor={colors.textFaint} keyboardType={keyboard || 'default'}
         autoCapitalize={cap || 'sentences'} />
+      {invalid ? <Text style={s.fieldError}>{fieldState.error?.message}</Text> : null}
     </View>
   );
 }
 
 function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleModalProps) {
-  const [form, setForm] = useState<VehicleForm>(BLANK);
-  const [saving, setSaving] = useState(false);
-  const set = <K extends keyof VehicleForm>(k: K, v: VehicleForm[K]) => setForm(f => ({ ...f, [k]: v }));
+  // Three generics because `year` is a `z.coerce` field: the form holds the
+  // string the input produces, the handler receives the coerced number.
+  const {
+    control, handleSubmit, reset,
+    formState: { isSubmitting },
+  } = useForm<VehicleFormValues, unknown, VehicleFormOutput>({
+    resolver: zodResolver(vehicleSchema),
+    defaultValues: BLANK,
+  });
 
   useEffect(() => {
     if (visible) {
-      setForm(editing ? {
+      reset(editing ? {
         licensePlate: editing.licensePlate || '',
         make: editing.make || '',
         model: editing.model || '',
@@ -128,27 +137,25 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
         customer: (typeof editing.customer === 'object' ? editing.customer?._id : editing.customer) || '',
       } : BLANK);
     }
-  }, [visible, editing]);
+  }, [visible, editing, reset]);
 
-  const handleSave = async () => {
-    if (!form.licensePlate.trim() || !form.make.trim() || !form.model.trim()) {
-      Toast.show({ type: 'error', text1: 'License plate, make and model are required' }); return;
-    }
-    if (!form.customer) {
-      Toast.show({ type: 'error', text1: 'Please select a customer owner' }); return;
-    }
-    setSaving(true);
+  const handleSave = async (values: VehicleFormOutput) => {
     try {
       const payload: Partial<Vehicle> & { customer: string; year?: number } = {
-        ...form,
-        licensePlate: form.licensePlate.toUpperCase(),
-        year: form.year ? parseInt(form.year, 10) : undefined,
+        licensePlate: values.licensePlate.toUpperCase(),
+        make: values.make,
+        model: values.model,
+        color: values.color || '',
+        fuelType: (values.fuelType || 'petrol') as FuelType,
+        customer: values.customer,
+        // '' means "not given" — send undefined rather than 0.
+        year: values.year === '' || values.year === undefined ? undefined : Number(values.year),
       };
       await onSave(payload);
       onClose();
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to save vehicle') });
-    } finally { setSaving(false); }
+    }
   };
 
   return (
@@ -163,26 +170,34 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
           <ScrollView style={s.sheetBody} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
 
             <Text style={s.sectionLabel}>Owner</Text>
-            <CustomerPicker customers={customers} value={form.customer} onChange={v => set('customer', v)} />
+            <Controller
+              control={control}
+              name="customer"
+              render={({ field, fieldState }) => (
+                <CustomerPicker customers={customers} value={field.value} onChange={field.onChange} error={fieldState.error?.message} />
+              )}
+            />
 
             <View style={s.divider} />
 
-            <F label="License Plate *" value={form.licensePlate} onChange={v => set('licensePlate', v.toUpperCase())}
-              placeholder="KA01AB1234" cap="characters" />
+            <F control={control} name="licensePlate" label="License Plate *" placeholder="KA01AB1234"
+              cap="characters" transform={v => v.toUpperCase()} />
 
             <View style={s.row}>
-              <View style={{ flex: 1 }}><F label="Make *" value={form.make} onChange={v => set('make', v)} placeholder="Honda, Maruti..." /></View>
+              <View style={{ flex: 1 }}><F control={control} name="make" label="Make *" placeholder="Honda, Maruti..." /></View>
               <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}><F label="Model *" value={form.model} onChange={v => set('model', v)} placeholder="City, Swift..." /></View>
+              <View style={{ flex: 1 }}><F control={control} name="model" label="Model *" placeholder="City, Swift..." /></View>
             </View>
 
             <View style={s.row}>
-              <View style={{ flex: 1 }}><F label="Year" value={form.year} onChange={v => set('year', v)} placeholder="2024" keyboard="numeric" cap="none" /></View>
+              <View style={{ flex: 1 }}><F control={control} name="year" label="Year" placeholder="2024" keyboard="numeric" cap="none" /></View>
               <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}><F label="Color" value={form.color} onChange={v => set('color', v)} placeholder="White, Black..." /></View>
+              <View style={{ flex: 1 }}><F control={control} name="color" label="Color" placeholder="White, Black..." /></View>
             </View>
 
-            <BottomSheetPicker
+            <ControlledPicker
+              control={control}
+              name="fuelType"
               label="Fuel Type"
               options={[
                 { value: 'petrol', label: 'Petrol', color: colors.danger },
@@ -191,16 +206,14 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
                 { value: 'electric', label: 'Electric', color: colors.success },
                 { value: 'hybrid', label: 'Hybrid', color: palette.violet500 },
               ]}
-              selectedValue={form.fuelType}
-              onValueChange={v => set('fuelType', v as FuelType)}
             />
           </ScrollView>
           <View style={s.footer}>
             <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
               <Text style={s.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Vehicle'}</Text>}
+            <TouchableOpacity style={[s.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Vehicle'}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -388,6 +401,8 @@ const s = StyleSheet.create({
   field: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
+  inputError: { borderColor: colors.danger },
+  fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
 
   row: { flexDirection: 'row' },
   cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },

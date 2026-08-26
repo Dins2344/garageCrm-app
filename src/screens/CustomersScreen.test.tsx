@@ -82,8 +82,11 @@ describe('CustomersScreen', () => {
 
     await user.press(screen.getByTestId('add-customer-fab'));
 
-    await user.type(screen.getByPlaceholderText('John Doe'), 'Rahul Sharma');
-    await user.type(screen.getByPlaceholderText('9876543210'), '9876543210');
+    // Select by accessibility label, not placeholder: the phone placeholder is
+    // the garage country's example number, so a placeholder query passes for an
+    // Indian tenant and fails for every other one.
+    await user.type(screen.getByLabelText('Full Name *'), 'Rahul Sharma');
+    await user.type(screen.getByLabelText('Phone Number *'), '9876543210');
 
     // Two "Add Customer" texts exist once the modal is open (the sheet title
     // and the submit button) — the submit button is rendered last.

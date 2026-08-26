@@ -95,6 +95,58 @@ device one person's dismissal hid it from everyone after them. Logout clears
 `ALL_STORAGE_KEYS` as a list, so a new key is handled by being declared there.
 A storage key must never live in a component file.
 
+## Forms — react-hook-form + zod, and `useController` is not optional
+
+Every form is `useForm` + `zodResolver`, and **every rule lives in
+`src/utils/validation.ts`** — a mirror of the web client's copy. Do not write a
+validation rule in a screen.
+
+**`register()` does not work here.** It binds by attaching a DOM ref and
+listening for native `change`/`blur` events, and a `TextInput` has neither.
+Spreading `register('name')` onto one typechecks, renders, and then silently
+never sees a keystroke — the form validates nothing and submits empty. Every
+field binds through `useController` instead:
+
+```jsx
+const { control, handleSubmit, formState: { isSubmitting } } =
+  useForm<CustomerFormValues>({ resolver: zodResolver(customerSchema(locale)) });
+
+<ControlledField control={control} name="name" label="Full Name" required />
+<ControlledPicker control={control} name="role" label="Role" options={...} />
+<PrimaryBtn onPress={handleSubmit(onValid)} loading={isSubmitting} ... />
+```
+
+`ControlledField` and `ControlledPicker` in `components/FormControls` are the
+shared bindings. A screen with its own local `F`/`Field` (Customers, Staff,
+Vehicles, Login) does the same `useController` call inline — keep those at
+module scope, or the remount-per-keystroke bug returns.
+
+Four settled points:
+
+1. **The schemas mirror the backend's Mongoose validators deliberately.** A
+   client rule stricter than the server rejects data the API would accept; a
+   looser one hands the user a server error after a round trip. Each odd rule
+   names the backend file it came from — the email regex really does reject
+   `.info`, because `models/User.ts` does.
+2. **Optional means "blank is fine", never "anything goes".** Everything
+   optional goes through `optionalOf()`, so an empty field passes but a filled
+   one is held to the full rule.
+3. **No `Toast.show({ type: 'error', text1: 'Name is required' })`.** A toast
+   cannot point at a field and is gone before the user scrolls to it. Errors
+   render under the input. A toast is still right for a *server* answer — a
+   rejected password, a duplicate email — which no client rule could check.
+4. **Where a gate is not a form** — the job-card wizard's Next button, the
+   estimation editor's Save — it still runs the schema via `safeParse` and
+   shows *why* it is blocked next to the button.
+
+`useWatch`, not the `watch()` returned by `useForm`: this repo's lint
+(`react-hooks/incompatible-library`) rejects `watch()` as unmemoizable.
+
+Every form input carries `accessibilityLabel={label}`. RN does not associate a
+`<Text>` label with an input, so without it a screen reader announces an
+unlabelled edit box — and tests are pushed onto the placeholder, which follows
+the garage's country and changes per tenant.
+
 ## Locale
 
 `locale` comes from `useGarage()`; format through `src/utils/format.ts`.
@@ -125,6 +177,8 @@ matching PR there.
 | `src/utils/format.ts` | `src/utils/format.ts` |
 | `src/utils/locale.ts` | `src/utils/locale.ts` |
 | `src/utils/format.test.ts` | `src/utils/format.test.ts` |
+| `src/utils/validation.ts` | `src/utils/validation.ts` |
+| `src/utils/validation.test.ts` | `src/utils/validation.test.ts` |
 | `src/hooks/useCountries.ts` | `src/hooks/useCountries.ts` |
 | `src/utils/constants.ts` (the `garagepulse_*` key strings only) | `src/utils/constants.ts` |
 | `.claude/rules/00-shared-*.md` | `.claude/rules/00-shared-*.md` |

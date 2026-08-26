@@ -10,12 +10,18 @@ import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import { getGarage, updateGarage, getBranchStaff } from '../api/garageService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
-import { Field, PrimaryBtn } from '../components/FormControls';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Field, ControlledField, ControlledPicker, PrimaryBtn } from '../components/FormControls';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import { useCountries } from '../hooks/useCountries';
 import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
-import type { Garage, Role, User } from '../types/models';
+import type { Garage, Role, User, ResolvedLocale } from '../types/models';
+import {
+  branchSchema, garageSettingsSchema,
+  type BranchFormValues, type GarageSettingsFormValues, type GarageSettingsFormOutput,
+} from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
 import { colors, palette, radius } from '../theme';
 
@@ -74,27 +80,24 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
   // The phone placeholder has to follow the garage's country — a UK owner
   // adding a branch was being shown an Indian 10-digit example.
   const { locale } = useGarage();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [saving, setSaving] = useState(false);
+  const {
+    control, handleSubmit, reset,
+    formState: { isSubmitting },
+  } = useForm<BranchFormValues>({
+    resolver: zodResolver(branchSchema),
+    defaultValues: { name: '', phone: '' },
+  });
 
   useEffect(() => {
-    if (visible) { setName(''); setPhone(''); }
-  }, [visible]);
+    if (visible) reset({ name: '', phone: '' });
+  }, [visible, reset]);
 
-  const handleSave = async () => {
-    if (!name.trim() || !phone.trim()) {
-      Toast.show({ type: 'error', text1: 'Branch name and phone are required' });
-      return;
-    }
-    setSaving(true);
+  const handleSave = async (values: BranchFormValues) => {
     try {
-      await onSave({ name: name.trim(), phone: phone.trim() });
+      await onSave({ name: values.name, phone: values.phone });
       onClose();
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to add branch') });
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -108,15 +111,15 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView style={branchModalStyles.body} keyboardShouldPersistTaps="handled">
-            <Field label="Branch Name *" value={name} onChangeText={setName} placeholder="e.g. Downtown Branch" />
-            <Field label="Phone *" value={phone} onChangeText={setPhone} placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
+            <ControlledField control={control} name="name" label="Branch Name" required placeholder="e.g. Downtown Branch" />
+            <ControlledField control={control} name="phone" label="Phone" required placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
           </ScrollView>
           <View style={branchModalStyles.footer}>
             <TouchableOpacity style={branchModalStyles.cancelBtn} onPress={onClose}>
               <Text style={branchModalStyles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[branchModalStyles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={branchModalStyles.saveBtnText}>Add Branch</Text>}
+            <TouchableOpacity style={[branchModalStyles.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={branchModalStyles.saveBtnText}>Add Branch</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -297,24 +300,60 @@ export default function SettingsScreen({ navigation }: Props) {
   const [garage, setGarage] = useState<Garage | null>(null);
   const [garageLoading, setGarageLoading] = useState(true);
   const [editingGarage, setEditingGarage] = useState(false);
-  const [garageName, setGarageName] = useState('');
-  const [garagePhone, setGaragePhone] = useState('');
-  const [garageEmail, setGarageEmail] = useState('');
-  const [garageGst, setGarageGst] = useState('');
-  const [garageTax, setGarageTax] = useState('');
-  const [garageLabor, setGarageLabor] = useState('');
-  const [garageStreet, setGarageStreet] = useState('');
-  const [garageCity, setGarageCity] = useState('');
-  const [garageState, setGarageState] = useState('');
-  const [garagePincode, setGaragePincode] = useState('');
-  const [garageCountry, setGarageCountry] = useState(DEFAULT_LOCALE.country);
-  const [garageTimezone, setGarageTimezone] = useState('');
-  const [savingGarage, setSavingGarage] = useState(false);
+  const { countries } = useCountries();
+
+  /**
+   * The postal-code and tax-id rules follow the country **being edited**, not
+   * the saved one — otherwise switching to the UK still validates the postcode
+   * against India's digits-only rule and `SW1A 1AA` is unenterable.
+   *
+   * That looks circular — the resolver needs the locale, the locale needs the
+   * form's country, the form does not exist yet — but it is not: the resolver
+   * is handed the values it is validating, and the country is one of them. So
+   * the locale is derived from the payload rather than from render state, with
+   * no ref and no second source of truth.
+   */
+  const localeForCountry = (code: string): ResolvedLocale => {
+    const c = countries.find(x => x.code === code);
+    return c
+      ? {
+        ...DEFAULT_LOCALE,
+        country: c.code, currency: c.currency,
+        taxLabel: c.taxLabel, taxIdLabel: c.taxIdLabel,
+        postalLabel: c.postalLabel, postalInputMode: c.postalInputMode,
+        phoneExample: c.phoneExample,
+      }
+      : DEFAULT_LOCALE;
+  };
+
+  const {
+    control: garageControl,
+    handleSubmit: handleGarageSubmit,
+    reset: resetGarageForm,
+    setValue: setGarageValue,
+    formState: { isSubmitting: savingGarage },
+  } = useForm<GarageSettingsFormValues, unknown, GarageSettingsFormOutput>({
+    // `useForm` re-reads its props every render, so this closure always sees
+    // the latest `countries`.
+    resolver: (values, ctx, opts) => {
+      const code = String((values as { country?: unknown }).country ?? DEFAULT_LOCALE.country);
+      return zodResolver(garageSettingsSchema(localeForCountry(code)))(values, ctx, opts);
+    },
+    defaultValues: {
+      name: '', phone: '', email: '', gstNumber: '',
+      country: DEFAULT_LOCALE.country,
+      settings: { taxRate: '18', laborRatePerHour: '500', timezone: '' },
+      address: { street: '', city: '', state: '', pincode: '' },
+    },
+  });
+  // `useWatch`, not the `watch()` returned by useForm: the React Compiler lint
+  // rule rejects `watch()` as unmemoizable (react-hooks/incompatible-library).
+  // `useWatch` is a real hook and subscribes to the same field.
+  const garageCountry = useWatch({ control: garageControl, name: 'country' });
 
   // Labels follow the country being EDITED, not the saved one, so switching
   // the picker to United Kingdom relabels "GSTIN" to "VAT No." immediately —
   // the owner sees what they're choosing before they commit to it.
-  const { countries } = useCountries();
   const selectedCountry = countries.find(c => c.code === garageCountry);
   const timezoneOptions = timezoneChoicesFor(garageCountry);
   const needsTimezone = (selectedCountry?.requiresTimezoneChoice ?? false) && timezoneOptions.length > 0;
@@ -333,20 +372,26 @@ export default function SettingsScreen({ navigation }: Props) {
   };
 
   const populateGarageForm = (g: Garage) => {
-    setGarageName(g.name || '');
-    setGaragePhone(g.phone || '');
-    setGarageEmail(g.email || '');
-    setGarageGst(g.gstNumber || '');
-    setGarageTax(String(g.settings?.taxRate ?? 18));
-    setGarageLabor(String(g.settings?.laborRatePerHour ?? 500));
-    setGarageStreet(g.address?.street || '');
-    setGarageCity(g.address?.city || '');
-    setGarageState(g.address?.state || '');
-    setGaragePincode(g.address?.pincode || '');
-    // Garages created before country support have no `country` key at all;
-    // the server resolves them to India, so the form must show the same.
-    setGarageCountry(g.country || g.locale?.country || DEFAULT_LOCALE.country);
-    setGarageTimezone(g.settings?.timezone || '');
+    resetGarageForm({
+      name: g.name || '',
+      phone: g.phone || '',
+      email: g.email || '',
+      gstNumber: g.gstNumber || '',
+      // Garages created before country support have no `country` key at all;
+      // the server resolves them to India, so the form must show the same.
+      country: g.country || g.locale?.country || DEFAULT_LOCALE.country,
+      settings: {
+        taxRate: String(g.settings?.taxRate ?? 18),
+        laborRatePerHour: String(g.settings?.laborRatePerHour ?? 500),
+        timezone: g.settings?.timezone || '',
+      },
+      address: {
+        street: g.address?.street || '',
+        city: g.address?.city || '',
+        state: g.address?.state || '',
+        pincode: g.address?.pincode || '',
+      },
+    });
   };
 
   const fetchGarage = async () => {
@@ -363,27 +408,30 @@ export default function SettingsScreen({ navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeGarageId]);
 
-  const handleSaveGarage = async () => {
-    if (!garageName.trim()) { Toast.show({ type: 'error', text1: 'Garage name is required' }); return; }
-    setSavingGarage(true);
+  const handleSaveGarage = async (values: GarageSettingsFormOutput) => {
     try {
       const { data } = await updateGarage({
-        name: garageName.trim(),
-        phone: garagePhone.trim(),
-        email: garageEmail.trim(),
-        gstNumber: garageGst.trim(),
-        country: garageCountry,
-        address: { street: garageStreet, city: garageCity, state: garageState, pincode: garagePincode },
+        name: values.name,
+        phone: values.phone,
+        email: values.email || '',
+        gstNumber: values.gstNumber || '',
+        country: values.country,
+        address: {
+          street: values.address.street || '',
+          city: values.address.city || '',
+          state: values.address.state || '',
+          pincode: values.address.pincode || '',
+        },
         // Send only the settings this form actually edits. The API merges
         // partial `settings` (dotted-path $set), so omitted keys are preserved.
         // Resending them was also silently destructive: `serviceReminderDays`
         // fell back to 7 here while the real default is 180.
         settings: {
-          taxRate: Number(garageTax) || 0,
-          laborRatePerHour: Number(garageLabor) || 0,
+          taxRate: values.settings.taxRate,
+          laborRatePerHour: values.settings.laborRatePerHour,
           // '' clears the override so the country table applies. Only
           // multi-zone countries ever set it.
-          timezone: needsTimezone ? garageTimezone : '',
+          timezone: needsTimezone ? (values.settings.timezone || '') : '',
         },
       });
       setGarage(data);
@@ -394,7 +442,7 @@ export default function SettingsScreen({ navigation }: Props) {
       Toast.show({ type: 'success', text1: 'Garage info updated!' });
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to update garage') });
-    } finally { setSavingGarage(false); }
+    }
   };
 
   const handleLogout = () => {
@@ -447,54 +495,52 @@ export default function SettingsScreen({ navigation }: Props) {
             <ActivityIndicator color={colors.primary} style={{ paddingVertical: 20 }} />
           ) : editingGarage ? (
             <>
-              <Field label="Garage Name *" value={garageName} onChangeText={setGarageName} placeholder="Your garage name" />
-              <Field label="Phone" value={garagePhone} onChangeText={setGaragePhone} placeholder={labels.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
-              <Field label="Email" value={garageEmail} onChangeText={setGarageEmail} placeholder="Garage email address" keyboardType="email-address" autoCapitalize="none" />
-              <BottomSheetPicker
+              <ControlledField control={garageControl} name="name" label="Garage Name" required placeholder="Your garage name" />
+              <ControlledField control={garageControl} name="phone" label="Phone" required placeholder={labels.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
+              <ControlledField control={garageControl} name="email" label="Email" placeholder="Garage email address" keyboardType="email-address" autoCapitalize="none" />
+              <ControlledPicker
+                control={garageControl}
+                name="country"
                 label="Country"
                 searchable
                 options={countryOptions}
-                selectedValue={garageCountry}
-                onValueChange={value => {
-                  setGarageCountry(value);
-                  // Clear any zone picked for the previous country — a US zone
-                  // on a garage that just moved to Australia is worse than none.
-                  setGarageTimezone('');
-                }}
+                // Clear any zone picked for the previous country — a US zone on
+                // a garage that just moved to Australia is worse than none.
+                onAfterChange={() => setGarageValue('settings.timezone', '')}
               />
               {needsTimezone && (
-                <BottomSheetPicker
+                <ControlledPicker
+                  control={garageControl}
+                  name="settings.timezone"
                   label="Timezone"
                   options={timezoneOptions.map(tz => ({ value: tz.value, label: tz.label }))}
-                  selectedValue={garageTimezone}
-                  onValueChange={setGarageTimezone}
                   placeholder="Select a timezone"
                 />
               )}
-              <Field label={labels.taxId} value={garageGst} onChangeText={setGarageGst} placeholder={`Your ${labels.taxId}`} autoCapitalize="characters" />
+              <ControlledField control={garageControl} name="gstNumber" label={labels.taxId} placeholder={`Your ${labels.taxId}`} autoCapitalize="characters" />
               <View style={styles.row}>
-                <View style={{ flex: 1 }}><Field label={`${labels.tax} Rate (%)`} value={garageTax} onChangeText={setGarageTax} placeholder="0" keyboardType="numeric" autoCapitalize="none" /></View>
+                <View style={{ flex: 1 }}><ControlledField control={garageControl} name="settings.taxRate" label={`${labels.tax} Rate (%)`} placeholder="0" keyboardType="numeric" autoCapitalize="none" /></View>
                 <View style={{ width: 12 }} />
-                <View style={{ flex: 1 }}><Field label={`Labor Rate (${labels.currency}/hr)`} value={garageLabor} onChangeText={setGarageLabor} placeholder="0" keyboardType="numeric" autoCapitalize="none" /></View>
+                <View style={{ flex: 1 }}><ControlledField control={garageControl} name="settings.laborRatePerHour" label={`Labor Rate (${labels.currency}/hr)`} placeholder="0" keyboardType="numeric" autoCapitalize="none" /></View>
               </View>
               <Text style={styles.subLabel}>Address</Text>
-              <Field label="Street" value={garageStreet} onChangeText={setGarageStreet} placeholder="Street / Area" />
+              <ControlledField control={garageControl} name="address.street" label="Street" placeholder="Street / Area" />
               <View style={styles.row}>
-                <View style={{ flex: 1 }}><Field label="City" value={garageCity} onChangeText={setGarageCity} placeholder="City" /></View>
+                <View style={{ flex: 1 }}><ControlledField control={garageControl} name="address.city" label="City" placeholder="City" /></View>
                 <View style={{ width: 12 }} />
-                <View style={{ flex: 1 }}><Field label="State" value={garageState} onChangeText={setGarageState} placeholder="State" /></View>
+                <View style={{ flex: 1 }}><ControlledField control={garageControl} name="address.state" label="State" placeholder="State" /></View>
               </View>
               {/* keyboardType follows the country: a numeric keypad makes UK
                   "SW1A 1AA" and Canadian "K1A 0B1" literally unenterable. */}
-              <Field
+              <ControlledField
+                control={garageControl}
+                name="address.pincode"
                 label={labels.postal}
-                value={garagePincode}
-                onChangeText={setGaragePincode}
                 placeholder={labels.postal}
                 keyboardType={labels.postalInputMode === 'numeric' ? 'numeric' : 'default'}
                 autoCapitalize="characters"
               />
-              <PrimaryBtn label="Save Garage Info" icon="save-outline" onPress={handleSaveGarage} loading={savingGarage} />
+              <PrimaryBtn label="Save Garage Info" icon="save-outline" onPress={handleGarageSubmit(handleSaveGarage)} loading={savingGarage} />
             </>
           ) : (
             <>

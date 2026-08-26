@@ -5,13 +5,19 @@ import {
   ScrollView, StatusBar, KeyboardTypeOptions, Image, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useForm, useController, useWatch, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '../components/toastConfig';
 import { getErrorMessage } from '../utils/errors';
 import { forgotPassword } from '../api/authService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
-import BottomSheetPicker from '../components/BottomSheetPicker';
+import { ControlledPicker } from '../components/FormControls';
+import {
+  loginSchema, registerSchema, forgotPasswordSchema,
+  type LoginFormValues, type RegisterFormValues, type ForgotPasswordFormValues,
+} from '../utils/validation';
 import { useCountries } from '../hooks/useCountries';
 import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
@@ -37,10 +43,10 @@ function Logo({ size = 52 }: { size?: number }) {
 }
 
 // ─── Input Field ───────────────────────────────────────────────────────────────
-interface FieldProps {
+interface FieldProps<T extends FieldValues> {
+  control: Control<T>;
+  name: FieldPath<T>;
   label: string;
-  value: string;
-  onChangeText: (v: string) => void;
   placeholder?: string;
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
@@ -48,18 +54,25 @@ interface FieldProps {
   icon: IconName;
 }
 
-function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, secureTextEntry, icon }: FieldProps) {
+// Bound with `useController`, not `register`: a TextInput has no DOM ref and
+// emits no native change event, so `register` typechecks and then never sees a
+// keystroke. See ControlledField in components/FormControls.tsx.
+function Field<T extends FieldValues>({ control, name, label, placeholder, keyboardType, autoCapitalize, secureTextEntry, icon }: FieldProps<T>) {
   const [show, setShow] = useState(false);
+  const { field, fieldState } = useController({ control, name });
   const isPwd = secureTextEntry !== undefined;
+  const invalid = !!fieldState.error;
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.inputRow}>
+      <View style={[styles.inputRow, invalid && styles.inputRowError]}>
         <Ionicons name={icon} size={18} color={colors.textFaint} style={{ marginRight: 10 }} />
         <TextInput
+          accessibilityLabel={label}
           style={styles.inputField}
-          value={value}
-          onChangeText={onChangeText}
+          value={field.value == null ? '' : String(field.value)}
+          onChangeText={field.onChange}
+          onBlur={field.onBlur}
           placeholder={placeholder}
           placeholderTextColor={colors.textFaint}
           keyboardType={keyboardType || 'default'}
@@ -73,6 +86,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, autoCapi
           </TouchableOpacity>
         )}
       </View>
+      {invalid ? <Text style={styles.fieldError}>{fieldState.error?.message}</Text> : null}
     </View>
   );
 }
@@ -90,27 +104,25 @@ type ForgotPasswordStep = 'confirm' | 'not-owner' | 'email';
 
 function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
   const [step, setStep] = useState<ForgotPasswordStep>('confirm');
-  const [email, setEmail] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const {
+    control, handleSubmit: submitForm, reset,
+    formState: { isSubmitting: submitting },
+  } = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
+  });
 
   useEffect(() => {
-    if (visible) { setStep('confirm'); setEmail(''); }
-  }, [visible]);
+    if (visible) { setStep('confirm'); reset({ email: '' }); }
+  }, [visible, reset]);
 
-  const handleSubmit = async () => {
-    if (!email.trim()) {
-      Toast.show({ type: 'error', text1: 'Please enter your email address' });
-      return;
-    }
-    setSubmitting(true);
+  const handleSubmit = async (values: ForgotPasswordFormValues) => {
     try {
-      const res = await forgotPassword(email.trim());
+      const res = await forgotPassword(values.email);
       Toast.show({ type: 'success', text1: res.message, visibilityTime: 5000 });
       onClose();
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to send reset link') });
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -158,14 +170,14 @@ function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
                 <Text style={forgotPwdStyles.helperText}>
                   Enter your account email and we'll send you a link to reset your password.
                 </Text>
-                <Field label="Email Address" value={email} onChangeText={setEmail}
+                <Field control={control} name="email" label="Email Address"
                   placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
               </ScrollView>
               <View style={forgotPwdStyles.footer}>
                 <TouchableOpacity style={forgotPwdStyles.cancelBtn} onPress={() => setStep('confirm')}>
                   <Text style={forgotPwdStyles.cancelBtnText}>Back</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[forgotPwdStyles.submitBtn, submitting && { opacity: 0.6 }]} onPress={handleSubmit} disabled={submitting}>
+                <TouchableOpacity style={[forgotPwdStyles.submitBtn, submitting && { opacity: 0.6 }]} onPress={submitForm(handleSubmit)} disabled={submitting}>
                   {submitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={forgotPwdStyles.submitBtnText}>Send Link</Text>}
                 </TouchableOpacity>
               </View>
@@ -224,18 +236,27 @@ export default function LoginScreen(_props: Props) {
   const [loading, setLoading] = useState(false);
   const [forgotPwdVisible, setForgotPwdVisible] = useState(false);
 
-  // Shared
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Two separate forms rather than one with optional halves: the login form
+  // must not carry `name`/`garageName` rules that a signing-in user can never
+  // satisfy, and switching modes should discard whatever was half-typed.
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
-  // Register only
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [garageName, setGarageName] = useState('');
-  // India by default, matching the server: every garage created before the
-  // picker existed is Indian, and it stays the common case.
-  const [country, setCountry] = useState(DEFAULT_LOCALE.country);
-  const [timezone, setTimezone] = useState('');
+  const registerForm = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      name: '', garageName: '', email: '', phone: '', password: '',
+      // India by default, matching the server: every garage created before the
+      // picker existed is Indian, and it stays the common case.
+      country: DEFAULT_LOCALE.country, timezone: '',
+    },
+  });
+
+  // `useWatch`, not the `watch()` from useForm — the React Compiler lint rule
+  // rejects `watch()` as unmemoizable (react-hooks/incompatible-library).
+  const country = useWatch({ control: registerForm.control, name: 'country' });
 
   const { countries } = useCountries();
   const selectedCountry = countries.find(c => c.code === country);
@@ -249,30 +270,22 @@ export default function LoginScreen(_props: Props) {
     ? countries.map(c => ({ value: c.code, label: c.name }))
     : [{ value: DEFAULT_LOCALE.country, label: 'India' }];
 
-  const handleCountryChange = (value: string) => {
-    setCountry(value);
-    // Clear any zone picked for the previous country — 'America/Denver' on a
-    // garage that just switched to Australia would be worse than no value.
-    setTimezone('');
-  };
-
   const switchMode = (m: 'login' | 'register') => {
     setMode(m);
     setStep(1);
-    setEmail(''); setPassword(''); setName(''); setPhone(''); setGarageName('');
+    loginForm.reset();
+    registerForm.reset();
   };
 
   // ── Login ──
-  const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      Toast.show({ type: 'error', text1: 'Please enter your email and password' });
-      return;
-    }
+  const handleLogin = async (values: LoginFormValues) => {
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(values.email, values.password);
       Toast.show({ type: 'success', text1: 'Welcome back!' });
     } catch (e) {
+      // A rejected credential is the server's answer about the request, not a
+      // rule this form could have checked — so it stays a toast.
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Login failed') });
     } finally {
       setLoading(false);
@@ -280,28 +293,30 @@ export default function LoginScreen(_props: Props) {
   };
 
   // ── Register step 1 → 2 ──
-  const handleNextStep = () => {
-    if (!name.trim()) { Toast.show({ type: 'error', text1: 'Please enter your name' }); return; }
-    // Presence only. The old `phone.length < 10` check was India's format
-    // hardcoded into the client, and it rejects valid numbers elsewhere (a
-    // Singapore mobile is 8 digits). The server validates against the chosen
-    // country and returns a message naming it.
-    if (!phone.trim()) { Toast.show({ type: 'error', text1: 'Please enter your phone number' }); return; }
-    if (needsTimezone && !timezone) { Toast.show({ type: 'error', text1: 'Please select your timezone' }); return; }
-    if (!email.trim()) { Toast.show({ type: 'error', text1: 'Please enter your email' }); return; }
-    if (!password || password.length < 6) { Toast.show({ type: 'error', text1: 'Password must be at least 6 characters' }); return; }
+  //
+  // Only step 1's fields are validated here. `trigger` with an explicit list is
+  // what keeps `garageName` — which lives on step 2 and is legitimately empty
+  // at this point — from blocking the Continue button.
+  const handleNextStep = async () => {
+    const ok = await registerForm.trigger(['name', 'country', 'phone', 'email', 'password']);
+    if (!ok) return;
+    // Conditional on the chosen country, so the schema cannot express it: only
+    // multi-zone countries ask for a zone at all.
+    if (needsTimezone && !registerForm.getValues('timezone')) {
+      registerForm.setError('timezone', { message: 'Select your timezone' });
+      return;
+    }
     setStep(2);
   };
 
   // ── Register step 2 → submit ──
-  const handleRegister = async () => {
-    if (!garageName.trim()) { Toast.show({ type: 'error', text1: 'Please enter your garage name' }); return; }
+  const handleRegister = async (values: RegisterFormValues) => {
     setLoading(true);
     try {
       await register({
-        name: name.trim(), email: email.trim(), phone: phone.trim(), password,
-        garageName: garageName.trim(), country,
-        ...(needsTimezone && timezone ? { timezone } : {})
+        name: values.name, email: values.email, phone: values.phone, password: values.password,
+        garageName: values.garageName, country: values.country,
+        ...(needsTimezone && values.timezone ? { timezone: values.timezone } : {})
       });
       Toast.show({ type: 'success', text1: 'Garage registered!' });
     } catch (e) {
@@ -342,9 +357,9 @@ export default function LoginScreen(_props: Props) {
               <Text style={styles.cardTitle}>Welcome back</Text>
               <Text style={styles.cardSub}>Enter your credentials to continue</Text>
 
-              <Field label="Email Address" value={email} onChangeText={setEmail}
+              <Field control={loginForm.control} name="email" label="Email Address"
                 placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
-              <Field label="Password" value={password} onChangeText={setPassword}
+              <Field control={loginForm.control} name="password" label="Password"
                 placeholder="••••••••" secureTextEntry autoCapitalize="none" icon="lock-closed-outline" />
 
               <TouchableOpacity onPress={() => setForgotPwdVisible(true)} style={styles.forgotPwdRow}>
@@ -353,7 +368,7 @@ export default function LoginScreen(_props: Props) {
 
               <TouchableOpacity
                 style={[styles.primaryBtn, loading && { opacity: 0.65 }]}
-                onPress={handleLogin} disabled={loading} activeOpacity={0.85}
+                onPress={loginForm.handleSubmit(handleLogin)} disabled={loading} activeOpacity={0.85}
               >
                 {loading
                   ? <ActivityIndicator color={colors.textOnPrimary} />
@@ -389,35 +404,38 @@ export default function LoginScreen(_props: Props) {
               <Text style={styles.cardTitle}>Create your account</Text>
               <Text style={styles.cardSub}>We'll set up your garage in the next step</Text>
 
-              <Field label="Full Name *" value={name} onChangeText={setName}
+              <Field control={registerForm.control} name="name" label="Full Name *"
                 placeholder="John Doe" icon="person-outline" />
               {/* Country comes before phone on purpose: it decides what a
                   valid phone number looks like, so the placeholder and the
                   check below both follow it. */}
-              <BottomSheetPicker
+              <ControlledPicker
+                control={registerForm.control}
+                name="country"
                 label="Country"
                 required
                 searchable
                 options={countryOptions}
-                selectedValue={country}
-                onValueChange={handleCountryChange}
+                // Clear any zone picked for the previous country — 'America/Denver'
+                // on a garage that just switched to Australia is worse than none.
+                onAfterChange={() => registerForm.setValue('timezone', '')}
               />
               {needsTimezone && (
-                <BottomSheetPicker
+                <ControlledPicker
+                  control={registerForm.control}
+                  name="timezone"
                   label="Timezone"
                   required
                   options={timezoneOptions.map(tz => ({ value: tz.value, label: tz.label }))}
-                  selectedValue={timezone}
-                  onValueChange={setTimezone}
                   placeholder="Select your timezone"
                 />
               )}
-              <Field label="Phone Number *" value={phone} onChangeText={setPhone}
+              <Field control={registerForm.control} name="phone" label="Phone Number *"
                 placeholder={selectedCountry?.phoneExample ?? DEFAULT_LOCALE.phoneExample}
                 keyboardType="phone-pad" autoCapitalize="none" icon="call-outline" />
-              <Field label="Email Address *" value={email} onChangeText={setEmail}
+              <Field control={registerForm.control} name="email" label="Email Address *"
                 placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
-              <Field label="Password *" value={password} onChangeText={setPassword}
+              <Field control={registerForm.control} name="password" label="Password *"
                 placeholder="Min. 6 characters" secureTextEntry autoCapitalize="none" icon="lock-closed-outline" />
 
               <TouchableOpacity style={styles.primaryBtn} onPress={handleNextStep} activeOpacity={0.85}>
@@ -455,7 +473,7 @@ export default function LoginScreen(_props: Props) {
               <Text style={styles.cardTitle}>Name your garage</Text>
               <Text style={styles.cardSub}>This will appear on all your documents</Text>
 
-              <Field label="Garage Name *" value={garageName} onChangeText={setGarageName}
+              <Field control={registerForm.control} name="garageName" label="Garage Name *"
                 placeholder="Speed Auto Works" icon="business-outline" />
 
               {/* Feature pills */}
@@ -478,7 +496,7 @@ export default function LoginScreen(_props: Props) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.primaryBtn, { flex: 1 }, loading && { opacity: 0.65 }]}
-                  onPress={handleRegister} disabled={loading} activeOpacity={0.85}
+                  onPress={registerForm.handleSubmit(handleRegister)} disabled={loading} activeOpacity={0.85}
                 >
                   {loading
                     ? <ActivityIndicator color={colors.textOnPrimary} />
@@ -553,7 +571,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background, borderWidth: 1.5, borderColor: colors.borderStrong,
     borderRadius: radius.lg, paddingHorizontal: 14, height: 50,
   },
+  inputRowError: { borderColor: colors.danger },
   inputField: { flex: 1, fontSize: 15, color: colors.textStrong },
+  fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
 
   // Forgot password link
   forgotPwdRow: { alignSelf: 'flex-end', marginTop: -8, marginBottom: 4 },
