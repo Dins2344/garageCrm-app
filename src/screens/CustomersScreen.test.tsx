@@ -5,6 +5,16 @@ import * as customerService from '../api/customerService';
 import type { Customer } from '../types/models';
 import type { RootStackScreenProps } from '../types/navigation';
 
+// See HomeScreen.test.tsx — the screen refetches through useFocusEffect, which
+// needs a NavigationContainer we deliberately don't mount.
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    const react = require('react');
+    react.useEffect(cb, [cb]);
+  },
+}));
+
 // Explicit factory — see AuthContext.test.tsx for why automock isn't used here.
 jest.mock('../api/customerService', () => ({
   getCustomers: jest.fn(),

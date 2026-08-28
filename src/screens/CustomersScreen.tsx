@@ -8,6 +8,7 @@ import {
 import { useForm, useController, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../api/customerService';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '../components/toastConfig';
@@ -172,7 +173,19 @@ export default function CustomersScreen(_props: Props) {
     finally { setLoading(false); setRefreshing(false); }
   }, [search]);
 
-  useEffect(() => { setPage(1); setLoading(true); fetchCustomers(1); }, [fetchCustomers, activeGarageId]);
+  // Re-fetch when the screen comes into focus, matching InvoicesScreen and
+  // DashboardScreen. Customers is a *tab*, so React Navigation keeps it mounted
+  // once visited — without this, the vehicle count each row shows stays as it
+  // was when the tab first loaded. Reassigning a vehicle's owner over on the
+  // Vehicles tab would then look like it had not worked until an app restart.
+  useFocusEffect(
+    useCallback(() => {
+      setPage(1);
+      setLoading(true);
+      fetchCustomers(1);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, activeGarageId])
+  );
 
   const handleSave = async (form: CustomerFormValues) => {
     if (editing) {

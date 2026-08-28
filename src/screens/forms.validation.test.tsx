@@ -17,6 +17,17 @@ import type { RootStackScreenProps } from '../types/navigation';
  * test below types into a real field and asserts the API was not called.
  */
 
+// CustomersScreen refetches through useFocusEffect, which needs a
+// NavigationContainer we deliberately do not mount. Same mock as
+// HomeScreen.test.tsx.
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    const react = require('react');
+    react.useEffect(cb, [cb]);
+  },
+}));
+
 // Explicit factories — a bare automock has to require() the real module, which
 // pulls in apiInterceptor's axios.create() and crashes under jest-expo.
 jest.mock('../api/customerService', () => ({
