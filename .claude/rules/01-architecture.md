@@ -23,6 +23,8 @@ mobile/
 │   │   └── ...
 │   ├── components/            # Reusable UI components
 │   │   ├── BottomSheetPicker.tsx
+│   │   ├── FeatureCarousel.tsx  # First-run tour pager (+ tourSlides.ts content)
+│   │   ├── WalkthroughGate.tsx  # Chooses intro / role tour / the app
 │   │   ├── IdleTimer.tsx
 │   │   ├── StatusStepper.tsx
 │   │   └── StatusStepper.test.tsx
@@ -168,6 +170,7 @@ navigation.navigate('JobCardDetail', { id: jobCard._id });
 | `Invoices`           | `InvoicesScreen.tsx`         |
 | `InvoiceViewer`      | `InvoiceViewerScreen.tsx`    |
 | `EstimationEditor`   | `EstimationEditorScreen.tsx` |
+| `Walkthrough`        | `WalkthroughScreen.tsx` (replay only — first run is handled by `WalkthroughGate`) |
 
 Every route above (and its params) is registered in `src/types/navigation.ts`'s `RootStackParamList`/`MainTabParamList` — see **TypeScript Conventions** below.
 

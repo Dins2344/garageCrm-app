@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { TOKEN_KEY, USER_KEY, ACTIVE_GARAGE_KEY } from '../utils/constants';
+import { TOKEN_KEY, ACTIVE_GARAGE_KEY, SESSION_STORAGE_KEYS } from '../utils/constants';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api');
 
@@ -35,12 +35,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      await AsyncStorage.removeItem(USER_KEY);
-      await AsyncStorage.removeItem(ACTIVE_GARAGE_KEY);
-      // Navigation dispatch needs to be handled outside interceptor ideally,
-      // but Context should pick up the token removal if subscribed,
-      // or we handle logout logic cleanly in AuthContext.
+      // The same list AuthContext.logout() clears. This used to name three keys
+      // by hand and so never cleared WEB_BANNER_DISMISSED_KEY — a session that
+      // ended by 401 rather than by the Log Out button leaked the banner
+      // dismissal to the next user on the device, which is the exact bug the
+      // one-list rule exists to prevent. Two sign-out paths, one list.
+      await AsyncStorage.multiRemove([...SESSION_STORAGE_KEYS]);
     }
     return Promise.reject(error);
   }

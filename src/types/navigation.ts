@@ -24,6 +24,7 @@ export type RootStackParamList = {
   Staff: undefined;
   EditProfile: undefined;
   ChangePassword: undefined;
+  Walkthrough: undefined;
 };
 
 // Props for a screen that lives directly on the root Stack.Navigator.

@@ -83,6 +83,16 @@ export default function MoreScreen({ navigation }: Props) {
       onPress: () => navigation.navigate('Settings'),
     },
     {
+      // No `roles`: everyone can replay it, and the deck filters itself to
+      // what the viewer's role can actually reach.
+      title: 'How this app works',
+      subtitle: 'Replay the quick tour',
+      icon: 'help-circle-outline',
+      iconBg: colors.primarySoft,
+      iconColor: colors.primary,
+      onPress: () => navigation.navigate('Walkthrough'),
+    },
+    {
       title: 'Web App',
       subtitle: 'Open the full app in your browser',
       icon: 'globe-outline',

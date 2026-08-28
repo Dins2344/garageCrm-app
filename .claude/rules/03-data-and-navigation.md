@@ -8,7 +8,7 @@
 The shared Axios instance handles:
 - **Base URL:** Reads from `EXPO_PUBLIC_API_URL` env var (falls back to local dev defaults)
 - **Auth token injection:** Reads JWT from AsyncStorage and adds `Bearer` header
-- **401 auto-logout:** Clears stored token/user on unauthorized responses
+- **401 auto-logout:** Clears `SESSION_STORAGE_KEYS` on unauthorized responses — the same list `AuthContext.logout()` clears, so the two sign-out paths cannot drift
 
 ### Service File Pattern
 
@@ -75,10 +75,16 @@ AppNavigator
 │       ├── InvoiceViewer
 │       ├── EstimationEditor
 │       ├── Settings
-│       └── Staff
+│       ├── Staff
+│       └── Walkthrough
 └── (Unauthenticated)
     └── Login
 ```
+
+`WalkthroughGate` wraps the whole `NavigationContainer` (see `AppNavigator.tsx`).
+On a first run it returns the tour *instead of* the navigator, so `Login` is
+never constructed behind it — the `Walkthrough` stack route above is only the
+replay entry point reached from More.
 
 ### Rules:
 - Auth state determines which navigator is rendered (conditional in `AppNavigator.tsx`)

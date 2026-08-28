@@ -77,23 +77,43 @@ navigation hooks. API modules in `src/api/` never touch UI state or toasts.
 | Primary action button | `PrimaryBtn` from `FormControls` |
 | Screen wrapper / max width | `ResponsiveScreen` |
 | Job status progression | `StatusStepper` |
+| Feature tour / swipeable slides | `FeatureCarousel` (content in `tourSlides.ts`) |
 | Toast styling | `toastConfig` |
 
 Use it → extend it with a prop → only then build new.
 
-## Storage keys
+## Storage keys — two categories, and picking wrong is silent
 
 ```javascript
-import { TOKEN_KEY, ALL_STORAGE_KEYS } from '../utils/constants';
+import { TOKEN_KEY, SESSION_STORAGE_KEYS } from '../utils/constants';
 await AsyncStorage.getItem(TOKEN_KEY);
-await AsyncStorage.multiRemove([...ALL_STORAGE_KEYS]);   // logout
+await AsyncStorage.multiRemove([...SESSION_STORAGE_KEYS]);   // logout, and the 401 handler
 ```
 
 They were inlined 18 times once, which is how the "More on the web" banner key
 got left out of logout — the banner never reappeared, and on a shared garage
-device one person's dismissal hid it from everyone after them. Logout clears
-`ALL_STORAGE_KEYS` as a list, so a new key is handled by being declared there.
-A storage key must never live in a component file.
+device one person's dismissal hid it from everyone after them. A storage key
+must never live in a component file.
+
+Every key goes in exactly one of two lists, and which one is a product decision:
+
+- **`SESSION_STORAGE_KEYS`** — cleared on sign-out, by both
+  `AuthContext.logout()` and the 401 handler in `api/apiInterceptor.ts`.
+  **This is the default.**
+- **`DEVICE_STORAGE_KEYS`** — never cleared. Currently only the two walkthrough
+  flags. They are device-scoped because `IdleTimer` signs people out after 10
+  idle minutes; a workshop phone does that several times a day, so a
+  session-scoped "already seen" flag would replay the first-run tour constantly.
+
+**The test: would the next person to sign in on a shared workshop phone be
+harmed by inheriting this value?** A dismissed banner fails that test. "This
+phone already played its intro" passes it. If you are unsure, it is a SESSION
+key. `TOUR_SEEN_USERS_KEY` holds a list of user ids precisely so "once per
+person" survives while the storage itself stays install-scoped.
+
+`ALL_STORAGE_KEYS` was deleted rather than redefined as the union of the two —
+a plausible name sitting beside the correct one is how the banner bug comes
+back. Both directions are pinned by tests in `AuthContext.test.tsx`.
 
 ## Forms — react-hook-form + zod, and `useController` is not optional
 

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login as authLogin, register as authRegister, getMe, RegisterFormData } from '../api/authService';
 import IdleTimer from '../components/IdleTimer';
-import { TOKEN_KEY, USER_KEY, ALL_STORAGE_KEYS } from '../utils/constants';
+import { TOKEN_KEY, USER_KEY, SESSION_STORAGE_KEYS } from '../utils/constants';
 import type { User } from '../types/models';
 
 export interface AuthContextValue {
@@ -22,12 +22,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const logout = async () => {
-    // Clears every key the app writes, from one list, so a new key added to
-    // constants.ts is cleaned up automatically. Naming keys individually here
-    // is what let the "More on the web" dismissal survive logout forever — the
-    // banner could never come back, and on a shared garage device one person
-    // dismissing it hid it from everyone who logged in afterwards.
-    await AsyncStorage.multiRemove([...ALL_STORAGE_KEYS]);
+    // Clears every *session* key from one list, so a new key added to
+    // SESSION_STORAGE_KEYS is cleaned up automatically. Naming keys
+    // individually here is what let the "More on the web" dismissal survive
+    // logout forever — the banner could never come back, and on a shared garage
+    // device one person dismissing it hid it from everyone after them.
+    //
+    // DEVICE_STORAGE_KEYS is deliberately NOT cleared — see the note on that
+    // list in constants.ts. The short version: IdleTimer signs people out every
+    // 10 idle minutes, so a first-run flag that logout wiped would replay the
+    // walkthrough several times a day.
+    await AsyncStorage.multiRemove([...SESSION_STORAGE_KEYS]);
     setUser(null);
   };
 

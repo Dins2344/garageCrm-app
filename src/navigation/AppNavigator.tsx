@@ -41,6 +41,8 @@ import InvoiceViewerScreen from '../screens/InvoiceViewerScreen';
 import InvoicesScreen from '../screens/InvoicesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+import WalkthroughScreen from '../screens/WalkthroughScreen';
+import WalkthroughGate from '../components/WalkthroughGate';
 import { colors } from '../theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -84,6 +86,10 @@ export default function AppNavigator() {
   }
 
   return (
+    // Wraps the navigator rather than living inside it: while the gate is
+    // showing the walkthrough, NavigationContainer is never constructed, so
+    // Login cannot flash behind it.
+    <WalkthroughGate>
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
@@ -128,12 +134,20 @@ export default function AppNavigator() {
               component={ChangePasswordScreen}
               options={{ headerShown: true, title: 'Change Password', headerTitleStyle: { fontWeight: 'bold' } }}
             />
+            {/* The replay route only — both first-run paths are handled by
+                WalkthroughGate below and never navigate here. */}
+            <Stack.Screen
+              name="Walkthrough"
+              component={WalkthroughScreen}
+              options={{ headerShown: true, title: 'How this app works', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    </WalkthroughGate>
   );
 }
 

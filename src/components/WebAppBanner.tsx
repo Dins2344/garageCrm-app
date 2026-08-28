@@ -3,9 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { openWebApp } from '../utils/webApp';
-// The key lives in utils/constants.ts, not here: logout clears every key from
-// ALL_STORAGE_KEYS, and AuthContext importing a storage key from a component
-// was a layering inversion waiting to be missed.
+// The key lives in utils/constants.ts, not here: sign-out clears every key in
+// SESSION_STORAGE_KEYS, and AuthContext importing a storage key from a
+// component was a layering inversion waiting to be missed.
 import { WEB_BANNER_DISMISSED_KEY } from '../utils/constants';
 import { colors, palette, radius } from '../theme';
 
