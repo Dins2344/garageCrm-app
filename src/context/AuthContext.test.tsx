@@ -151,4 +151,36 @@ describe('AuthContext', () => {
     await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
     expect(await AsyncStorage.getItem('garagepulse_web_banner_dismissed')).toBeNull();
   });
+
+  /**
+   * The other half of the rule, deliberately sitting next to the case above.
+   *
+   * `SESSION_STORAGE_KEYS` is cleared on sign-out; `DEVICE_STORAGE_KEYS` is
+   * not. The walkthrough flags are device-scoped because IdleTimer signs
+   * people out after 10 idle minutes — a workshop phone does that several
+   * times a day, and clearing these would replay the first-run tour every
+   * time someone put the phone down to do the actual work.
+   */
+  it('logout() keeps the device-scoped walkthrough flags', async () => {
+    await seedStoredSession();
+    await AsyncStorage.setItem('garagepulse_walkthrough_seen', 'true');
+    await AsyncStorage.setItem('garagepulse_tour_seen_users', '["u1"]');
+    jest.mocked(authService.getMe).mockResolvedValue({ success: true, data: mockUser });
+    const user = userEvent.setup();
+
+    await render(
+      <AuthProvider>
+        <Consumer />
+      </AuthProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('owner@example.com'));
+
+    await user.press(screen.getByTestId('logout-btn'));
+
+    await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
+    expect(await AsyncStorage.getItem('garagepulse_walkthrough_seen')).toBe('true');
+    expect(await AsyncStorage.getItem('garagepulse_tour_seen_users')).toBe('["u1"]');
+    // ...while the session keys are gone, as before.
+    expect(await AsyncStorage.getItem('garagepulse_token')).toBeNull();
+  });
 });

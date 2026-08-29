@@ -10,19 +10,20 @@ import ResponsiveScreen from '../components/ResponsiveScreen';
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { JobCard, JobStatus } from '../types/models';
+import { colors, palette, radius } from '../theme';
 
 const PAGE_LIMIT = 10;
 
 type Props = MainTabScreenProps<'JobCards'>;
 
 const STATUS_COLORS: Partial<Record<JobStatus, string>> = {
-  new: '#3b82f6',
-  estimation_sent: '#f59e0b',
-  approved: '#8b5cf6',
-  in_progress: '#ec4899',
-  ready_for_pickup: '#10b981',
-  delivered: '#6b7280',
-  cancelled: '#ef4444',
+  new: colors.info,
+  estimation_sent: colors.warning,
+  approved: palette.violet500,
+  in_progress: palette.pink500,
+  ready_for_pickup: colors.success,
+  delivered: colors.textMuted,
+  cancelled: colors.danger,
 };
 
 export default function JobCardsScreen({ navigation }: Props) {
@@ -90,7 +91,7 @@ export default function JobCardsScreen({ navigation }: Props) {
     fetchJobCards(nextPage);
   };
 
-  const getStatusColor = (status?: JobStatus) => (status && STATUS_COLORS[status]) || '#6b7280';
+  const getStatusColor = (status?: JobStatus) => (status && STATUS_COLORS[status]) || colors.textMuted;
 
   // Wrapped in useCallback so FlatList doesn't get a new renderItem identity
   // on every keystroke in the search box — see CONTRIBUTING.md Performance Conventions.
@@ -109,13 +110,13 @@ export default function JobCardsScreen({ navigation }: Props) {
       </View>
       <View style={styles.cardBody}>
         <View style={styles.row}>
-          <Ionicons name="car-outline" size={16} color="#6b7280" />
+          <Ionicons name="car-outline" size={16} color={colors.textMuted} />
           <Text style={styles.bodyText}>
             {typeof item.vehicle === 'object' ? `${item.vehicle?.licensePlate} (${item.vehicle?.make})` : ''}
           </Text>
         </View>
         <View style={styles.row}>
-          <Ionicons name="person-outline" size={16} color="#6b7280" />
+          <Ionicons name="person-outline" size={16} color={colors.textMuted} />
           <Text style={styles.bodyText}>
             {typeof item.customer === 'object' ? `${item.customer?.name} - ${item.customer?.phone}` : ''}
           </Text>
@@ -127,7 +128,7 @@ export default function JobCardsScreen({ navigation }: Props) {
         </View>
       </View>
     </TouchableOpacity>
-  ), [navigation]);
+  ), [navigation, locale]);
 
   const keyExtractor = useCallback((item: JobCard) => item._id, []);
 
@@ -135,19 +136,19 @@ export default function JobCardsScreen({ navigation }: Props) {
     <ResponsiveScreen>
     <View style={styles.container}>
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color={colors.textFaint} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search job cards..."
           value={search}
           onChangeText={setSearch}
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textFaint}
         />
       </View>
 
       {loading && page === 1 ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b5ff8" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -159,10 +160,10 @@ export default function JobCardsScreen({ navigation }: Props) {
           onRefresh={onRefresh}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: 20 }} color="#3b5ff8" /> : null}
+          ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: 20 }} color={colors.primary} /> : null}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="clipboard-outline" size={48} color="#d1d5db" />
+              <Ionicons name="clipboard-outline" size={48} color={colors.borderStrong} />
               <Text style={styles.emptyText}>No job cards found</Text>
             </View>
           }
@@ -173,7 +174,7 @@ export default function JobCardsScreen({ navigation }: Props) {
         style={styles.fab}
         onPress={() => navigation.navigate('CreateJobCard')}
       >
-        <Ionicons name="add" size={28} color="#fff" />
+        <Ionicons name="add" size={28} color={colors.textOnPrimary} />
       </TouchableOpacity>
     </View>
     </ResponsiveScreen>
@@ -183,16 +184,16 @@ export default function JobCardsScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fdfcfb',
+    backgroundColor: colors.background,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     margin: 16,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.borderStrong,
     paddingHorizontal: 12,
   },
   searchIcon: {
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     fontSize: 16,
-    color: '#1f2937',
+    color: colors.textStrong,
   },
   listContainer: {
     paddingHorizontal: 16,
@@ -211,11 +212,11 @@ const styles = StyleSheet.create({
     paddingBottom: TAB_BAR_CLEARANCE + 20,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -226,12 +227,12 @@ const styles = StyleSheet.create({
   jobNumber: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#3b5ff8',
+    color: colors.primary,
   },
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 160,
+    borderRadius: radius.pill,
   },
   badgeText: {
     fontSize: 10,
@@ -247,12 +248,12 @@ const styles = StyleSheet.create({
   },
   bodyText: {
     fontSize: 14,
-    color: '#4b5563',
+    color: palette.gray600,
   },
   priceText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
   },
   loadingContainer: {
     flex: 1,
@@ -266,7 +267,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textMuted,
   },
   fab: {
     position: 'absolute',
@@ -275,11 +276,11 @@ const styles = StyleSheet.create({
     right: 24,
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: '#3b5ff8',
+    borderRadius: radius.xxl,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#3b5ff8',
+    shadowColor: colors.primary,
     shadowOpacity: 0.4,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 4 },

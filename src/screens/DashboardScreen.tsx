@@ -8,6 +8,7 @@ import Toast from 'react-native-toast-message';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
+import { colors, palette, radius } from '../theme';
 
 type Props = MainTabScreenProps<'Dashboard'>;
 
@@ -25,14 +26,14 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  new: '#3b82f6',
-  estimation_sent: '#f59e0b',
-  approved: '#8b5cf6',
-  in_progress: '#ec4899',
-  quality_check: '#06b6d4',
-  ready_for_pickup: '#10b981',
-  delivered: '#6b7280',
-  cancelled: '#ef4444',
+  new: colors.info,
+  estimation_sent: colors.warning,
+  approved: palette.violet500,
+  in_progress: palette.pink500,
+  quality_check: palette.cyan500,
+  ready_for_pickup: colors.success,
+  delivered: colors.textMuted,
+  cancelled: colors.danger,
 };
 
 const BAR_MAX_HEIGHT = 110;
@@ -73,7 +74,7 @@ export default function DashboardScreen(_props: Props) {
     return (
       <ResponsiveScreen>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b5ff8" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading Dashboard...</Text>
         </View>
       </ResponsiveScreen>
@@ -137,7 +138,7 @@ export default function DashboardScreen(_props: Props) {
                 <View style={styles.hBarTrack}>
                   <View style={[
                     styles.hBarFill,
-                    { width: `${(count / maxStatusCount) * 100}%`, backgroundColor: STATUS_COLORS[status] || '#3b5ff8' }
+                    { width: `${(count / maxStatusCount) * 100}%`, backgroundColor: STATUS_COLORS[status] || colors.primary }
                   ]} />
                 </View>
                 <Text style={styles.hBarValue}>{count}</Text>
@@ -161,7 +162,7 @@ export default function DashboardScreen(_props: Props) {
                 <View style={styles.hBarTrack}>
                   <View style={[
                     styles.hBarFill,
-                    { width: `${(s.totalLabor / maxStaffLabor) * 100}%`, backgroundColor: '#3b5ff8' }
+                    { width: `${(s.totalLabor / maxStaffLabor) * 100}%`, backgroundColor: colors.primary }
                   ]} />
                 </View>
                 <Text style={styles.staffMeta}>{s.jobCount} job{s.jobCount !== 1 ? 's' : ''}</Text>
@@ -177,7 +178,7 @@ export default function DashboardScreen(_props: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fdfcfb',
+    backgroundColor: colors.background,
   },
   content: {
     padding: 16,
@@ -191,15 +192,15 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#6b7280',
+    color: colors.textMuted,
   },
 
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#6366f1',
+    shadowColor: colors.shadowAmbient,
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -208,12 +209,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
     marginBottom: 16,
   },
   emptyText: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: colors.textFaint,
     textAlign: 'center',
     paddingVertical: 20,
   },
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   barValue: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#3b5ff8',
+    color: colors.primary,
     marginBottom: 4,
   },
   barTrack: {
@@ -241,12 +242,12 @@ const styles = StyleSheet.create({
   },
   bar: {
     width: 18,
-    borderRadius: 6,
-    backgroundColor: '#3b5ff8',
+    borderRadius: radius.xs,
+    backgroundColor: colors.primary,
   },
   barLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: colors.textFaint,
     fontWeight: '600',
     marginTop: 8,
   },
@@ -261,14 +262,14 @@ const styles = StyleSheet.create({
   hBarLabel: {
     width: 96,
     fontSize: 12,
-    color: '#4b5563',
+    color: palette.gray600,
     fontWeight: '600',
   },
   hBarTrack: {
     flex: 1,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: colors.surfaceMuted,
     overflow: 'hidden',
   },
   hBarFill: {
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
     width: 28,
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
     textAlign: 'right',
   },
 
@@ -295,17 +296,17 @@ const styles = StyleSheet.create({
   staffName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.textPrimary,
     flex: 1,
   },
   staffValue: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#3b5ff8',
+    color: colors.primary,
   },
   staffMeta: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: colors.textFaint,
     marginTop: 4,
   },
 });

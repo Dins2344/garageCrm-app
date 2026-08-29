@@ -12,13 +12,14 @@ import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Invoice, PaymentStatus } from '../types/models';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'Invoices'>;
 
 const PAYMENT_CONFIG: Record<PaymentStatus, { label: string; bg: string; text: string; dot: string }> = {
-  paid:    { label: 'Paid',    bg: '#dcfce7', text: '#166534', dot: '#16a34a' },
-  unpaid:  { label: 'Unpaid',  bg: '#fff7ed', text: '#9a3412', dot: '#f97316' },
-  partial: { label: 'Partial', bg: '#eff6ff', text: '#1e40af', dot: '#3b82f6' },
+  paid:    { label: 'Paid',    bg: palette.green100, text: palette.emerald700, dot: palette.emerald600 },
+  unpaid:  { label: 'Unpaid',  bg: palette.orange50, text: palette.orange800, dot: palette.orange500 },
+  partial: { label: 'Partial', bg: colors.infoSoft, text: palette.blue700, dot: colors.info },
 };
 
 const LIMIT = 20;
@@ -86,11 +87,11 @@ export default function InvoicesScreen({ navigation }: Props) {
     fetchInvoices(true);
   };
 
-  const fmt = (n?: number) =>
-    formatMoney(n, locale);
+  const fmt = useCallback((n?: number) =>
+    formatMoney(n, locale), [locale]);
 
-  const fmtDate = (d?: string) =>
-    d ? formatDate(d, locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+  const fmtDate = useCallback((d?: string) =>
+    d ? formatDate(d, locale, { day: 'numeric', month: 'short', year: 'numeric' }) : '—', [locale]);
 
   // Wrapped in useCallback so FlatList doesn't get a new renderItem identity
   // on every keystroke in the search box — see CONTRIBUTING.md Performance Conventions.
@@ -124,13 +125,13 @@ export default function InvoicesScreen({ navigation }: Props) {
         {/* Customer & Vehicle */}
         <View style={s.metaRow}>
           <View style={s.metaItem}>
-            <Ionicons name="person-outline" size={13} color="#9ca3af" />
+            <Ionicons name="person-outline" size={13} color={colors.textFaint} />
             <Text style={s.metaText} numberOfLines={1}>
               {customer?.name || '—'}
             </Text>
           </View>
           <View style={s.metaItem}>
-            <Ionicons name="car-outline" size={13} color="#9ca3af" />
+            <Ionicons name="car-outline" size={13} color={colors.textFaint} />
             <Text style={s.metaText} numberOfLines={1}>
               {vehicle?.licensePlate || '—'}
             </Text>
@@ -150,12 +151,12 @@ export default function InvoicesScreen({ navigation }: Props) {
             </View>
           )}
           {item.paymentStatus === 'paid' && (
-            <Ionicons name="checkmark-circle" size={22} color="#16a34a" />
+            <Ionicons name="checkmark-circle" size={22} color={palette.emerald600} />
           )}
         </View>
       </TouchableOpacity>
     );
-  }, [navigation]);
+  }, [navigation, fmt, fmtDate]);
 
   const keyExtractor = useCallback((item: Invoice) => item._id, []);
 
@@ -170,18 +171,18 @@ export default function InvoicesScreen({ navigation }: Props) {
     <View>
       {/* Search */}
       <View style={s.searchBox}>
-        <Ionicons name="search-outline" size={17} color="#9ca3af" style={{ marginRight: 8 }} />
+        <Ionicons name="search-outline" size={17} color={colors.textFaint} style={{ marginRight: 8 }} />
         <TextInput
           style={s.searchInput}
           placeholder="Search invoice or customer..."
-          placeholderTextColor="#9ca3af"
+          placeholderTextColor={colors.textFaint}
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={18} color="#9ca3af" />
+            <Ionicons name="close-circle" size={18} color={colors.textFaint} />
           </TouchableOpacity>
         )}
       </View>
@@ -213,7 +214,7 @@ export default function InvoicesScreen({ navigation }: Props) {
     if (loading) return null;
     return (
       <View style={s.emptyContainer}>
-        <Ionicons name="document-text-outline" size={56} color="#d1d5db" />
+        <Ionicons name="document-text-outline" size={56} color={colors.borderStrong} />
         <Text style={s.emptyTitle}>No Invoices Found</Text>
         <Text style={s.emptySubtitle}>
           {search || filter !== 'all'
@@ -228,7 +229,7 @@ export default function InvoicesScreen({ navigation }: Props) {
     if (!loadingMore) return null;
     return (
       <View style={{ paddingVertical: 16, alignItems: 'center' }}>
-        <ActivityIndicator size="small" color="#3b5ff8" />
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   };
@@ -236,12 +237,12 @@ export default function InvoicesScreen({ navigation }: Props) {
   return (
     <ResponsiveScreen>
     <View style={s.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
 
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={s.headerTitle}>Invoices</Text>
@@ -252,7 +253,7 @@ export default function InvoicesScreen({ navigation }: Props) {
 
       {loading && !refreshing ? (
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b5ff8" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={s.loadingText}>Loading invoices...</Text>
         </View>
       ) : (
@@ -266,7 +267,7 @@ export default function InvoicesScreen({ navigation }: Props) {
           contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b5ff8" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
           onEndReached={() => fetchInvoices(false)}
           onEndReachedThreshold={0.4}
@@ -278,7 +279,7 @@ export default function InvoicesScreen({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
+  container: { flex: 1, backgroundColor: colors.background },
 
   header: {
     flexDirection: 'row',
@@ -286,77 +287,77 @@ const s = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 54 : (StatusBar.currentHeight || 24) + 10,
     paddingBottom: 14,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.surfaceMuted,
     gap: 12,
   },
   backBtn: { padding: 4 },
   headerCenter: { flex: 1 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#111827' },
-  headerSub: { fontSize: 12, color: '#9ca3af', marginTop: 1 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary },
+  headerSub: { fontSize: 12, color: colors.textFaint, marginTop: 1 },
 
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { color: '#6b7280', fontSize: 14 },
+  loadingText: { color: colors.textMuted, fontSize: 14 },
 
   list: { padding: 16, paddingBottom: 40 },
 
   // Search
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 12,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: 14, paddingVertical: 10,
+    borderWidth: 1, borderColor: colors.borderStrong, marginBottom: 12,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#111827', paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: 14, color: colors.textPrimary, paddingVertical: 0 },
 
   // Filter tabs
   filterRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   filterTab: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: '#e5e7eb',
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: radius.xl,
+    backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border,
   },
-  filterTabActive: { backgroundColor: '#3b5ff8', borderColor: '#3b5ff8' },
-  filterTabText: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
-  filterTabTextActive: { color: '#fff' },
+  filterTabActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterTabText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  filterTabTextActive: { color: colors.textOnPrimary },
 
-  countText: { fontSize: 12, color: '#9ca3af', marginBottom: 10 },
+  countText: { fontSize: 12, color: colors.textFaint, marginBottom: 10 },
 
   // Invoice Card
   card: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12,
-    borderWidth: 1, borderColor: '#f3f4f6',
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.surfaceMuted,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
   cardTopLeft: {},
-  invoiceNo: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
-  dateText: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
+  invoiceNo: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
+  dateText: { fontSize: 11, color: colors.textFaint, marginTop: 2 },
 
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.xl,
   },
   statusDot: { width: 7, height: 7, borderRadius: 4 },
   statusText: { fontSize: 12, fontWeight: '700' },
 
-  divider: { height: 1, backgroundColor: '#f3f4f6', marginBottom: 10 },
+  divider: { height: 1, backgroundColor: colors.surfaceMuted, marginBottom: 10 },
 
   metaRow: { flexDirection: 'row', gap: 16, marginBottom: 12 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
-  metaText: { fontSize: 12, color: '#374151', flex: 1 },
+  metaText: { fontSize: 12, color: colors.textSecondary, flex: 1 },
 
   amountRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fdfcfb', padding: 10, borderRadius: 16,
+    backgroundColor: colors.background, padding: 10, borderRadius: radius.lg,
   },
-  amountLabel: { fontSize: 11, color: '#9ca3af', marginBottom: 2 },
-  amountValue: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
-  dueLabel: { fontSize: 11, color: '#9ca3af', marginBottom: 2 },
-  dueValue: { fontSize: 15, fontWeight: 'bold', color: '#ef4444' },
+  amountLabel: { fontSize: 11, color: colors.textFaint, marginBottom: 2 },
+  amountValue: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
+  dueLabel: { fontSize: 11, color: colors.textFaint, marginBottom: 2 },
+  dueValue: { fontSize: 15, fontWeight: 'bold', color: colors.danger },
 
   // Empty state
   emptyContainer: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 32 },
-  emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#374151', marginTop: 16, marginBottom: 8 },
-  emptySubtitle: { fontSize: 14, color: '#9ca3af', textAlign: 'center', lineHeight: 20 },
+  emptyTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textSecondary, marginTop: 16, marginBottom: 8 },
+  emptySubtitle: { fontSize: 14, color: colors.textFaint, textAlign: 'center', lineHeight: 20 },
 });

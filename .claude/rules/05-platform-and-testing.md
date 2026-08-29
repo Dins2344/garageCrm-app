@@ -45,7 +45,7 @@ The whole mobile app is TypeScript (`strict: true` in `tsconfig.json`, extending
 - **Shared domain types live in `src/types/models.ts`** (`User`, `Customer`, `Vehicle`, `JobCard`, `Invoice`, etc.) and `src/types/api.ts` (`ApiListResponse<T>`, `ApiItemResponse<T>`, `ApiMessageResponse`) — same backend contract as the web frontend's equivalent files, ported (not shared via import) since this is a separate repo/app.
 - **Navigation is fully typed** via `src/types/navigation.ts`: `RootStackParamList` (every stack screen + its params) and `MainTabParamList` (the four `MainTabs` screens), plus a `declare global { namespace ReactNavigation { interface RootParamList ... } }` augmentation so `useNavigation()` infers route names without a generic. A screen's props come from `RootStackScreenProps<'ScreenName'>` or, for a `MainTabs` screen that also needs to navigate to a stack-level route (e.g. `JobCardsScreen` navigating to `JobCardDetail`), `MainTabScreenProps<'ScreenName'>` (a `CompositeScreenProps` of both navigators). Adding a screen means adding its entry to the relevant `ParamList` first — see the Navigation Rules "Adding a New Screen" steps above.
 - **Avoid `any`, including on `catch` parameters.** Use `src/utils/errors.ts`'s `getErrorMessage(error: unknown, fallback: string)` to pull a backend error message out of a caught Axios error instead of `catch (e: any) { e?.response?.data?.message }` — it narrows `unknown` safely and keeps `no-explicit-any` clean.
-- `@expo/vector-icons` must be a **direct** `dependencies` entry (not left to resolve transitively through `expo`'s own `node_modules`) — TypeScript's module resolution won't reach into a nested dependency's `node_modules` the way Metro's runtime resolver does.
+- `@expo/vector-icons` and `expo-constants` must be **direct** `dependencies` entries (not left to resolve transitively through `expo`'s own `node_modules`) — TypeScript's module resolution won't reach into a nested dependency's `node_modules` the way Metro's runtime resolver does. Both were caught the same way: the import runs fine under Expo Go and fails CI's `npm run typecheck`. Any future `expo-*` module you import needs the same treatment.
 - Run `npm run typecheck` (`tsc --noEmit`) before pushing — it's also enforced in CI (`.github/workflows/ci.yml`).
 
 ---
@@ -56,8 +56,8 @@ Tests use **Jest** (`jest-expo` preset) + **React Native Testing Library** + its
 
 ### Where tests live
 - **Colocated with the file they test**: `StatusStepper.tsx` → `StatusStepper.test.tsx`, `customerService.ts` → `customerService.test.ts`, right next to each other — same reasoning as the web frontend (tests are single-file-scoped, so colocation keeps them moving/deleting with the code they verify).
-- `jest.config.js` — `preset: 'jest-expo'`, `setupFilesAfterEnv: ['./jest.setup.ts']`.
-- `jest.setup.ts` — global mocks every test needs: `@expo/vector-icons` (mocked to a plain `Text`, since the real one pulls in `expo-font`/`expo-asset` native asset-loading machinery that Jest can't run) and `@react-native-async-storage/async-storage` (mocked via the package's own official `.../jest/async-storage-mock`).
+- `jest.config.js` — `preset: 'jest-expo'`, `setupFilesAfterEnv: ['./jest.setup.ts']`, `testTimeout: 20000` (see **Timeouts** below).
+- `jest.setup.ts` — global mocks every test needs: `@expo/vector-icons` (mocked to a plain `Text`, since the real one pulls in `expo-font`/`expo-asset` native asset-loading machinery that Jest can't run), `@react-native-async-storage/async-storage` (the package's own official `.../jest/async-storage-mock`), and `react-native-safe-area-context` (its own `jest/mock`, needed because `useSafeAreaInsets()` throws without a `SafeAreaProvider` above it — the real app has one in `App.tsx`, an isolated component test does not). Note that last one requires `.default`: the mock file is an `export default`.
 
 ### Rules
 - **`render()` from `@testing-library/react-native` returns a `Promise` — always `await` it.** This is a change from the deprecated `react-test-renderer`-based API: `const result = render(...)` without `await` gives you an unresolved Promise (so `result.getByText` doesn't exist), and the `screen` singleton isn't bound until the render settles, so a synchronous `screen.getByText(...)` immediately afterward fails with "`render` function has not been called." Always write `await render(...)`.
@@ -65,6 +65,37 @@ Tests use **Jest** (`jest-expo` preset) + **React Native Testing Library** + its
 - **`AuthContext` only calls `getMe()` to re-validate a session already persisted in `AsyncStorage`** (unlike the web app, which always calls `getMe()` on mount) — tests exercising that path must seed `AsyncStorage.setItem('garagepulse_token', ...)` / `garagepulse_user` first, and `AsyncStorage.clear()` in `beforeEach` so tests don't leak state into each other.
 - Priority order for new work: hooks and context (pure logic, cheap to test), the service-layer contract for any new/changed service module, one presentational-component test for anything with real branching (like `StatusStepper`), and one fetch → render (+ primary action) test per new screen — not exhaustive coverage.
 - Prefer `getByText`/`getByPlaceholderText`/`getByRole` queries over `testID` where the element already has visible, accessible text. Add `testID` (and, where it doubles as a real accessibility improvement, `accessibilityLabel`) only for icon-only controls with no discoverable text — see the `add-customer-fab` button in `CustomersScreen.tsx`.
+- **`fireEvent` must be awaited.** Two fired back to back synchronously produce "You seem to have overlapping act() calls" and the second silently does not take effect — which looks exactly like the component ignoring the event. See `scrollToPage` in `FeatureCarousel.test.tsx`.
+- **Do not `mockRestore()` a spy on the AsyncStorage mock.** It restores a bare `jest.fn()` with no implementation, so `getItem` starts returning `undefined` and every later test in the file dies on `.then` of undefined. `jest.clearAllMocks()` does not undo a `mockReturnValue` either — it clears recorded calls and keeps the implementation, so a never-resolving stub leaks and hangs the rest of the file. Use `mockReturnValueOnce`, which self-heals because later calls fall through to the real mock (`WalkthroughGate.test.tsx`).
+- **Don't assert a virtualized list's page changed by querying slide content.** `FlatList` renders `initialNumToRender` (10) items, so every slide's text is already in the tree at index 0 and the assertion passes without anything having moved. Assert on the step indicator or the button label instead.
+
+### Timeouts — 20s, and why it is not 5s
+
+`jest.config.js` sets `testTimeout: 20000`. Jest's 5s default is a Node
+unit-test number and does not survive React Native component tests.
+
+Mounting a large screen through jest-expo costs most of a second even warm and
+idle, and that cost is dominated by first render and module resolution — both
+of which balloon under parallel load. Measured on one machine, same commit,
+`SettingsScreen.country.test.tsx`'s first test ran in **756ms, then 1134ms,
+then 3174ms**. A 4x spread on identical code. On a shared CI runner it crossed
+5s and failed the build; nothing was broken.
+
+If a test times out, check for that pattern before assuming a regression:
+
+- Is it the **first** test in its file? It pays the module-load and
+  first-render cost the rest of the file reuses.
+- Does it pass in isolation (`npx jest path/to/file`) but fail in the full
+  run? That is contention, not a bug.
+- Run it three times. A wide spread means timing; a consistent failure at the
+  same assertion means the code.
+
+20s is deliberately generous: long enough that load never fails a passing test,
+short enough that a genuine hang — an unresolved promise, a `waitFor` on
+something that never renders — still fails instead of stalling CI.
+
+`garageCrm-be` reached the same conclusion independently: `vitest.config.mts`
+runs `testTimeout: 30000`, `hookTimeout: 60000`.
 
 ### Running tests
 ```bash
@@ -88,6 +119,8 @@ npm run test:watch # watch mode while developing
 
 - [ ] No emoji anywhere — UI text, toasts, comments, or commit messages
 - [ ] No inline storage keys, external URLs, or magic numbers — import from `constants.ts`
+- [ ] A new storage key is classified SESSION (cleared on sign-out — the default) or DEVICE (deliberately survives it)
+- [ ] A new storage key is classified SESSION (cleared on sign-out, the default) or DEVICE (deliberately survives it)
 - [ ] Dependencies installed under Node 20 / npm 10 (`nvm use`) — verify with `npx -y npm@10 ci --dry-run`
 - [ ] No new component that duplicates one already in `src/components/`
 - [ ] No `console.log` statements

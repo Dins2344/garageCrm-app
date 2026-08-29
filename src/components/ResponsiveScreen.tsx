@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
+import { colors } from '../theme';
 
 // Above this width (roughly "small tablet and up" in portrait), content gets
 // capped and centered instead of stretching edge-to-edge.
@@ -24,7 +25,7 @@ interface ResponsiveScreenProps {
  * on tablet-sized viewports, instead of stretching edge-to-edge. On phones
  * this is a no-op (full width, same as before).
  */
-export default function ResponsiveScreen({ children, backgroundColor = '#fdfcfb' }: ResponsiveScreenProps) {
+export default function ResponsiveScreen({ children, backgroundColor = colors.background }: ResponsiveScreenProps) {
   const isTablet = useIsTablet();
   return (
     <View style={[styles.outer, { backgroundColor }]}>

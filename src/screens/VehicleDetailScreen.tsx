@@ -11,20 +11,21 @@ import { getVehicle, getVehicleHistory } from '../api/vehicleService';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Vehicle, JobCard, FuelType, JobStatus } from '../types/models';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'VehicleDetail'>;
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
-const FUEL_COLOR: Partial<Record<FuelType, string>> = { petrol: '#ef4444', diesel: '#3b82f6', electric: '#10b981', hybrid: '#8b5cf6' };
+const FUEL_COLOR: Partial<Record<FuelType, string>> = { petrol: colors.danger, diesel: colors.info, electric: colors.success, hybrid: palette.violet500 };
 
 const STATUS_CONFIG: Partial<Record<JobStatus, { label: string; color: string }>> = {
-  new: { label: 'New', color: '#3b82f6' },
-  estimation_sent: { label: 'Estimation Sent', color: '#f59e0b' },
-  approved: { label: 'Approved', color: '#8b5cf6' },
-  in_progress: { label: 'In Progress', color: '#ec4899' },
-  ready_for_pickup: { label: 'Ready for Pickup', color: '#10b981' },
-  delivered: { label: 'Delivered', color: '#6b7280' },
-  cancelled: { label: 'Cancelled', color: '#ef4444' },
+  new: { label: 'New', color: colors.info },
+  estimation_sent: { label: 'Estimation Sent', color: colors.warning },
+  approved: { label: 'Approved', color: palette.violet500 },
+  in_progress: { label: 'In Progress', color: palette.pink500 },
+  ready_for_pickup: { label: 'Ready for Pickup', color: colors.success },
+  delivered: { label: 'Delivered', color: colors.textMuted },
+  cancelled: { label: 'Cancelled', color: colors.danger },
 };
 
 interface InfoRowProps {
@@ -39,7 +40,7 @@ function InfoRow({ icon, label, value, valueColor }: InfoRowProps) {
   return (
     <View style={styles.infoRow}>
       <View style={styles.infoIcon}>
-        <Ionicons name={icon} size={16} color="#6b7280" />
+        <Ionicons name={icon} size={16} color={colors.textMuted} />
       </View>
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
@@ -89,7 +90,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
     return (
       <ResponsiveScreen>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3b5ff8" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading vehicle...</Text>
         </View>
       </ResponsiveScreen>
@@ -99,7 +100,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
   if (!vehicle) return null;
 
   const fuelType = (vehicle.fuelType?.toLowerCase() || 'petrol') as FuelType;
-  const fuelColor = FUEL_COLOR[fuelType] || '#6b7280';
+  const fuelColor = FUEL_COLOR[fuelType] || colors.textMuted;
   const owner = typeof vehicle.customer === 'object' ? vehicle.customer : null;
 
   return (
@@ -107,12 +108,12 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#3b5ff8" />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       {/* Hero Header */}
       <View style={styles.heroCard}>
         <View style={styles.heroIcon}>
-          <Ionicons name="car-sport" size={40} color="#3b5ff8" />
+          <Ionicons name="car-sport" size={40} color={colors.primary} />
         </View>
         <Text style={styles.heroPlate}>{vehicle.licensePlate}</Text>
         <Text style={styles.heroMakeModel}>
@@ -121,7 +122,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
         </Text>
         {vehicle.color && (
           <View style={styles.colorTag}>
-            <Ionicons name="color-palette-outline" size={13} color="#6b7280" />
+            <Ionicons name="color-palette-outline" size={13} color={colors.textMuted} />
             <Text style={styles.colorTagText}>{vehicle.color}</Text>
           </View>
         )}
@@ -162,12 +163,12 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
         <Text style={styles.sectionTitle}>Service History ({jobCards.length})</Text>
         {jobCards.length === 0 ? (
           <View style={styles.emptyHistory}>
-            <Ionicons name="clipboard-outline" size={36} color="#e5e7eb" />
+            <Ionicons name="clipboard-outline" size={36} color={colors.border} />
             <Text style={styles.emptyHistoryText}>No service records yet</Text>
           </View>
         ) : (
           jobCards.map((jc) => {
-            const statusCfg = (jc.status && STATUS_CONFIG[jc.status]) || { label: jc.status, color: '#6b7280' };
+            const statusCfg = (jc.status && STATUS_CONFIG[jc.status]) || { label: jc.status, color: colors.textMuted };
             return (
               <TouchableOpacity
                 key={jc._id}
@@ -190,7 +191,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
                       {money(jc.estimation.grandTotal)}
                     </Text>
                   ) : null}
-                  <Ionicons name="chevron-forward" size={16} color="#d1d5db" style={{ marginTop: 4 }} />
+                  <Ionicons name="chevron-forward" size={16} color={colors.borderStrong} style={{ marginTop: 4 }} />
                 </View>
               </TouchableOpacity>
             );
@@ -205,7 +206,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fdfcfb',
+    backgroundColor: colors.background,
   },
   contentContainer: {
     paddingBottom: 40,
@@ -217,22 +218,22 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
-    color: '#9ca3af',
+    color: colors.textFaint,
     fontSize: 14,
   },
   heroCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     margin: 16,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   heroIcon: {
     width: 72,
     height: 72,
-    borderRadius: 20,
-    backgroundColor: '#eff2ff',
+    borderRadius: radius.xl,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -240,12 +241,12 @@ const styles = StyleSheet.create({
   heroPlate: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
     letterSpacing: 1,
   },
   heroMakeModel: {
     fontSize: 15,
-    color: '#6b7280',
+    color: colors.textMuted,
     marginTop: 4,
   },
   colorTag: {
@@ -256,13 +257,13 @@ const styles = StyleSheet.create({
   },
   colorTagText: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textMuted,
     textTransform: 'capitalize',
   },
   fuelBadge: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 160,
+    borderRadius: radius.pill,
     marginTop: 10,
   },
   fuelText: {
@@ -270,17 +271,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     marginHorizontal: 16,
     marginBottom: 16,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     padding: 16,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   infoRow: {
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f9fafb',
+    borderBottomColor: colors.surfaceSunken,
     gap: 10,
   },
   infoIcon: {
@@ -301,13 +302,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textFaint,
     fontWeight: '500',
     marginBottom: 2,
   },
   infoValue: {
     fontSize: 15,
-    color: '#1f2937',
+    color: colors.textStrong,
     fontWeight: '500',
   },
   emptyHistory: {
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
   },
   emptyHistoryText: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textFaint,
   },
   jobCardRow: {
     flexDirection: 'row',
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.surfaceMuted,
   },
   jobCardLeft: {
     flex: 1,
@@ -334,11 +335,11 @@ const styles = StyleSheet.create({
   jobCardNumber: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#3b5ff8',
+    color: colors.primary,
   },
   jobCardDate: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textFaint,
     marginTop: 3,
   },
   jobCardRight: {
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 160,
+    borderRadius: radius.pill,
   },
   statusText: {
     fontSize: 10,
@@ -357,6 +358,6 @@ const styles = StyleSheet.create({
   jobCardAmount: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
   },
 });

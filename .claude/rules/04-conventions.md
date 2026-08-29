@@ -60,7 +60,9 @@ All app-wide constants live in `src/utils/constants.ts`.
 
 ### What Goes Here:
 - AsyncStorage keys (`TOKEN_KEY`, `USER_KEY`, `ACTIVE_GARAGE_KEY`, `WEB_BANNER_DISMISSED_KEY`)
-- `ALL_STORAGE_KEYS` — the list logout clears
+- `SESSION_STORAGE_KEYS` — the list sign-out clears (logout *and* the 401 handler)
+- `DEVICE_STORAGE_KEYS` — the list that deliberately survives sign-out
+- Walkthrough flags (`WALKTHROUGH_SEEN_KEY`, `TOUR_SEEN_USERS_KEY`, `TOUR_SEEN_USERS_LIMIT`)
 - Limits and page sizes (`DEFAULT_PAGE_SIZE`, `DROPDOWN_FETCH_LIMIT`, `VEHICLE_HISTORY_LIMIT`)
 - Branding (`APP_NAME`)
 
@@ -92,12 +94,25 @@ These were inlined 18 times across `apiInterceptor`, `AuthContext`,
 the "More on the web" banner never reappeared, and on a shared garage device
 one person dismissing it hid it from everyone who logged in afterwards.
 
-**Logout clears `ALL_STORAGE_KEYS`, not a hand-written list.** When you add a
-new key, add it to that array and sign-out cleanup is handled:
+**Sign-out clears `SESSION_STORAGE_KEYS`, not a hand-written list** — from both
+`AuthContext.logout()` and the 401 handler in `apiInterceptor.ts`. Naming keys
+by hand in either one is what let them drift; the 401 path never cleared the
+banner key, so a session that ended by expiry rather than by the Log Out button
+leaked the dismissal to the next user.
 
 ```javascript
-await AsyncStorage.multiRemove([...ALL_STORAGE_KEYS]);
+await AsyncStorage.multiRemove([...SESSION_STORAGE_KEYS]);
 ```
+
+**A new key goes in one of two lists, and SESSION is the default.**
+`DEVICE_STORAGE_KEYS` is never cleared — currently just the two walkthrough
+flags, which are device-scoped because `IdleTimer` signs people out after 10
+idle minutes and a session-scoped "already seen" flag would replay the
+first-run tour several times a day.
+
+The test: *would the next person to sign in on a shared workshop phone be
+harmed by inheriting this value?* A dismissed banner fails it. "This phone
+already played its intro" passes it. If you are unsure, it is a SESSION key.
 
 A storage key must never be defined in a component file. `AuthContext`
 importing `WEB_BANNER_DISMISSED_KEY` from `WebAppBanner` was a layering

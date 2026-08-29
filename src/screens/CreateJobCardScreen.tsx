@@ -16,7 +16,9 @@ import BottomSheetPicker from '../components/BottomSheetPicker';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer, Vehicle, User, FuelType, ServiceType, ComplaintPriority } from '../types/models';
+import { customerSchema, vehicleSchema } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'CreateJobCard'>;
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -31,7 +33,7 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 function CardTitle({ icon, children }: { icon: IconName; children: React.ReactNode }) {
   return (
     <View style={s.cardTitleRow}>
-      <Ionicons name={icon} size={16} color="#3b5ff8" />
+      <Ionicons name={icon} size={16} color={colors.primary} />
       <Text style={s.cardTitle}>{children}</Text>
     </View>
   );
@@ -93,11 +95,11 @@ function CalendarModal({ visible, selected, onSelect, onClose }: CalendarModalPr
           {/* Header */}
           <View style={cal.header}>
             <TouchableOpacity onPress={prevMonth} style={cal.navBtn}>
-              <Ionicons name="chevron-back" size={20} color="#374151" />
+              <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
             <Text style={cal.monthTitle}>{MONTHS[viewMonth]} {viewYear}</Text>
             <TouchableOpacity onPress={nextMonth} style={cal.navBtn}>
-              <Ionicons name="chevron-forward" size={20} color="#374151" />
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
           {/* Day labels */}
@@ -142,21 +144,21 @@ function CalendarModal({ visible, selected, onSelect, onClose }: CalendarModalPr
 
 const cal = StyleSheet.create({
   overlay:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
-  card:           { backgroundColor: '#fff', borderRadius: 20, padding: 20, width: 320, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  card:           { backgroundColor: colors.surface, borderRadius: radius.xl, padding: 20, width: 320, shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   navBtn:         { padding: 6 },
-  monthTitle:     { fontSize: 16, fontWeight: '700', color: '#111827' },
+  monthTitle:     { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   dayRow:         { flexDirection: 'row', marginBottom: 4 },
-  dayLabel:       { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: '#9ca3af', paddingVertical: 4 },
-  cell:           { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 16, margin: 1 },
-  cellSelected:   { backgroundColor: '#3b5ff8' },
+  dayLabel:       { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: colors.textFaint, paddingVertical: 4 },
+  cell:           { flex: 1, aspectRatio: 1, alignItems: 'center', justifyContent: 'center', borderRadius: radius.lg, margin: 1 },
+  cellSelected:   { backgroundColor: colors.primary },
   cellDisabled:   { opacity: 0.3 },
-  cellText:       { fontSize: 14, color: '#111827', fontWeight: '500' },
-  cellTextSelected: { color: '#fff', fontWeight: '700' },
-  cellTextPast:   { color: '#9ca3af' },
+  cellText:       { fontSize: 14, color: colors.textPrimary, fontWeight: '500' },
+  cellTextSelected: { color: colors.textOnPrimary, fontWeight: '700' },
+  cellTextPast:   { color: colors.textFaint },
   footer:         { marginTop: 12, alignItems: 'flex-end' },
   cancelBtn:      { paddingHorizontal: 16, paddingVertical: 8 },
-  cancelText:     { fontSize: 14, color: '#6b7280', fontWeight: '600' },
+  cancelText:     { fontSize: 14, color: colors.textMuted, fontWeight: '600' },
 });
 
 // ─── Search + Select Modal ────────────────────────────────────────────────────
@@ -180,11 +182,11 @@ function SearchModal<T extends { _id: string }>({ visible, onClose, title, items
           <View style={ms.handle} />
           <View style={ms.header}>
             <Text style={ms.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <View style={ms.searchRow}>
-            <Ionicons name="search" size={16} color="#9ca3af" />
-            <TextInput style={ms.searchInput} value={q} onChangeText={setQ} placeholder="Search..." placeholderTextColor="#9ca3af" autoFocus />
+            <Ionicons name="search" size={16} color={colors.textFaint} />
+            <TextInput style={ms.searchInput} value={q} onChangeText={setQ} placeholder="Search..." placeholderTextColor={colors.textFaint} autoFocus />
           </View>
           <ScrollView style={ms.list} keyboardShouldPersistTaps="handled">
             {filtered.slice(0, 50).map(item => (
@@ -202,15 +204,15 @@ function SearchModal<T extends { _id: string }>({ visible, onClose, title, items
 
 const ms = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  title: { fontSize: 17, fontWeight: 'bold', color: '#111827' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12, height: 44 },
-  searchInput: { flex: 1, fontSize: 15, color: '#1f2937' },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
+  title: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44 },
+  searchInput: { flex: 1, fontSize: 15, color: colors.textStrong },
   list: { paddingHorizontal: 16, paddingBottom: 32 },
-  option: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f9fafb' },
-  empty: { textAlign: 'center', color: '#9ca3af', marginTop: 32, fontSize: 14 },
+  option: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.surfaceSunken },
+  empty: { textAlign: 'center', color: colors.textFaint, marginTop: 32, fontSize: 14 },
 });
 
 // ─── Shared form field ────────────────────────────────────────────────────────
@@ -229,7 +231,7 @@ function F({ label, value, onChange, placeholder, keyboard, cap, required }: FPr
     <View style={s.field}>
       <Text style={s.label}>{label}{required ? ' *' : ''}</Text>
       <TextInput style={s.input} value={value} onChangeText={onChange} placeholder={placeholder}
-        placeholderTextColor="#9ca3af" keyboardType={keyboard || 'default'}
+        placeholderTextColor={colors.textFaint} keyboardType={keyboard || 'default'}
         autoCapitalize={cap || 'sentences'} />
     </View>
   );
@@ -244,7 +246,7 @@ interface SelectedCardProps {
   color?: string;
 }
 
-function SelectedCard({ icon, title, subtitle, onClear, color = '#3b5ff8' }: SelectedCardProps) {
+function SelectedCard({ icon, title, subtitle, onClear, color = colors.primary }: SelectedCardProps) {
   return (
     <View style={[s.selectedCard, { borderColor: `${color}30` }]}>
       <View style={[s.selectedIcon, { backgroundColor: `${color}15` }]}>
@@ -255,7 +257,7 @@ function SelectedCard({ icon, title, subtitle, onClear, color = '#3b5ff8' }: Sel
         {subtitle ? <Text style={s.selectedSub}>{subtitle}</Text> : null}
       </View>
       <TouchableOpacity onPress={onClear} style={s.clearBtn}>
-        <Ionicons name="close-circle" size={20} color="#9ca3af" />
+        <Ionicons name="close-circle" size={20} color={colors.textFaint} />
       </TouchableOpacity>
     </View>
   );
@@ -328,6 +330,9 @@ export default function CreateJobCardScreen({ navigation }: Props) {
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [odometerAtIntake, setOdometerAtIntake] = useState('');
+  // The first thing wrong with the current step, or null. Cleared whenever a
+  // step is passed, so a stale message never sits under a fixed form.
+  const [stepError, setStepError] = useState<string | null>(null);
   const [internalNotes, setInternalNotes] = useState('');
 
   useEffect(() => {
@@ -356,25 +361,66 @@ export default function CreateJobCardScreen({ navigation }: Props) {
     });
 
   const PRIORITY_OPTIONS: { value: ComplaintPriority; label: string; color: string }[] = [
-    { value: 'low',    label: 'Low',    color: '#10b981' },
-    { value: 'medium', label: 'Medium', color: '#f59e0b' },
-    { value: 'high',   label: 'High',   color: '#ef4444' },
-    { value: 'urgent', label: 'Urgent', color: '#7c3aed' },
+    { value: 'low',    label: 'Low',    color: colors.success },
+    { value: 'medium', label: 'Medium', color: colors.warning },
+    { value: 'high',   label: 'High',   color: colors.danger },
+    { value: 'urgent', label: 'Urgent', color: palette.violet600 },
   ];
 
+  // ── Step validation ──
+  //
+  // This is a wizard, not a single form: each step gates a button rather than
+  // submitting, so instead of react-hook-form it runs the same zod schemas
+  // through `safeParse`. The rules stay in `utils/validation.ts` with every
+  // other form and are not re-written by hand here.
+  //
+  // Each gate returns *why* it failed. The message renders above the button
+  // rather than as a toast: a toast about a field is gone before the user has
+  // scrolled back to it.
+
+  const step1Problem = (): string | null => {
+    if (custTab === 0) {
+      if (!selCustomer) return 'Select a customer';
+    } else {
+      const r = customerSchema(locale).safeParse({
+        name: newCustName, phone: newCustPhone, email: newCustEmail, notes: '',
+        address: { street: newCustPlace, city: newCustCity, state: '', pincode: '' },
+      });
+      if (!r.success) return r.error.issues[0].message;
+    }
+    if (vehTab === 0) {
+      if (!selVehicle) return 'Select a vehicle';
+    } else {
+      // `customer` is resolved at submit time, so satisfy it here.
+      const r = vehicleSchema.safeParse({
+        licensePlate: newPlate, make: newMake, model: newModel,
+        year: newYear, color: '', fuelType: newFuel, customer: 'pending',
+      });
+      if (!r.success) return r.error.issues[0].message;
+    }
+    return null;
+  };
+
+  const step2Problem = (): string | null => {
+    if (!advisorId) return 'Assign a service advisor';
+    if (!odometerAtIntake.trim()) return 'Enter the odometer reading at intake';
+    if (!/^\d+$/.test(odometerAtIntake.trim())) return 'Odometer must be a whole number';
+    if (!complaints.some(c => c.description.trim())) return 'Add at least one complaint';
+    return null;
+  };
+
   const handleNext = () => {
-    if (custTab === 0 && !selCustomer) { Toast.show({ type: 'error', text1: 'Please select a customer' }); return; }
-    if (custTab === 1 && (!newCustName.trim() || !newCustPhone.trim())) { Toast.show({ type: 'error', text1: 'Customer name and phone are required' }); return; }
-    if (vehTab === 0 && !selVehicle) { Toast.show({ type: 'error', text1: 'Please select a vehicle' }); return; }
-    if (vehTab === 1 && (!newPlate.trim() || !newMake.trim() || !newModel.trim())) { Toast.show({ type: 'error', text1: 'License plate, make and model are required' }); return; }
+    const problem = step1Problem();
+    if (problem) { setStepError(problem); return; }
+    setStepError(null);
     setStep(2);
   };
 
   const handleSubmit = async () => {
-    if (!advisorId) { Toast.show({ type: 'error', text1: 'Please assign a Service Advisor' }); return; }
-    if (!odometerAtIntake.trim()) { Toast.show({ type: 'error', text1: 'Please enter the odometer reading' }); return; }
+    const problem = step2Problem();
+    if (problem) { setStepError(problem); return; }
+    setStepError(null);
     const validComplaints = complaints.filter(c => c.description.trim());
-    if (validComplaints.length === 0) { Toast.show({ type: 'error', text1: 'Please add at least one complaint' }); return; }
 
     setLoading(true);
     try {
@@ -432,7 +478,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
   const header = (
     <View style={s.headerInner}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-        <Ionicons name="close" size={24} color="#111827" />
+        <Ionicons name="close" size={24} color={colors.textPrimary} />
       </TouchableOpacity>
       <Text style={s.headerTitle}>New Job Card</Text>
       <View style={{ width: 32 }} />
@@ -458,11 +504,11 @@ export default function CreateJobCardScreen({ navigation }: Props) {
             <View key={i} style={s.stepWrap}>
               <View style={[s.stepDot, step > i + 1 ? s.stepDone : step === i + 1 ? s.stepActive : s.stepPending]}>
                 {step > i + 1
-                  ? <Ionicons name="checkmark" size={13} color="#fff" />
+                  ? <Ionicons name="checkmark" size={13} color={colors.textOnPrimary} />
                   : <Text style={s.stepNum}>{i + 1}</Text>}
               </View>
-              <Text style={[s.stepLabel, step === i + 1 && { color: '#3b5ff8' }]}>{l}</Text>
-              {i === 0 && <View style={[s.stepLine, step > 1 && { backgroundColor: '#3b5ff8' }]} />}
+              <Text style={[s.stepLabel, step === i + 1 && { color: colors.primary }]}>{l}</Text>
+              {i === 0 && <View style={[s.stepLine, step > 1 && { backgroundColor: colors.primary }]} />}
             </View>
           ))}
         </View>
@@ -480,7 +526,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                     <SelectedCard icon="person" title={selCustomer.name} subtitle={selCustomer.phone} onClear={() => setSelCustomer(null)} />
                   ) : (
                     <TouchableOpacity style={s.selectBtn} onPress={() => setShowCustModal(true)}>
-                      <Ionicons name="search" size={18} color="#3b5ff8" />
+                      <Ionicons name="search" size={18} color={colors.primary} />
                       <Text style={s.selectBtnText}>Search & select customer...</Text>
                     </TouchableOpacity>
                   )
@@ -502,10 +548,10 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 
                 {vehTab === 0 ? (
                   selVehicle ? (
-                    <SelectedCard icon="car-sport" title={selVehicle.licensePlate} subtitle={`${selVehicle.make} ${selVehicle.model}`} onClear={() => setSelVehicle(null)} color="#10b981" />
+                    <SelectedCard icon="car-sport" title={selVehicle.licensePlate} subtitle={`${selVehicle.make} ${selVehicle.model}`} onClear={() => setSelVehicle(null)} color={colors.success} />
                   ) : (
                     <TouchableOpacity style={s.selectBtn} onPress={() => setShowVehModal(true)}>
-                      <Ionicons name="search" size={18} color="#3b5ff8" />
+                      <Ionicons name="search" size={18} color={colors.primary} />
                       <Text style={s.selectBtnText}>
                         {selCustomer ? `Search vehicles for ${selCustomer.name}...` : 'Search & select vehicle...'}
                       </Text>
@@ -541,9 +587,10 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                 )}
               </View>
 
+              {stepError ? <Text style={s.stepError}>{stepError}</Text> : null}
               <TouchableOpacity style={s.primaryBtn} onPress={handleNext} activeOpacity={0.85}>
                 <Text style={s.primaryBtnText}>Next: Work Details</Text>
-                <Ionicons name="arrow-forward" size={18} color="#fff" />
+                <Ionicons name="arrow-forward" size={18} color={colors.textOnPrimary} />
               </TouchableOpacity>
             </>
           ) : (
@@ -556,9 +603,9 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                   label="Service Type"
                   required
                   options={[
-                    { value: 'service', label: 'Periodic Service', icon: 'build-outline', color: '#3b5ff8' },
-                    { value: 'repair',  label: 'General Repair',   icon: 'construct-outline', color: '#f59e0b' },
-                    { value: 'accident', label: 'Accident Repair', icon: 'warning-outline', color: '#ef4444' },
+                    { value: 'service', label: 'Periodic Service', icon: 'build-outline', color: colors.primary },
+                    { value: 'repair',  label: 'General Repair',   icon: 'construct-outline', color: colors.warning },
+                    { value: 'accident', label: 'Accident Repair', icon: 'warning-outline', color: colors.danger },
                   ]}
                   selectedValue={serviceType}
                   onValueChange={v => setServiceType(v as ServiceType)}
@@ -600,7 +647,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                       keyboardType="number-pad"
                       maxLength={7}
                       placeholder="e.g. 42000"
-                      placeholderTextColor="#9ca3af"
+                      placeholderTextColor={colors.textFaint}
                     />
                   </View>
                   <View style={{ width: 12 }} />
@@ -611,15 +658,15 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                       onPress={() => setShowDatePicker(true)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="calendar-outline" size={16} color={expectedDeliveryDate ? '#1f2937' : '#9ca3af'} />
-                      <Text style={{ fontSize: 14, color: expectedDeliveryDate ? '#1f2937' : '#9ca3af', flex: 1 }}>
+                      <Ionicons name="calendar-outline" size={16} color={expectedDeliveryDate ? colors.textStrong : colors.textFaint} />
+                      <Text style={{ fontSize: 14, color: expectedDeliveryDate ? colors.textStrong : colors.textFaint, flex: 1 }}>
                         {expectedDeliveryDate
                           ? fmtDate(expectedDeliveryDate, locale, { day: '2-digit', month: 'short', year: 'numeric' })
                           : 'Select date'}
                       </Text>
                       {expectedDeliveryDate && (
                         <TouchableOpacity onPress={() => setExpectedDeliveryDate(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                          <Ionicons name="close-circle" size={16} color="#9ca3af" />
+                          <Ionicons name="close-circle" size={16} color={colors.textFaint} />
                         </TouchableOpacity>
                       )}
                     </TouchableOpacity>
@@ -640,7 +687,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                 <View style={s.complaintHeader}>
                   <CardTitle icon="alert-circle-outline">Customer Complaints *</CardTitle>
                   <TouchableOpacity style={s.addComplaintBtn} onPress={addComplaint}>
-                    <Ionicons name="add" size={16} color="#3b5ff8" />
+                    <Ionicons name="add" size={16} color={colors.primary} />
                     <Text style={s.addComplaintText}>Add</Text>
                   </TouchableOpacity>
                 </View>
@@ -665,7 +712,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                         </TouchableOpacity>
                         {complaints.length > 1 && (
                           <TouchableOpacity onPress={() => removeComplaint(i)} style={s.removeComplaintBtn}>
-                            <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                            <Ionicons name="trash-outline" size={16} color={colors.danger} />
                           </TouchableOpacity>
                         )}
                       </View>
@@ -675,7 +722,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                         onChangeText={v => updateComplaint(i, 'description', v)}
                         multiline
                         placeholder="Describe the complaint or service needed..."
-                        placeholderTextColor="#9ca3af"
+                        placeholderTextColor={colors.textFaint}
                       />
                     </View>
                   );
@@ -691,7 +738,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                   onChangeText={setInternalNotes}
                   multiline
                   placeholder="Any internal instructions or notes (not visible to customer)..."
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor={colors.textFaint}
                 />
               </View>
 
@@ -699,23 +746,24 @@ export default function CreateJobCardScreen({ navigation }: Props) {
               <View style={s.summaryCard}>
                 <Text style={s.summaryTitle}>Summary</Text>
                 <View style={s.summaryRow}>
-                  <Ionicons name="person-outline" size={15} color="#6b7280" />
+                  <Ionicons name="person-outline" size={15} color={colors.textMuted} />
                   <Text style={s.summaryText}>{custTab === 0 ? selCustomer?.name : (newCustName || '—')}</Text>
                 </View>
                 <View style={s.summaryRow}>
-                  <Ionicons name="car-outline" size={15} color="#6b7280" />
+                  <Ionicons name="car-outline" size={15} color={colors.textMuted} />
                   <Text style={s.summaryText}>{vehTab === 0 ? `${selVehicle?.licensePlate} · ${selVehicle?.make} ${selVehicle?.model}` : ((newPlate || newMake || newModel) ? `${newPlate} · ${newMake} ${newModel}` : '—')}</Text>
                 </View>
               </View>
 
+              {stepError ? <Text style={s.stepError}>{stepError}</Text> : null}
               <View style={s.btnRow}>
                 <TouchableOpacity style={s.backBtn2} onPress={() => setStep(1)}>
-                  <Ionicons name="arrow-back" size={18} color="#374151" />
+                  <Ionicons name="arrow-back" size={18} color={colors.textSecondary} />
                   <Text style={s.backBtn2Text}>Back</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.primaryBtn, { flex: 2, marginTop: 0 }, loading && { opacity: 0.65 }]}
                   onPress={handleSubmit} disabled={loading} activeOpacity={0.85}>
-                  {loading ? <ActivityIndicator color="#fff" /> : <><Ionicons name="checkmark-circle-outline" size={18} color="#fff" /><Text style={s.primaryBtnText}>Create Job Card</Text></>}
+                  {loading ? <ActivityIndicator color={colors.textOnPrimary} /> : <><Ionicons name="checkmark-circle-outline" size={18} color={colors.textOnPrimary} /><Text style={s.primaryBtnText}>Create Job Card</Text></>}
                 </TouchableOpacity>
               </View>
             </>
@@ -732,8 +780,8 @@ export default function CreateJobCardScreen({ navigation }: Props) {
           onSelect={c => { setSelCustomer(c); setSelVehicle(null); }}
           renderItem={c => (
             <>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#111827' }}>{c.name}</Text>
-              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>{c.phone}{c.email ? ` · ${c.email}` : ''}</Text>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.textPrimary }}>{c.name}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>{c.phone}{c.email ? ` · ${c.email}` : ''}</Text>
             </>
           )}
         />
@@ -746,8 +794,8 @@ export default function CreateJobCardScreen({ navigation }: Props) {
           onSelect={v => setSelVehicle(v)}
           renderItem={v => (
             <>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#111827', letterSpacing: 0.5 }}>{v.licensePlate}</Text>
-              <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary, letterSpacing: 0.5 }}>{v.licensePlate}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
                 {v.make} {v.model}{v.year ? ` (${v.year})` : ''} · {(typeof v.customer === 'object' ? v.customer?.name : '') || ''}
               </Text>
             </>
@@ -760,71 +808,72 @@ export default function CreateJobCardScreen({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
-  safeHeader: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  container: { flex: 1, backgroundColor: colors.background },
+  safeHeader: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
   headerInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14, paddingHorizontal: 16, paddingTop: 4 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: (StatusBar.currentHeight || 24) + 10, paddingBottom: 14, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: (StatusBar.currentHeight || 24) + 10, paddingBottom: 14, paddingHorizontal: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
   backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   // Steps
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 24, paddingVertical: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 24, paddingVertical: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
   stepWrap: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  stepDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
-  stepActive: { backgroundColor: '#3b5ff8' },
-  stepDone: { backgroundColor: '#10b981' },
-  stepPending: { backgroundColor: '#e5e7eb' },
-  stepNum: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  stepLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '600', marginLeft: 6, marginRight: 4, flexShrink: 1 },
-  stepLine: { flex: 1, height: 2, backgroundColor: '#e5e7eb', marginHorizontal: 4 },
+  stepDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' },
+  stepActive: { backgroundColor: colors.primary },
+  stepDone: { backgroundColor: colors.success },
+  stepPending: { backgroundColor: colors.border },
+  stepNum: { color: colors.textOnPrimary, fontSize: 12, fontWeight: 'bold' },
+  stepLabel: { fontSize: 11, color: colors.textFaint, fontWeight: '600', marginLeft: 6, marginRight: 4, flexShrink: 1 },
+  stepLine: { flex: 1, height: 2, backgroundColor: colors.border, marginHorizontal: 4 },
   // Scroll
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
   // Card
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, marginBottom: 14, shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
-  cardTitle: { fontSize: 16, fontWeight: "bold", color: "#111827" },
+  cardTitle: { fontSize: 16, fontWeight: "bold", color: colors.textPrimary },
   // Tabs
-  tabs: { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 16, padding: 3, marginBottom: 14 },
-  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 16 },
-  tabActive: { backgroundColor: '#fff', shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
-  tabText: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
-  tabTextActive: { color: '#3b5ff8' },
+  tabs: { flexDirection: 'row', backgroundColor: colors.surfaceMuted, borderRadius: radius.lg, padding: 3, marginBottom: 14 },
+  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: radius.lg },
+  tabActive: { backgroundColor: colors.surface, shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  tabText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+  tabTextActive: { color: colors.primary },
   // Select button
-  selectBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: '#3b5ff8', borderStyle: 'dashed', borderRadius: 16, padding: 14 },
-  selectBtnText: { fontSize: 14, color: '#3b5ff8', fontWeight: '500' },
+  selectBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed', borderRadius: radius.lg, padding: 14 },
+  selectBtnText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
   // Selected card
-  selectedCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: 16, padding: 12 },
-  selectedIcon: { width: 38, height: 38, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  selectedTitle: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
-  selectedSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  selectedCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderRadius: radius.lg, padding: 12 },
+  selectedIcon: { width: 38, height: 38, borderRadius: radius.lg, justifyContent: 'center', alignItems: 'center' },
+  selectedTitle: { fontSize: 15, fontWeight: 'bold', color: colors.textPrimary },
+  selectedSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   clearBtn: { padding: 4 },
   // Form
   field: { marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  input: { backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
+  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
+  stepError: { fontSize: 13, color: colors.danger, marginTop: 12, textAlign: 'center' },
 
   rowFields: { flexDirection: 'row' },
   // Date picker trigger button (looks like an input)
   dateTrigger: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 12 },
   // Summary
-  summaryCard: { backgroundColor: '#f0f9ff', borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#bae6fd' },
-  summaryTitle: { fontSize: 13, fontWeight: '700', color: '#0369a1', marginBottom: 8 },
+  summaryCard: { backgroundColor: palette.sky50, borderRadius: radius.lg, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: palette.sky100 },
+  summaryTitle: { fontSize: 13, fontWeight: '700', color: palette.sky700, marginBottom: 8 },
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  summaryText: { fontSize: 13, color: '#374151', fontWeight: '500' },
+  summaryText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
   // Buttons
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#3b5ff8', borderRadius: 16, paddingVertical: 15, marginTop: 4, shadowColor: '#3b5ff8', shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: radius.lg, paddingVertical: 15, marginTop: 4, shadowColor: colors.primary, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  primaryBtnText: { color: colors.textOnPrimary, fontSize: 16, fontWeight: 'bold' },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  backBtn2: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 15, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#f3f4f6' },
-  backBtn2Text: { fontSize: 15, fontWeight: '600', color: '#374151' },
+  backBtn2: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 15, paddingHorizontal: 16, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted },
+  backBtn2Text: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
   // Complaints
   complaintHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-  addComplaintBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#3b5ff8', borderStyle: 'dashed', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 5 },
-  addComplaintText: { fontSize: 13, color: '#3b5ff8', fontWeight: '600' },
-  complaintCard: { backgroundColor: '#fdfcfb', borderRadius: 16, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#f3f4f6' },
+  addComplaintBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: colors.primary, borderStyle: 'dashed', borderRadius: radius.lg, paddingHorizontal: 10, paddingVertical: 5 },
+  addComplaintText: { fontSize: 13, color: colors.primary, fontWeight: '600' },
+  complaintCard: { backgroundColor: colors.background, borderRadius: radius.lg, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: colors.surfaceMuted },
   complaintTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  complaintNum: { fontSize: 12, fontWeight: '700', color: '#9ca3af', minWidth: 20 },
-  priorityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  complaintNum: { fontSize: 12, fontWeight: '700', color: colors.textFaint, minWidth: 20 },
+  priorityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: radius.xs, paddingHorizontal: 8, paddingVertical: 3 },
   priorityText: { fontSize: 12, fontWeight: '700' },
   removeComplaintBtn: { marginLeft: 'auto', padding: 4 },
 });

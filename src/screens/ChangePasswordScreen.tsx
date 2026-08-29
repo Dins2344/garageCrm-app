@@ -1,33 +1,38 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import Toast from 'react-native-toast-message';
 import { changePassword } from '../api/authService';
-import { Field, PrimaryBtn } from '../components/FormControls';
+import { ControlledField, PrimaryBtn } from '../components/FormControls';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
+import { changePasswordSchema, type ChangePasswordFormValues } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
+import { colors, radius } from '../theme';
 
 type Props = RootStackScreenProps<'ChangePassword'>;
 
-export default function ChangePasswordScreen(_props: Props) {
-  const [currentPwd, setCurrentPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
-  const [saving, setSaving] = useState(false);
+const BLANK: ChangePasswordFormValues = { currentPassword: '', newPassword: '', confirmPassword: '' };
 
-  const handleSave = async () => {
-    if (!currentPwd || !newPwd || !confirmPwd) { Toast.show({ type: 'error', text1: 'Please fill all fields' }); return; }
-    if (newPwd.length < 6) { Toast.show({ type: 'error', text1: 'Password must be at least 6 characters' }); return; }
-    if (newPwd !== confirmPwd) { Toast.show({ type: 'error', text1: 'Passwords do not match' }); return; }
-    setSaving(true);
+export default function ChangePasswordScreen(_props: Props) {
+  const {
+    control, handleSubmit, reset,
+    formState: { isSubmitting },
+  } = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: BLANK,
+  });
+
+  const handleSave = async (values: ChangePasswordFormValues) => {
     try {
-      await changePassword({ currentPassword: currentPwd, newPassword: newPwd });
+      await changePassword({ currentPassword: values.currentPassword, newPassword: values.newPassword });
       Toast.show({ type: 'success', text1: 'Password changed!' });
-      setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
+      reset(BLANK);
     } catch (e) {
+      // A toast is still right here: a rejected *current* password is a server
+      // answer about the request, not a rule this form could have checked.
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to change password') });
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -36,10 +41,10 @@ export default function ChangePasswordScreen(_props: Props) {
       <ResponsiveScreen>
         <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
-            <Field label="Current Password" value={currentPwd} onChangeText={setCurrentPwd} placeholder="Current password" secureTextEntry autoCapitalize="none" />
-            <Field label="New Password" value={newPwd} onChangeText={setNewPwd} placeholder="Min. 6 characters" secureTextEntry autoCapitalize="none" />
-            <Field label="Confirm New Password" value={confirmPwd} onChangeText={setConfirmPwd} placeholder="Re-enter new password" secureTextEntry autoCapitalize="none" />
-            <PrimaryBtn label="Update Password" icon="key-outline" onPress={handleSave} loading={saving} />
+            <ControlledField control={control} name="currentPassword" label="Current Password" placeholder="Current password" secureTextEntry autoCapitalize="none" required />
+            <ControlledField control={control} name="newPassword" label="New Password" placeholder="Min. 6 characters" secureTextEntry autoCapitalize="none" required />
+            <ControlledField control={control} name="confirmPassword" label="Confirm New Password" placeholder="Re-enter new password" secureTextEntry autoCapitalize="none" required />
+            <PrimaryBtn label="Update Password" icon="key-outline" onPress={handleSubmit(handleSave)} loading={isSubmitting} />
           </View>
         </ScrollView>
       </ResponsiveScreen>
@@ -48,10 +53,10 @@ export default function ChangePasswordScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
+  container: { flex: 1, backgroundColor: colors.background },
   content: { padding: 16 },
   card: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
-    shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16,
+    shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4,
   },
 });

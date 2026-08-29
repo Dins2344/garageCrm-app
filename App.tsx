@@ -1,4 +1,5 @@
 import React from 'react';
+import UpdateGate from './src/components/UpdateGate';
 import { AuthProvider } from './src/context/AuthContext';
 import { GarageProvider } from './src/context/GarageContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -12,11 +13,16 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" />
-      <AuthProvider>
-        <GarageProvider>
-          <AppNavigator />
-        </GarageProvider>
-      </AuthProvider>
+      {/* Outermost gate on purpose — see the docblock in UpdateGate. While a
+          mandatory update is showing, nothing below here mounts: no session
+          check, no idle timer, no garage fetch. */}
+      <UpdateGate>
+        <AuthProvider>
+          <GarageProvider>
+            <AppNavigator />
+          </GarageProvider>
+        </AuthProvider>
+      </UpdateGate>
       {/* Lifted clear of the floating dock so toasts never sit behind it. */}
       <Toast position='bottom' config={toastConfig} bottomOffset={TAB_BAR_CLEARANCE} />
     </SafeAreaProvider>

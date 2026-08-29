@@ -4,7 +4,9 @@ import {
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
   KeyboardTypeOptions, ListRenderItem
 } from 'react-native';
-import BottomSheetPicker from '../components/BottomSheetPicker';
+import { useForm, useController, Controller, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ControlledPicker } from '../components/FormControls';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '../components/toastConfig';
@@ -16,32 +18,25 @@ import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScree
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
 import type { Customer, Vehicle, FuelType } from '../types/models';
+import { vehicleSchema, type VehicleFormValues, type VehicleFormOutput } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
+import { colors, palette, radius } from '../theme';
 
 type Props = MainTabScreenProps<'Vehicles'>;
 
-const FUEL_COLOR: Partial<Record<FuelType, string>> = { petrol: '#ef4444', diesel: '#3b82f6', electric: '#10b981', hybrid: '#8b5cf6', cng: '#f59e0b' };
+const FUEL_COLOR: Partial<Record<FuelType, string>> = { petrol: colors.danger, diesel: colors.info, electric: colors.success, hybrid: palette.violet500, cng: colors.warning };
 
-interface VehicleForm {
-  licensePlate: string;
-  make: string;
-  model: string;
-  year: string;
-  color: string;
-  fuelType: FuelType;
-  customer: string;
-}
-
-const BLANK: VehicleForm = { licensePlate: '', make: '', model: '', year: '', color: '', fuelType: 'petrol', customer: '' };
+const BLANK: VehicleFormValues = { licensePlate: '', make: '', model: '', year: '', color: '', fuelType: 'petrol', customer: '' };
 
 // ─── Customer Search Picker ────────────────────────────────────────────────────
 interface CustomerPickerProps {
   customers: Customer[];
   value: string;
   onChange: (id: string) => void;
+  error?: string;
 }
 
-function CustomerPicker({ customers, value, onChange }: CustomerPickerProps) {
+function CustomerPicker({ customers, value, onChange, error }: CustomerPickerProps) {
   const [query, setQuery] = useState('');
   const filtered = customers.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) || c.phone.includes(query)
@@ -51,15 +46,15 @@ function CustomerPicker({ customers, value, onChange }: CustomerPickerProps) {
   return (
     <View>
       <View style={s.searchRow}>
-        <Ionicons name="search" size={16} color="#9ca3af" style={{ marginRight: 6 }} />
+        <Ionicons name="search" size={16} color={colors.textFaint} style={{ marginRight: 6 }} />
         <TextInput style={s.searchInput} value={query} onChangeText={setQuery}
-          placeholder="Search customer by name or phone..." placeholderTextColor="#9ca3af" />
+          placeholder="Search customer by name or phone..." placeholderTextColor={colors.textFaint} />
       </View>
       <ScrollView style={s.customerList} nestedScrollEnabled>
         {filtered.slice(0, 30).map(c => (
           <TouchableOpacity key={c._id} style={[s.customerOption, value === c._id && s.customerSelected]}
             onPress={() => { onChange(c._id); setQuery(''); }}>
-            <Text style={[s.customerOptionName, value === c._id && { color: '#3b5ff8' }]}>{c.name}</Text>
+            <Text style={[s.customerOptionName, value === c._id && { color: colors.primary }]}>{c.name}</Text>
             <Text style={s.customerOptionPhone}>{c.phone}</Text>
           </TouchableOpacity>
         ))}
@@ -67,11 +62,12 @@ function CustomerPicker({ customers, value, onChange }: CustomerPickerProps) {
       </ScrollView>
       {selected && (
         <View style={s.selectedChip}>
-          <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+          <Ionicons name="checkmark-circle" size={14} color={colors.success} />
           <Text style={s.selectedChipText}>{selected.name} · {selected.phone}</Text>
-          <TouchableOpacity onPress={() => onChange('')}><Ionicons name="close-circle" size={14} color="#9ca3af" /></TouchableOpacity>
+          <TouchableOpacity onPress={() => onChange('')}><Ionicons name="close-circle" size={14} color={colors.textFaint} /></TouchableOpacity>
         </View>
       )}
+      {error ? <Text style={s.fieldError}>{error}</Text> : null}
     </View>
   );
 }
@@ -85,13 +81,15 @@ interface VehicleModalProps {
   customers: Customer[];
 }
 
-interface FProps {
+interface FProps<T extends FieldValues> {
+  control: Control<T>;
+  name: FieldPath<T>;
   label: string;
-  value: string;
-  onChange: (v: string) => void;
   placeholder?: string;
   keyboard?: KeyboardTypeOptions;
   cap?: 'none' | 'sentences' | 'words' | 'characters';
+  /** Applied to every keystroke — the plate is stored upper-case. */
+  transform?: (v: string) => string;
 }
 
 // Defined at module scope, not inside VehicleModal — a component defined
@@ -99,25 +97,37 @@ interface FProps {
 // re-render, which makes React unmount+remount its TextInput on every
 // keystroke (losing all but the first typed character). See CONTRIBUTING.md
 // Performance Conventions.
-function F({ label, value, onChange, placeholder, keyboard, cap }: FProps) {
+function F<T extends FieldValues>({ control, name, label, placeholder, keyboard, cap, transform }: FProps<T>) {
+  const { field, fieldState } = useController({ control, name });
+  const invalid = !!fieldState.error;
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
-      <TextInput style={s.input} value={value} onChangeText={onChange} placeholder={placeholder}
-        placeholderTextColor="#9ca3af" keyboardType={keyboard || 'default'}
+      <TextInput accessibilityLabel={label} style={[s.input, invalid && s.inputError]}
+        value={field.value == null ? '' : String(field.value)}
+        onChangeText={v => field.onChange(transform ? transform(v) : v)}
+        onBlur={field.onBlur} placeholder={placeholder}
+        placeholderTextColor={colors.textFaint} keyboardType={keyboard || 'default'}
         autoCapitalize={cap || 'sentences'} />
+      {invalid ? <Text style={s.fieldError}>{fieldState.error?.message}</Text> : null}
     </View>
   );
 }
 
 function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleModalProps) {
-  const [form, setForm] = useState<VehicleForm>(BLANK);
-  const [saving, setSaving] = useState(false);
-  const set = <K extends keyof VehicleForm>(k: K, v: VehicleForm[K]) => setForm(f => ({ ...f, [k]: v }));
+  // Three generics because `year` is a `z.coerce` field: the form holds the
+  // string the input produces, the handler receives the coerced number.
+  const {
+    control, handleSubmit, reset,
+    formState: { isSubmitting },
+  } = useForm<VehicleFormValues, unknown, VehicleFormOutput>({
+    resolver: zodResolver(vehicleSchema),
+    defaultValues: BLANK,
+  });
 
   useEffect(() => {
     if (visible) {
-      setForm(editing ? {
+      reset(editing ? {
         licensePlate: editing.licensePlate || '',
         make: editing.make || '',
         model: editing.model || '',
@@ -127,27 +137,25 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
         customer: (typeof editing.customer === 'object' ? editing.customer?._id : editing.customer) || '',
       } : BLANK);
     }
-  }, [visible, editing]);
+  }, [visible, editing, reset]);
 
-  const handleSave = async () => {
-    if (!form.licensePlate.trim() || !form.make.trim() || !form.model.trim()) {
-      Toast.show({ type: 'error', text1: 'License plate, make and model are required' }); return;
-    }
-    if (!form.customer) {
-      Toast.show({ type: 'error', text1: 'Please select a customer owner' }); return;
-    }
-    setSaving(true);
+  const handleSave = async (values: VehicleFormOutput) => {
     try {
       const payload: Partial<Vehicle> & { customer: string; year?: number } = {
-        ...form,
-        licensePlate: form.licensePlate.toUpperCase(),
-        year: form.year ? parseInt(form.year, 10) : undefined,
+        licensePlate: values.licensePlate.toUpperCase(),
+        make: values.make,
+        model: values.model,
+        color: values.color || '',
+        fuelType: (values.fuelType || 'petrol') as FuelType,
+        customer: values.customer,
+        // '' means "not given" — send undefined rather than 0.
+        year: values.year === '' || values.year === undefined ? undefined : Number(values.year),
       };
       await onSave(payload);
       onClose();
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to save vehicle') });
-    } finally { setSaving(false); }
+    }
   };
 
   return (
@@ -157,49 +165,55 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
           <View style={s.handle} />
           <View style={s.sheetHeader}>
             <Text style={s.sheetTitle}>{editing ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView style={s.sheetBody} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
 
             <Text style={s.sectionLabel}>Owner</Text>
-            <CustomerPicker customers={customers} value={form.customer} onChange={v => set('customer', v)} />
+            <Controller
+              control={control}
+              name="customer"
+              render={({ field, fieldState }) => (
+                <CustomerPicker customers={customers} value={field.value} onChange={field.onChange} error={fieldState.error?.message} />
+              )}
+            />
 
             <View style={s.divider} />
 
-            <F label="License Plate *" value={form.licensePlate} onChange={v => set('licensePlate', v.toUpperCase())}
-              placeholder="KA01AB1234" cap="characters" />
+            <F control={control} name="licensePlate" label="License Plate *" placeholder="KA01AB1234"
+              cap="characters" transform={v => v.toUpperCase()} />
 
             <View style={s.row}>
-              <View style={{ flex: 1 }}><F label="Make *" value={form.make} onChange={v => set('make', v)} placeholder="Honda, Maruti..." /></View>
+              <View style={{ flex: 1 }}><F control={control} name="make" label="Make *" placeholder="Honda, Maruti..." /></View>
               <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}><F label="Model *" value={form.model} onChange={v => set('model', v)} placeholder="City, Swift..." /></View>
+              <View style={{ flex: 1 }}><F control={control} name="model" label="Model *" placeholder="City, Swift..." /></View>
             </View>
 
             <View style={s.row}>
-              <View style={{ flex: 1 }}><F label="Year" value={form.year} onChange={v => set('year', v)} placeholder="2024" keyboard="numeric" cap="none" /></View>
+              <View style={{ flex: 1 }}><F control={control} name="year" label="Year" placeholder="2024" keyboard="numeric" cap="none" /></View>
               <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}><F label="Color" value={form.color} onChange={v => set('color', v)} placeholder="White, Black..." /></View>
+              <View style={{ flex: 1 }}><F control={control} name="color" label="Color" placeholder="White, Black..." /></View>
             </View>
 
-            <BottomSheetPicker
+            <ControlledPicker
+              control={control}
+              name="fuelType"
               label="Fuel Type"
               options={[
-                { value: 'petrol', label: 'Petrol', color: '#ef4444' },
-                { value: 'diesel', label: 'Diesel', color: '#3b82f6' },
-                { value: 'cng', label: 'CNG', color: '#f59e0b' },
-                { value: 'electric', label: 'Electric', color: '#10b981' },
-                { value: 'hybrid', label: 'Hybrid', color: '#8b5cf6' },
+                { value: 'petrol', label: 'Petrol', color: colors.danger },
+                { value: 'diesel', label: 'Diesel', color: colors.info },
+                { value: 'cng', label: 'CNG', color: colors.warning },
+                { value: 'electric', label: 'Electric', color: colors.success },
+                { value: 'hybrid', label: 'Hybrid', color: palette.violet500 },
               ]}
-              selectedValue={form.fuelType}
-              onValueChange={v => set('fuelType', v as FuelType)}
             />
           </ScrollView>
           <View style={s.footer}>
             <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
               <Text style={s.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Vehicle'}</Text>}
+            <TouchableOpacity style={[s.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Vehicle'}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -236,7 +250,7 @@ export default function VehiclesScreen({ navigation }: Props) {
     finally { setLoading(false); setRefreshing(false); }
   }, [search]);
 
-  useEffect(() => { setPage(1); setLoading(true); fetchVehicles(1); }, [search, activeGarageId]);
+  useEffect(() => { setPage(1); setLoading(true); fetchVehicles(1); }, [fetchVehicles, activeGarageId]);
 
   useEffect(() => {
     getCustomers({ limit: 500 }).then(r => setCustomers(r.data || [])).catch(() => {});
@@ -269,13 +283,13 @@ export default function VehiclesScreen({ navigation }: Props) {
   // on every keystroke in the search box — see CONTRIBUTING.md Performance Conventions.
   const renderItem: ListRenderItem<Vehicle> = useCallback(({ item: v }) => {
     const fuel = (v.fuelType?.toLowerCase() || 'petrol') as FuelType;
-    const fuelColor = FUEL_COLOR[fuel] || '#6b7280';
+    const fuelColor = FUEL_COLOR[fuel] || colors.textMuted;
     const owner = typeof v.customer === 'object' ? v.customer : null;
     return (
       <TouchableOpacity style={s.card} activeOpacity={0.8}
         onPress={() => navigation.navigate('VehicleDetail', { id: v._id })}>
         <View style={s.cardTop}>
-          <View style={s.vehicleIcon}><Ionicons name="car-sport-outline" size={24} color="#3b5ff8" /></View>
+          <View style={s.vehicleIcon}><Ionicons name="car-sport-outline" size={24} color={colors.primary} /></View>
           <View style={{ flex: 1 }}>
             <Text style={s.plate}>{v.licensePlate}</Text>
             <Text style={s.makeModel}>{v.make} {v.model}{v.year ? ` (${v.year})` : ''}</Text>
@@ -287,18 +301,18 @@ export default function VehiclesScreen({ navigation }: Props) {
         <View style={s.divider} />
         <View style={s.cardFooter}>
           <View style={s.metaRow}>
-            <Ionicons name="person-outline" size={13} color="#9ca3af" />
+            <Ionicons name="person-outline" size={13} color={colors.textFaint} />
             <Text style={s.metaText}>{owner?.name || 'No owner'}</Text>
           </View>
-          {v.color && <View style={s.metaRow}><Ionicons name="color-palette-outline" size={13} color="#9ca3af" /><Text style={s.metaText}>{v.color}</Text></View>}
+          {v.color && <View style={s.metaRow}><Ionicons name="color-palette-outline" size={13} color={colors.textFaint} /><Text style={s.metaText}>{v.color}</Text></View>}
           {canManage && (
             <View style={s.actionGroup}>
               <TouchableOpacity style={s.actionBtn} onPress={() => { setEditing(v); setModalVisible(true); }}>
-                <Ionicons name="pencil-outline" size={15} color="#3b5ff8" />
+                <Ionicons name="pencil-outline" size={15} color={colors.primary} />
               </TouchableOpacity>
               {canDelete && (
-                <TouchableOpacity style={[s.actionBtn, { backgroundColor: '#fee2e2' }]} onPress={() => handleDelete(v)}>
-                  <Ionicons name="trash-outline" size={15} color="#ef4444" />
+                <TouchableOpacity style={[s.actionBtn, { backgroundColor: palette.red100 }]} onPress={() => handleDelete(v)}>
+                  <Ionicons name="trash-outline" size={15} color={colors.danger} />
                 </TouchableOpacity>
               )}
             </View>
@@ -315,14 +329,14 @@ export default function VehiclesScreen({ navigation }: Props) {
     <ResponsiveScreen>
     <View style={s.container}>
       <View style={s.searchBox}>
-        <Ionicons name="search" size={20} color="#9ca3af" style={{ marginRight: 8 }} />
+        <Ionicons name="search" size={20} color={colors.textFaint} style={{ marginRight: 8 }} />
         <TextInput style={s.searchInput2} placeholder="Search plate, make or model..." value={search}
-          onChangeText={setSearch} placeholderTextColor="#9ca3af" />
-        {search ? <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={18} color="#9ca3af" /></TouchableOpacity> : null}
+          onChangeText={setSearch} placeholderTextColor={colors.textFaint} />
+        {search ? <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={18} color={colors.textFaint} /></TouchableOpacity> : null}
       </View>
 
       {loading ? (
-        <View style={s.loading}><ActivityIndicator size="large" color="#3b5ff8" /></View>
+        <View style={s.loading}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <FlatList data={vehicles} keyExtractor={keyExtractor} renderItem={renderItem}
           contentContainerStyle={s.list} refreshing={refreshing}
@@ -331,7 +345,7 @@ export default function VehiclesScreen({ navigation }: Props) {
           onEndReachedThreshold={0.5}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Ionicons name="car-outline" size={52} color="#e5e7eb" />
+              <Ionicons name="car-outline" size={52} color={colors.border} />
               <Text style={s.emptyTitle}>No Vehicles Found</Text>
               <Text style={s.emptySub}>{search ? 'Try a different search' : 'Add your first vehicle'}</Text>
             </View>
@@ -341,7 +355,7 @@ export default function VehiclesScreen({ navigation }: Props) {
 
       {canManage && (
         <TouchableOpacity style={s.fab} onPress={() => { setEditing(null); setModalVisible(true); }}>
-          <Ionicons name="add" size={28} color="#fff" />
+          <Ionicons name="add" size={28} color={colors.textOnPrimary} />
         </TouchableOpacity>
       )}
 
@@ -353,55 +367,57 @@ export default function VehiclesScreen({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 16, marginBottom: 8, borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12 },
-  searchInput2: { flex: 1, height: 44, fontSize: 15, color: '#1f2937' },
+  container: { flex: 1, backgroundColor: colors.background },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, margin: 16, marginBottom: 8, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: 12 },
+  searchInput2: { flex: 1, height: 44, fontSize: 15, color: colors.textStrong },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: TAB_BAR_CLEARANCE + 20 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, marginBottom: 10, shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  vehicleIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
-  plate: { fontSize: 17, fontWeight: 'bold', color: '#111827', letterSpacing: 0.5 },
-  makeModel: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  fuelBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 160 },
+  vehicleIcon: { width: 44, height: 44, borderRadius: radius.lg, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center' },
+  plate: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary, letterSpacing: 0.5 },
+  makeModel: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  fuelBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill },
   fuelText: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize' },
-  divider: { height: 1, backgroundColor: '#f3f4f6', marginBottom: 10 },
+  divider: { height: 1, backgroundColor: colors.surfaceMuted, marginBottom: 10 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12, color: '#6b7280' },
+  metaText: { fontSize: 12, color: colors.textMuted },
   actionGroup: { flexDirection: 'row', gap: 6, marginLeft: 'auto' },
-  actionBtn: { width: 30, height: 30, borderRadius: 16, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
+  actionBtn: { width: 30, height: 30, borderRadius: radius.lg, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { alignItems: 'center', marginTop: 60, gap: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: 'bold', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9ca3af' },
-  fab: { position: 'absolute', bottom: TAB_BAR_CLEARANCE, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#3b5ff8', justifyContent: 'center', alignItems: 'center', shadowColor: '#3b5ff8', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  emptyTitle: { fontSize: 17, fontWeight: 'bold', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textFaint },
+  fab: { position: 'absolute', bottom: TAB_BAR_CLEARANCE, right: 24, width: 56, height: 56, borderRadius: radius.xxl, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   // Modal
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
+  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   sheetBody: { padding: 20 },
-  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 8 },
+  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 8 },
   field: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  input: { backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
+  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
+  inputError: { borderColor: colors.danger },
+  fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
 
   row: { flexDirection: 'row' },
-  cancelBtn: { flex: 1, padding: 14, borderRadius: 16, backgroundColor: '#f3f4f6', alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
-  saveBtn: { flex: 1.5, padding: 14, borderRadius: 16, backgroundColor: '#3b5ff8', alignItems: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
+  cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
+  cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
+  saveBtn: { flex: 1.5, padding: 14, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center' },
+  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: colors.textOnPrimary },
   // Customer picker
-  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 10, height: 42, marginBottom: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: '#1f2937' },
-  customerList: { maxHeight: 160, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, marginBottom: 8 },
-  customerOption: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  customerSelected: { backgroundColor: '#eff2ff' },
-  customerOptionName: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  customerOptionPhone: { fontSize: 12, color: '#6b7280' },
-  noCustomer: { padding: 12, textAlign: 'center', color: '#9ca3af', fontSize: 13 },
-  selectedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 6 },
-  selectedChipText: { flex: 1, fontSize: 13, color: '#166534', fontWeight: '500' },
+  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 10, height: 42, marginBottom: 8 },
+  searchInput: { flex: 1, fontSize: 14, color: colors.textStrong },
+  customerList: { maxHeight: 160, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, marginBottom: 8 },
+  customerOption: { padding: 10, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
+  customerSelected: { backgroundColor: colors.primarySoft },
+  customerOptionName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  customerOptionPhone: { fontSize: 12, color: colors.textMuted },
+  noCustomer: { padding: 12, textAlign: 'center', color: colors.textFaint, fontSize: 13 },
+  selectedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: palette.green50, borderWidth: 1, borderColor: palette.green200, borderRadius: radius.lg, paddingHorizontal: 10, paddingVertical: 6 },
+  selectedChipText: { flex: 1, fontSize: 13, color: palette.emerald700, fontWeight: '500' },
 });

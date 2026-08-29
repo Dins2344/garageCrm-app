@@ -6,6 +6,7 @@ import { useAuth } from './AuthContext';
 import { DEFAULT_LOCALE } from '../utils/locale';
 import { ACTIVE_GARAGE_KEY } from '../utils/constants';
 import type { Garage, ResolvedLocale } from '../types/models';
+import { colors } from '../theme';
 
 
 // Minimum time the "switching branch" overlay stays up, so screens that
@@ -134,7 +135,7 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       {children}
       {switching && (
         <View style={styles.overlay} pointerEvents="auto">
-          <ActivityIndicator size="large" color="#ffffff" />
+          <ActivityIndicator size="large" color={colors.textOnPrimary} />
           <Text style={styles.overlayText}>Switching branch…</Text>
         </View>
       )}
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
   },
   overlayText: {
     marginTop: 12,
-    color: '#ffffff',
+    color: colors.textOnPrimary,
     fontSize: 15,
     fontWeight: '600',
   },

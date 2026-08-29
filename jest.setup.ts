@@ -14,3 +14,14 @@ jest.mock('@expo/vector-icons', () => {
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
+
+// `useSafeAreaInsets` throws "No safe area value available" unless a
+// SafeAreaProvider is above it. The real app has one in App.tsx, but a test
+// mounting a component in isolation does not — so use the package's own mock,
+// which supplies zero insets and a plausible frame. Registered globally rather
+// than per-file so any component that starts respecting insets keeps working.
+// `.default` because that file is `export default { ... }`, so the require
+// returns the module namespace rather than the mock itself.
+jest.mock('react-native-safe-area-context', () =>
+  require('react-native-safe-area-context/jest/mock').default
+);

@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { openWebApp } from '../utils/webApp';
-// The key lives in utils/constants.ts, not here: logout clears every key from
-// ALL_STORAGE_KEYS, and AuthContext importing a storage key from a component
-// was a layering inversion waiting to be missed.
+// The key lives in utils/constants.ts, not here: sign-out clears every key in
+// SESSION_STORAGE_KEYS, and AuthContext importing a storage key from a
+// component was a layering inversion waiting to be missed.
 import { WEB_BANNER_DISMISSED_KEY } from '../utils/constants';
+import { colors, palette, radius } from '../theme';
 
 
 /**
@@ -33,13 +34,13 @@ export default function WebAppBanner() {
     <View style={s.banner} testID="web-app-banner">
       <TouchableOpacity style={s.content} onPress={openWebApp} activeOpacity={0.8}>
         <View style={s.iconWrap}>
-          <Ionicons name="globe-outline" size={20} color="#3b5ff8" />
+          <Ionicons name="globe-outline" size={20} color={colors.primary} />
         </View>
         <View style={s.textWrap}>
           <Text style={s.title}>More on the web</Text>
           <Text style={s.subtitle}>Reports, bulk actions & more</Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+        <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
       </TouchableOpacity>
       <TouchableOpacity
         onPress={handleDismiss}
@@ -48,7 +49,7 @@ export default function WebAppBanner() {
         testID="web-app-banner-dismiss"
         accessibilityLabel="Dismiss"
       >
-        <Ionicons name="close" size={18} color="#9ca3af" />
+        <Ionicons name="close" size={18} color={colors.textFaint} />
       </TouchableOpacity>
     </View>
   );
@@ -58,10 +59,10 @@ const s = StyleSheet.create({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#eff6ff',
-    borderRadius: 16,
+    backgroundColor: colors.infoSoft,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: palette.blue200,
     marginBottom: 16,
     paddingRight: 8,
   },
@@ -75,8 +76,8 @@ const s = StyleSheet.create({
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 12,
-    backgroundColor: '#dbeafe',
+    borderRadius: radius.md,
+    backgroundColor: palette.blue100,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -86,11 +87,11 @@ const s = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1e3a8a',
+    color: palette.blue900,
   },
   subtitle: {
     fontSize: 12,
-    color: '#3b5ff8',
+    color: colors.primary,
     marginTop: 1,
   },
   closeBtn: {

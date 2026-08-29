@@ -20,23 +20,51 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
-    padding: 16,
+    backgroundColor: colors.background,
+    padding: spacing.lg,
   },
   title: {
-    fontSize: 24,
+    fontSize: type.display,
     fontWeight: 'bold',
-    color: '#111827',
+    color: colors.textPrimary,
   },
 });
 
-// Wrong — inline styles
+// Wrong — inline styles, and hex literals
 <View style={{ flex: 1, padding: 16, backgroundColor: '#f9fafb' }}>
 ```
 
-### Color Palette (Must Match Web App)
+### Colours come from `src/theme.ts` — never a hex literal
 
-Use these exact hex values to maintain visual consistency with the web frontend:
+```javascript
+import { colors, radius, spacing, elevation } from '../theme';
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...elevation.card,
+  },
+  title: { fontSize: type.title, fontWeight: 'bold', color: colors.textPrimary },
+});
+```
+
+There are **zero** hex literals left outside `theme.ts`; keep it that way. Use
+`colors.*` (what a thing is *for*) and reach into `palette.*` only for a
+genuine one-off.
+
+Two pairs that are easy to get wrong:
+
+- **`colors.border` is a divider. `colors.borderStrong` is a control edge.**
+  An input or outlined button bordered with `border` sits at about 1.2:1
+  against its ground — invisible. Anything operable uses `borderStrong`.
+- **`colors.primary` (blue) is the in-app primary action. `colors.accent`
+  (orange) is the one action that completes a flow.** At most one `accent` per
+  screen or it stops meaning anything.
+
+The reference values below are what the tokens resolve to. They are documented
+for cross-repo comparison, not for copying into a StyleSheet:
 
 | Token              | Hex        | Usage                          |
 | ------------------ | ---------- | ------------------------------ |
@@ -54,37 +82,28 @@ Use these exact hex values to maintain visual consistency with the web frontend:
 | **Info**           | `#3b82f6`  | Informational states           |
 | **Purple Accent**  | `#8b5cf6`  | Charts, secondary accent       |
 
-```javascript
-// Use consistent color values
-<View style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}>
-
-// Don't use random colors
-<View style={{ backgroundColor: 'dodgerblue' }}>
-```
-
-> **Future:** Consider extracting these into a shared `theme.ts` constants file.
+> Extracted into `src/theme.ts`. The app moved onto the shared bone/ink ramp
+> afterwards, so several rows above describe the *web* palette rather than
+> what mobile renders today — `theme.ts` is the source of truth for mobile.
 
 ### Standard Component Styles
 
 ```javascript
-// Card pattern
+// Card pattern — elevation.card carries both the iOS shadow* props and the
+// Android elevation, so spreading it covers both platforms.
 card: {
-  backgroundColor: '#fff',
-  borderRadius: 12,
-  padding: 16,
-  marginBottom: 16,
-  shadowColor: '#000',
-  shadowOpacity: 0.05,
-  shadowRadius: 5,
-  shadowOffset: { width: 0, height: 2 },
-  elevation: 2,                    // Android shadow
+  backgroundColor: colors.surface,
+  borderRadius: radius.lg,
+  padding: spacing.lg,
+  marginBottom: spacing.lg,
+  ...elevation.card,
 },
 
 // Screen container
 container: {
   flex: 1,
-  backgroundColor: '#f9fafb',
-  padding: 16,
+  backgroundColor: colors.background,
+  padding: spacing.lg,
 },
 
 // Loading container
@@ -96,10 +115,10 @@ loadingContainer: {
 
 // Section title
 sectionTitle: {
-  fontSize: 18,
+  fontSize: type.title,
   fontWeight: 'bold',
-  color: '#111827',
-  marginBottom: 16,
+  color: colors.textPrimary,
+  marginBottom: spacing.lg,
 },
 ```
 
@@ -107,23 +126,23 @@ sectionTitle: {
 
 | Usage              | Value   |
 | ------------------ | ------- |
-| Screen padding     | `16`    |
-| Card padding       | `16`    |
-| Card border radius | `12`    |
-| Card margin bottom | `16`    |
-| Section gap        | `20`    |
-| Element spacing    | `8–12`  |
+| Screen padding     | `spacing.lg` (16) |
+| Card padding       | `spacing.lg` (16) |
+| Card border radius | `radius.lg` (10)  |
+| Card margin bottom | `spacing.lg` (16) |
+| Section gap        | `spacing.xl` (20) |
+| Element spacing    | `spacing.sm`–`md` |
 
 ### Typography Standards
 
-| Element            | Font Size | Weight   | Color     |
-| ------------------ | --------- | -------- | --------- |
-| Screen title       | `24`      | `bold`   | `#111827` |
-| Section title      | `18`      | `bold`   | `#111827` |
-| Stat value         | `20`      | `bold`   | `#1f2937` |
-| Body text          | `15`      | `normal` | `#4b5563` |
-| Label text         | `13`      | `500`    | `#6b7280` |
-| Caption/muted      | `12`      | `normal` | `#9ca3af` |
+| Element            | Size              | Weight   | Colour                 |
+| ------------------ | ----------------- | -------- | ---------------------- |
+| Screen title       | `type.display`    | `bold`   | `colors.textPrimary`   |
+| Section title      | `type.title`      | `bold`   | `colors.textPrimary`   |
+| Stat value         | `type.heading`    | `bold`   | `colors.textStrong`    |
+| Body text          | `type.bodyLarge`  | `normal` | `colors.textSecondary` |
+| Label text         | `type.label`      | `500`    | `colors.textMuted`     |
+| Caption/muted      | `type.small`      | `normal` | `colors.textFaint`     |
 
 ---
 

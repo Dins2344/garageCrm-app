@@ -31,6 +31,37 @@ and this app must tolerate fields it does not know about.
 6. **Install dependencies under Node 20 / npm 10** — a lock file from a newer
    npm fails CI's `npm ci`.
 
+## Everything visual comes from `src/theme.ts`
+
+There are **zero hex literals outside that file**. Colour, radius, spacing,
+type scale and elevation are all tokens:
+
+```javascript
+import { colors, radius, spacing, type, elevation } from '../theme';
+```
+
+The app runs the same **Service Counter** palette as the web client — warm
+bone grounds, ink for dark bands — but deliberately keeps a small corner
+radius (`radius.lg` = 10) and real Android elevation, where web is square and
+flat. Zero radius reads as deliberate on a web page and as unfinished against
+Material's conventions.
+
+Three things that bite:
+
+1. **`colors.border` divides; `colors.borderStrong` is a control edge.** An
+   input bordered with `border` sits at ~1.2:1 against its ground — invisible.
+   Anything operable uses `borderStrong`.
+2. **`colors.primary` (blue) is the in-app action; `colors.accent` (orange) is
+   the one action that completes a flow.** One `accent` per screen, at most.
+3. **Spread `elevation.card`, don't hand-write shadows.** iOS reads the
+   `shadow*` props and Android reads `elevation`; the preset carries both, and
+   a hand-written shadow usually forgets the Android half.
+
+The theme was extracted from 908 inlined literals in a refactor proved
+value-for-value against a snapshot, *then* the values were changed. Keeping
+those two steps apart is what made a 21-screen restyle one readable diff — do
+the same for the next one.
+
 ## Layering
 
 Screens own data fetching and local state, and define `StyleSheet.create()` at
@@ -46,23 +77,131 @@ navigation hooks. API modules in `src/api/` never touch UI state or toasts.
 | Primary action button | `PrimaryBtn` from `FormControls` |
 | Screen wrapper / max width | `ResponsiveScreen` |
 | Job status progression | `StatusStepper` |
+| Feature tour / swipeable slides | `FeatureCarousel` (content in `tourSlides.ts`) |
 | Toast styling | `toastConfig` |
 
 Use it → extend it with a prop → only then build new.
 
-## Storage keys
+## Storage keys — two categories, and picking wrong is silent
 
 ```javascript
-import { TOKEN_KEY, ALL_STORAGE_KEYS } from '../utils/constants';
+import { TOKEN_KEY, SESSION_STORAGE_KEYS } from '../utils/constants';
 await AsyncStorage.getItem(TOKEN_KEY);
-await AsyncStorage.multiRemove([...ALL_STORAGE_KEYS]);   // logout
+await AsyncStorage.multiRemove([...SESSION_STORAGE_KEYS]);   // logout, and the 401 handler
 ```
 
 They were inlined 18 times once, which is how the "More on the web" banner key
 got left out of logout — the banner never reappeared, and on a shared garage
-device one person's dismissal hid it from everyone after them. Logout clears
-`ALL_STORAGE_KEYS` as a list, so a new key is handled by being declared there.
-A storage key must never live in a component file.
+device one person's dismissal hid it from everyone after them. A storage key
+must never live in a component file.
+
+Every key goes in exactly one of two lists, and which one is a product decision:
+
+- **`SESSION_STORAGE_KEYS`** — cleared on sign-out, by both
+  `AuthContext.logout()` and the 401 handler in `api/apiInterceptor.ts`.
+  **This is the default.**
+- **`DEVICE_STORAGE_KEYS`** — never cleared. Currently only the two walkthrough
+  flags. They are device-scoped because `IdleTimer` signs people out after 10
+  idle minutes; a workshop phone does that several times a day, so a
+  session-scoped "already seen" flag would replay the first-run tour constantly.
+
+**The test: would the next person to sign in on a shared workshop phone be
+harmed by inheriting this value?** A dismissed banner fails that test. "This
+phone already played its intro" passes it. If you are unsure, it is a SESSION
+key. `TOUR_SEEN_USERS_KEY` holds a list of user ids precisely so "once per
+person" survives while the storage itself stays install-scoped.
+
+`ALL_STORAGE_KEYS` was deleted rather than redefined as the union of the two —
+a plausible name sitting beside the correct one is how the banner bug comes
+back. Both directions are pinned by tests in `AuthContext.test.tsx`.
+
+## The update gate can hide the whole app
+
+`UpdateGate` in `App.tsx` wraps `AuthProvider` — further out than
+`WalkthroughGate` — and asks `GET /meta/app-update` whether this build should
+update, and whether it must.
+
+**Everything about it is shaped by one fact: a server-driven block cannot be
+undone remotely, because the devices it blocked are the ones that would need to
+receive the fix.** So:
+
+- **The blocking path is a conjunction of explicit positive checks; every other
+  path lets the user through.** A rejection, timeout, non-2xx, 429, malformed
+  body, or `updateRequired` arriving as the string `"true"` all resolve to
+  `clear`.
+- **The gate never withholds the app for longer than `UPDATE_GATE_HOLD_MS`.**
+  `WalkthroughGate` may hold indefinitely because it waits on AsyncStorage,
+  which cannot hang on a network. This waits on a network, and an unbounded
+  hold is a permanent brick on exactly the connections nobody tests on.
+- **The version comparison is the server's job**, because anything shipped into
+  a binary is frozen forever (see `backend/CLAUDE.md` non-negotiable #2). The
+  app keeps only two rules, and both can *only* unblock: it ignores a required
+  verdict naming the version it is already running, and it ignores a response
+  whose echoed `receivedVersion` is not what it sent.
+- **A resume while blocked forces a re-check**, ignoring the throttle. That is
+  how an admin's rollback reaches a stuck device without a cold start.
+- **The Play Store link is a compiled-in constant, never the server's
+  `storeUrl`.** It is the escape hatch when a bad policy has blocked the app, so
+  it must not come from the document that did the blocking.
+
+`expo-constants` is a **direct** dependency for `APP_VERSION` — it also resolves
+transitively under `expo/node_modules`, which Metro finds and `tsc` does not.
+
+**Bump `latestVersion` in the admin console only after the build is live on
+Play**, and never set `minSupportedVersion` above a version the store can
+actually supply.
+
+## Forms — react-hook-form + zod, and `useController` is not optional
+
+Every form is `useForm` + `zodResolver`, and **every rule lives in
+`src/utils/validation.ts`** — a mirror of the web client's copy. Do not write a
+validation rule in a screen.
+
+**`register()` does not work here.** It binds by attaching a DOM ref and
+listening for native `change`/`blur` events, and a `TextInput` has neither.
+Spreading `register('name')` onto one typechecks, renders, and then silently
+never sees a keystroke — the form validates nothing and submits empty. Every
+field binds through `useController` instead:
+
+```jsx
+const { control, handleSubmit, formState: { isSubmitting } } =
+  useForm<CustomerFormValues>({ resolver: zodResolver(customerSchema(locale)) });
+
+<ControlledField control={control} name="name" label="Full Name" required />
+<ControlledPicker control={control} name="role" label="Role" options={...} />
+<PrimaryBtn onPress={handleSubmit(onValid)} loading={isSubmitting} ... />
+```
+
+`ControlledField` and `ControlledPicker` in `components/FormControls` are the
+shared bindings. A screen with its own local `F`/`Field` (Customers, Staff,
+Vehicles, Login) does the same `useController` call inline — keep those at
+module scope, or the remount-per-keystroke bug returns.
+
+Four settled points:
+
+1. **The schemas mirror the backend's Mongoose validators deliberately.** A
+   client rule stricter than the server rejects data the API would accept; a
+   looser one hands the user a server error after a round trip. Each odd rule
+   names the backend file it came from — the email regex really does reject
+   `.info`, because `models/User.ts` does.
+2. **Optional means "blank is fine", never "anything goes".** Everything
+   optional goes through `optionalOf()`, so an empty field passes but a filled
+   one is held to the full rule.
+3. **No `Toast.show({ type: 'error', text1: 'Name is required' })`.** A toast
+   cannot point at a field and is gone before the user scrolls to it. Errors
+   render under the input. A toast is still right for a *server* answer — a
+   rejected password, a duplicate email — which no client rule could check.
+4. **Where a gate is not a form** — the job-card wizard's Next button, the
+   estimation editor's Save — it still runs the schema via `safeParse` and
+   shows *why* it is blocked next to the button.
+
+`useWatch`, not the `watch()` returned by `useForm`: this repo's lint
+(`react-hooks/incompatible-library`) rejects `watch()` as unmemoizable.
+
+Every form input carries `accessibilityLabel={label}`. RN does not associate a
+`<Text>` label with an input, so without it a screen reader announces an
+unlabelled edit box — and tests are pushed onto the placeholder, which follows
+the garage's country and changes per tenant.
 
 ## Locale
 
@@ -94,6 +233,8 @@ matching PR there.
 | `src/utils/format.ts` | `src/utils/format.ts` |
 | `src/utils/locale.ts` | `src/utils/locale.ts` |
 | `src/utils/format.test.ts` | `src/utils/format.test.ts` |
+| `src/utils/validation.ts` | `src/utils/validation.ts` |
+| `src/utils/validation.test.ts` | `src/utils/validation.test.ts` |
 | `src/hooks/useCountries.ts` | `src/hooks/useCountries.ts` |
 | `src/utils/constants.ts` (the `garagepulse_*` key strings only) | `src/utils/constants.ts` |
 | `.claude/rules/00-shared-*.md` | `.claude/rules/00-shared-*.md` |

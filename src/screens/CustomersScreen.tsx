@@ -5,7 +5,10 @@ import {
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
   KeyboardTypeOptions, ListRenderItem
 } from 'react-native';
+import { useForm, useController, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../api/customerService';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from '../components/toastConfig';
@@ -13,48 +16,52 @@ import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
-import type { Customer, Address } from '../types/models';
+import type { Customer } from '../types/models';
+import { customerSchema, type CustomerFormValues } from '../utils/validation';
 import { getErrorMessage } from '../utils/errors';
+import { colors, palette, radius } from '../theme';
 
 type Props = RootStackScreenProps<'Customers'>;
 
-interface CustomerForm {
-  name: string;
-  phone: string;
-  email: string;
-  notes: string;
-  address: Address;
-}
+const BLANK: CustomerFormValues = { name: '', phone: '', email: '', notes: '', address: { street: '', city: '', state: '', pincode: '' } };
 
-const BLANK: CustomerForm = { name: '', phone: '', email: '', notes: '', address: { street: '', city: '', state: '', pincode: '' } };
-
-interface FProps {
+interface FProps<T extends FieldValues> {
+  control: Control<T>;
+  name: FieldPath<T>;
   label: string;
-  value: string;
-  onChange: (v: string) => void;
   placeholder?: string;
   keyboard?: KeyboardTypeOptions;
   cap?: 'none' | 'sentences' | 'words' | 'characters';
   multiline?: boolean;
 }
 
-// Defined at module scope, not inside CustomerModal — a component defined
-// inside another component's render body gets a new type identity on every
-// re-render, which makes React unmount+remount its TextInput on every
-// keystroke (losing all but the first typed character). See CONTRIBUTING.md
-// Performance Conventions.
-function F({ label, value, onChange, placeholder, keyboard, cap, multiline }: FProps) {
+// Two things about this component are load-bearing:
+//
+// 1. It is at module scope, not inside CustomerModal. A component defined in
+//    another component's render body gets a new type identity every re-render,
+//    so React unmounts and remounts its TextInput on every keystroke — losing
+//    all but the first character typed.
+// 2. It binds through `useController`, not `register`. A TextInput has no DOM
+//    ref and emits no native change event, so `register` typechecks here and
+//    then never sees a keystroke. Same reason as ControlledField in
+//    components/FormControls.tsx.
+function F<T extends FieldValues>({ control, name, label, placeholder, keyboard, cap, multiline }: FProps<T>) {
+  const { field, fieldState } = useController({ control, name });
+  const value = field.value == null ? '' : String(field.value);
+  const invalid = !!fieldState.error;
   return (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
       {multiline ? (
-        <TextInput style={[s.input, { height: 72, textAlignVertical: 'top' }]} value={value} onChangeText={onChange}
-          placeholder={placeholder} placeholderTextColor="#9ca3af" multiline />
+        <TextInput accessibilityLabel={label} style={[s.input, invalid && s.inputError, { height: 72, textAlignVertical: 'top' }]} value={value}
+          onChangeText={field.onChange} onBlur={field.onBlur}
+          placeholder={placeholder} placeholderTextColor={colors.textFaint} multiline />
       ) : (
-        <TextInput style={s.input} value={value} onChangeText={onChange} placeholder={placeholder}
-          placeholderTextColor="#9ca3af" keyboardType={keyboard || 'default'}
+        <TextInput accessibilityLabel={label} style={[s.input, invalid && s.inputError]} value={value} onChangeText={field.onChange} onBlur={field.onBlur}
+          placeholder={placeholder} placeholderTextColor={colors.textFaint} keyboardType={keyboard || 'default'}
           autoCapitalize={cap || 'sentences'} />
       )}
+      {invalid ? <Text style={s.fieldError}>{fieldState.error?.message}</Text> : null}
     </View>
   );
 }
@@ -62,37 +69,43 @@ function F({ label, value, onChange, placeholder, keyboard, cap, multiline }: FP
 interface CustomerModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (form: CustomerForm) => Promise<void>;
+  onSave: (form: CustomerFormValues) => Promise<void>;
   editing: Customer | null;
 }
 
 function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps) {
-  const [form, setForm] = useState<CustomerForm>(BLANK);
-  const [saving, setSaving] = useState(false);
-  const set = (k: keyof Omit<CustomerForm, 'address'>, v: string) => setForm(f => ({ ...f, [k]: v }));
-  const setAddr = (k: keyof Address, v: string) => setForm(f => ({ ...f, address: { ...f.address, [k]: v } }));
+  // The postal rule follows the garage's country, so the schema is built from
+  // the live locale rather than a fixed one — a UK garage must be able to
+  // enter "SW1A 1AA".
+  const { locale } = useGarage();
+  const {
+    control, handleSubmit, reset,
+    formState: { isSubmitting },
+  } = useForm<CustomerFormValues>({
+    resolver: zodResolver(customerSchema(locale)),
+    defaultValues: BLANK,
+  });
 
   useEffect(() => {
     if (visible) {
-      setForm(editing ? {
+      reset(editing ? {
         name: editing.name || '', phone: editing.phone || '', email: editing.email || '',
         notes: editing.notes || '',
-        address: editing.address || { street: '', city: '', state: '', pincode: '' }
+        address: {
+          street: editing.address?.street || '', city: editing.address?.city || '',
+          state: editing.address?.state || '', pincode: editing.address?.pincode || '',
+        },
       } : BLANK);
     }
-  }, [visible, editing]);
+  }, [visible, editing, reset]);
 
-  const handleSave = async () => {
-    if (!form.name.trim() || !form.phone.trim()) {
-      Toast.show({ type: 'error', text1: 'Name and phone are required' }); return;
-    }
-    setSaving(true);
+  const handleSave = async (values: CustomerFormValues) => {
     try {
-      await onSave(form);
+      await onSave(values);
       onClose();
     } catch (e) {
       Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to save customer') });
-    } finally { setSaving(false); }
+    }
   };
 
   return (
@@ -102,25 +115,30 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
           <View style={s.handle} />
           <View style={s.sheetHeader}>
             <Text style={s.sheetTitle}>{editing ? 'Edit Customer' : 'Add Customer'}</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color="#6b7280" /></TouchableOpacity>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
           </View>
           <ScrollView style={s.sheetBody} keyboardShouldPersistTaps="handled">
-            <F label="Full Name *" value={form.name} onChange={v => set('name', v)} placeholder="John Doe" />
-            <F label="Phone Number *" value={form.phone} onChange={v => set('phone', v)} placeholder="9876543210" keyboard="phone-pad" cap="none" />
-            <F label="Email" value={form.email} onChange={v => set('email', v)} placeholder="customer@email.com (optional)" keyboard="email-address" cap="none" />
+            <F control={control} name="name" label="Full Name *" placeholder="John Doe" />
+            <F control={control} name="phone" label="Phone Number *" placeholder={locale.phoneExample} keyboard="phone-pad" cap="none" />
+            <F control={control} name="email" label="Email" placeholder="customer@email.com (optional)" keyboard="email-address" cap="none" />
             <View style={s.row}>
-              <View style={{ flex: 1 }}><F label="City" value={form.address.city || ''} onChange={v => setAddr('city', v)} placeholder="City" /></View>
+              <View style={{ flex: 1 }}><F control={control} name="address.city" label="City" placeholder="City" /></View>
               <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}><F label="Pincode" value={form.address.pincode || ''} onChange={v => setAddr('pincode', v)} placeholder="560001" keyboard="numeric" cap="none" /></View>
+              {/* Label, keypad and example all follow the garage's country —
+                  this used to be hardcoded to an Indian pincode. */}
+              <View style={{ flex: 1 }}>
+                <F control={control} name="address.pincode" label={locale.postalLabel} placeholder={locale.postalLabel}
+                  keyboard={locale.postalInputMode === 'numeric' ? 'numeric' : 'default'} cap="characters" />
+              </View>
             </View>
-            <F label="Notes" value={form.notes} onChange={v => set('notes', v)} placeholder="Any notes..." multiline />
+            <F control={control} name="notes" label="Notes" placeholder="Any notes..." multiline />
           </ScrollView>
           <View style={s.footer}>
             <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
               <Text style={s.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Customer'}</Text>}
+            <TouchableOpacity style={[s.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
+              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Customer'}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -155,9 +173,21 @@ export default function CustomersScreen(_props: Props) {
     finally { setLoading(false); setRefreshing(false); }
   }, [search]);
 
-  useEffect(() => { setPage(1); setLoading(true); fetchCustomers(1); }, [search, activeGarageId]);
+  // Re-fetch when the screen comes into focus, matching InvoicesScreen and
+  // DashboardScreen. Customers is a *tab*, so React Navigation keeps it mounted
+  // once visited — without this, the vehicle count each row shows stays as it
+  // was when the tab first loaded. Reassigning a vehicle's owner over on the
+  // Vehicles tab would then look like it had not worked until an app restart.
+  useFocusEffect(
+    useCallback(() => {
+      setPage(1);
+      setLoading(true);
+      fetchCustomers(1);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search, activeGarageId])
+  );
 
-  const handleSave = async (form: CustomerForm) => {
+  const handleSave = async (form: CustomerFormValues) => {
     if (editing) {
       await updateCustomer(editing._id, form);
       Toast.show({ type: 'success', text1: 'Customer updated!' });
@@ -195,16 +225,16 @@ export default function CustomersScreen(_props: Props) {
         <Text style={s.spentText}>{formatMoney(c.totalSpent, locale)}</Text>
       </View>
       <View style={s.cardFooter}>
-        <View style={s.metaChip}><Ionicons name="car-outline" size={13} color="#6b7280" /><Text style={s.metaChipText}>{c.vehicles?.length || 0} vehicles</Text></View>
-        {c.address?.city ? <View style={s.metaChip}><Ionicons name="location-outline" size={13} color="#6b7280" /><Text style={s.metaChipText}>{c.address.city}</Text></View> : null}
+        <View style={s.metaChip}><Ionicons name="car-outline" size={13} color={colors.textMuted} /><Text style={s.metaChipText}>{c.vehicles?.length || 0} vehicles</Text></View>
+        {c.address?.city ? <View style={s.metaChip}><Ionicons name="location-outline" size={13} color={colors.textMuted} /><Text style={s.metaChipText}>{c.address.city}</Text></View> : null}
         {canManage && (
           <View style={s.actions}>
             <TouchableOpacity style={s.actionBtn} onPress={() => { setEditing(c); setModalVisible(true); }}>
-              <Ionicons name="pencil-outline" size={15} color="#3b5ff8" />
+              <Ionicons name="pencil-outline" size={15} color={colors.primary} />
             </TouchableOpacity>
             {canDelete && (
-              <TouchableOpacity style={[s.actionBtn, { backgroundColor: '#fee2e2' }]} onPress={() => handleDelete(c)}>
-                <Ionicons name="trash-outline" size={15} color="#ef4444" />
+              <TouchableOpacity style={[s.actionBtn, { backgroundColor: palette.red100 }]} onPress={() => handleDelete(c)}>
+                <Ionicons name="trash-outline" size={15} color={colors.danger} />
               </TouchableOpacity>
             )}
           </View>
@@ -220,14 +250,14 @@ export default function CustomersScreen(_props: Props) {
     <ResponsiveScreen>
     <View style={s.container}>
       <View style={s.searchBox}>
-        <Ionicons name="search" size={20} color="#9ca3af" style={{ marginRight: 8 }} />
+        <Ionicons name="search" size={20} color={colors.textFaint} style={{ marginRight: 8 }} />
         <TextInput style={s.searchInput} placeholder="Search by name or phone..." value={search}
-          onChangeText={setSearch} placeholderTextColor="#9ca3af" />
-        {search ? <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={18} color="#9ca3af" /></TouchableOpacity> : null}
+          onChangeText={setSearch} placeholderTextColor={colors.textFaint} />
+        {search ? <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={18} color={colors.textFaint} /></TouchableOpacity> : null}
       </View>
 
       {loading ? (
-        <View style={s.loading}><ActivityIndicator size="large" color="#3b5ff8" /></View>
+        <View style={s.loading}><ActivityIndicator size="large" color={colors.primary} /></View>
       ) : (
         <FlatList data={customers} keyExtractor={keyExtractor} renderItem={renderItem}
           contentContainerStyle={s.list} refreshing={refreshing}
@@ -236,7 +266,7 @@ export default function CustomersScreen(_props: Props) {
           onEndReachedThreshold={0.5}
           ListEmptyComponent={
             <View style={s.empty}>
-              <Ionicons name="people-outline" size={52} color="#e5e7eb" />
+              <Ionicons name="people-outline" size={52} color={colors.border} />
               <Text style={s.emptyTitle}>No Customers Found</Text>
               <Text style={s.emptySub}>{search ? 'Try a different search' : 'Add your first customer'}</Text>
             </View>
@@ -251,7 +281,7 @@ export default function CustomersScreen(_props: Props) {
           testID="add-customer-fab"
           accessibilityLabel="Add customer"
         >
-          <Ionicons name="add" size={28} color="#fff" />
+          <Ionicons name="add" size={28} color={colors.textOnPrimary} />
         </TouchableOpacity>
       )}
 
@@ -262,41 +292,43 @@ export default function CustomersScreen(_props: Props) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fdfcfb' },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 16, marginBottom: 8, borderRadius: 16, borderWidth: 1, borderColor: '#e5e7eb', paddingHorizontal: 12 },
-  searchInput: { flex: 1, height: 44, fontSize: 15, color: '#1f2937' },
+  container: { flex: 1, backgroundColor: colors.background },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, margin: 16, marginBottom: 8, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: 12 },
+  searchInput: { flex: 1, height: 44, fontSize: 15, color: colors.textStrong },
   list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 100 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, shadowColor: '#6366f1', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: 14, marginBottom: 10, shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  avatarWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 18, fontWeight: 'bold', color: '#3b5ff8' },
-  customerName: { fontSize: 16, fontWeight: 'bold', color: '#111827' },
-  customerSub: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  spentText: { fontSize: 15, fontWeight: 'bold', color: '#10b981' },
+  avatarWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
+  customerName: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
+  customerSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  spentText: { fontSize: 15, fontWeight: 'bold', color: colors.success },
   cardFooter: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f3f4f6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 160 },
-  metaChipText: { fontSize: 12, color: '#6b7280' },
+  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surfaceMuted, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill },
+  metaChipText: { fontSize: 12, color: colors.textMuted },
   actions: { flexDirection: 'row', gap: 6, marginLeft: 'auto' },
-  actionBtn: { width: 30, height: 30, borderRadius: 16, backgroundColor: '#eff2ff', justifyContent: 'center', alignItems: 'center' },
+  actionBtn: { width: 30, height: 30, borderRadius: radius.lg, backgroundColor: colors.primarySoft, justifyContent: 'center', alignItems: 'center' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   empty: { alignItems: 'center', marginTop: 60, gap: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: 'bold', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9ca3af' },
-  fab: { position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28, backgroundColor: '#3b5ff8', justifyContent: 'center', alignItems: 'center', shadowColor: '#3b5ff8', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  emptyTitle: { fontSize: 17, fontWeight: 'bold', color: colors.textSecondary },
+  emptySub: { fontSize: 13, color: colors.textFaint },
+  fab: { position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: radius.xxl, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   // Modal
   overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e5e7eb', alignSelf: 'center', marginTop: 12 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827' },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
+  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
   sheetBody: { padding: 20 },
-  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
   field: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 },
-  input: { backgroundColor: '#fdfcfb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, paddingHorizontal: 12, height: 44, fontSize: 15, color: '#1f2937' },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
+  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
+  inputError: { borderColor: colors.danger },
+  fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
   row: { flexDirection: 'row' },
-  cancelBtn: { flex: 1, padding: 14, borderRadius: 16, backgroundColor: '#f3f4f6', alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
-  saveBtn: { flex: 1.5, padding: 14, borderRadius: 16, backgroundColor: '#3b5ff8', alignItems: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
+  cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
+  cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
+  saveBtn: { flex: 1.5, padding: 14, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center' },
+  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: colors.textOnPrimary },
 });
