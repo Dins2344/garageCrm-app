@@ -115,6 +115,42 @@ person" survives while the storage itself stays install-scoped.
 a plausible name sitting beside the correct one is how the banner bug comes
 back. Both directions are pinned by tests in `AuthContext.test.tsx`.
 
+## The update gate can hide the whole app
+
+`UpdateGate` in `App.tsx` wraps `AuthProvider` — further out than
+`WalkthroughGate` — and asks `GET /meta/app-update` whether this build should
+update, and whether it must.
+
+**Everything about it is shaped by one fact: a server-driven block cannot be
+undone remotely, because the devices it blocked are the ones that would need to
+receive the fix.** So:
+
+- **The blocking path is a conjunction of explicit positive checks; every other
+  path lets the user through.** A rejection, timeout, non-2xx, 429, malformed
+  body, or `updateRequired` arriving as the string `"true"` all resolve to
+  `clear`.
+- **The gate never withholds the app for longer than `UPDATE_GATE_HOLD_MS`.**
+  `WalkthroughGate` may hold indefinitely because it waits on AsyncStorage,
+  which cannot hang on a network. This waits on a network, and an unbounded
+  hold is a permanent brick on exactly the connections nobody tests on.
+- **The version comparison is the server's job**, because anything shipped into
+  a binary is frozen forever (see `backend/CLAUDE.md` non-negotiable #2). The
+  app keeps only two rules, and both can *only* unblock: it ignores a required
+  verdict naming the version it is already running, and it ignores a response
+  whose echoed `receivedVersion` is not what it sent.
+- **A resume while blocked forces a re-check**, ignoring the throttle. That is
+  how an admin's rollback reaches a stuck device without a cold start.
+- **The Play Store link is a compiled-in constant, never the server's
+  `storeUrl`.** It is the escape hatch when a bad policy has blocked the app, so
+  it must not come from the document that did the blocking.
+
+`expo-constants` is a **direct** dependency for `APP_VERSION` — it also resolves
+transitively under `expo/node_modules`, which Metro finds and `tsc` does not.
+
+**Bump `latestVersion` in the admin console only after the build is live on
+Play**, and never set `minSupportedVersion` above a version the store can
+actually supply.
+
 ## Forms — react-hook-form + zod, and `useController` is not optional
 
 Every form is `useForm` + `zodResolver`, and **every rule lives in

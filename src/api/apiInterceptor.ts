@@ -34,7 +34,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    // Only when the request actually carried a token. A 401 on a request that
+    // never sent one is not a session expiry — and the public /meta/app-update
+    // call now runs on every launch *and* every resume, so a misconfigured
+    // proxy answering 401 would otherwise sign people out several times a day.
+    if (error.response?.status === 401 && error.config?.headers?.Authorization) {
       // The same list AuthContext.logout() clears. This used to name three keys
       // by hand and so never cleared WEB_BANNER_DISMISSED_KEY — a session that
       // ended by 401 rather than by the Log Out button leaked the banner
