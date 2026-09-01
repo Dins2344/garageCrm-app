@@ -170,9 +170,14 @@ export default function JobCardsScreen({ navigation }: Props) {
         />
       )}
 
+      {/* Icon-only, so it needs both: the label is what a screen reader
+          announces instead of "button", and the testID is how the E2E flows
+          reach it. Matches add-customer-fab in CustomersScreen. */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('CreateJobCard')}
+        testID="add-job-card-fab"
+        accessibilityLabel="New job card"
       >
         <Ionicons name="add" size={28} color={colors.textOnPrimary} />
       </TouchableOpacity>

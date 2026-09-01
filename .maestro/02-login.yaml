@@ -1,0 +1,32 @@
+# Sign in and land on the dashboard.
+#
+# Credentials come from the environment so no account details are committed:
+#   maestro test .maestro -e EMAIL=you@example.com -e PASSWORD=...
+#
+# Selectors are accessibility labels, not placeholders. Placeholders follow the
+# garage's country (a phone example, a postal-code name), so a placeholder
+# selector passes for an Indian tenant and fails for every other one.
+appId: com.dctechs.garagepulse
+---
+- launchApp:
+    clearState: true
+
+# Dismiss the first-run carousel if it is showing. `optional` because a device
+# that has already run it goes straight to the login screen.
+- tapOn:
+    text: 'Skip'
+    optional: true
+
+- tapOn: 'Email Address'
+- inputText: ${EMAIL}
+- tapOn: 'Password'
+- inputText: ${PASSWORD}
+
+# No `hideKeyboard` here. On Android Maestro implements it as a back press, and
+# with the keyboard already down that backs straight out of the app — the flow
+# then fails on the next step with "element not found" while actually sitting on
+# the launcher. Maestro scrolls to the target itself, so it was never needed.
+- tapOn: 'Sign In'
+
+# The greeting is time-of-day dependent, so assert on something stable.
+- assertVisible: 'Quick Actions'

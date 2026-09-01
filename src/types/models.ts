@@ -85,6 +85,12 @@ export interface Garage {
   /** ISO alpha-2. Absent on garages created before country support shipped. */
   country?: string;
   owner?: string | { _id: string; name: string; email: string; phone: string; role: Role };
+  /**
+   * The garage still holds the demo rows seeded at registration. Server-derived
+   * on GET /garage only, so it is absent on auth payloads and on any older API
+   * — an absent flag must read as "no banner", never as a crash.
+   */
+  hasSampleData?: boolean;
   settings?: GarageSettings;
   /** Server-resolved; present on garage and auth payloads. */
   locale?: ResolvedLocale;
@@ -94,6 +100,12 @@ export interface Garage {
 
 export interface Customer {
   _id: string;
+  /**
+   * Seeded demo row, created with the garage so a new account is not an empty
+   * app. Optional because every published build predates the field, and backend
+   * changes stay additive.
+   */
+  isSample?: boolean;
   name: string;
   phone: string;
   email?: string;
@@ -111,6 +123,8 @@ export type FuelType = 'petrol' | 'diesel' | 'cng' | 'electric' | 'hybrid' | 'ot
 
 export interface Vehicle {
   _id: string;
+  /** Seeded demo row - see Customer.isSample. */
+  isSample?: boolean;
   licensePlate: string;
   make: string;
   model: string;
@@ -183,6 +197,8 @@ export interface AssignedStaff {
 
 export interface JobCard {
   _id: string;
+  /** Seeded demo row - see Customer.isSample. */
+  isSample?: boolean;
   serviceType: ServiceType;
   jobCardNumber: string;
   vehicle?: Vehicle | string;
@@ -210,6 +226,8 @@ export type PaymentMethod = 'cash' | 'upi' | 'card' | 'bank_transfer' | 'other' 
 
 export interface Invoice {
   _id: string;
+  /** Seeded demo row - see Customer.isSample. */
+  isSample?: boolean;
   invoiceNumber: string;
   jobCard?: { _id: string; jobCardNumber: string; status?: string; odometerAtIntake?: number } | string;
   customer?: Customer | string;

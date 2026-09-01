@@ -19,6 +19,13 @@ jest.mock('../api/dashboardService', () => ({
   getDashboardStats: jest.fn(),
 }));
 
+// SampleDataBanner reaches garageService, and any module that transitively
+// imports apiInterceptor crashes on its axios.create() under jest-expo. The
+// banner has its own test file; here it only has to not explode.
+jest.mock('../api/garageService', () => ({
+  removeSampleData: jest.fn(),
+}));
+
 jest.mock('../components/WebAppBanner', () => {
   const { Text } = require('react-native');
   return () => <Text>MORE ON THE WEB</Text>;

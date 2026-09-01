@@ -1,0 +1,19 @@
+# The anti-brick check, on a real build.
+#
+# UpdateGate asks GET /meta/app-update on every cold start and can withhold the
+# whole app. Its unit tests fake the network; this proves the real binary opens
+# against the real API. If a bad AppRelease policy is live, this is the flow
+# that fails — and it fails loudly rather than in a support queue.
+appId: com.dctechs.garagepulse
+---
+- clearState
+- launchApp
+
+# The first-run carousel is expected on a cleared install. Reaching either it or
+# the login screen means the gate let go within its bounded hold.
+- assertVisible:
+    text: 'Skip|Next|Get started|Sign In|Email Address'
+
+# Explicitly not tolerated: the blocking screen, on a build the store is
+# currently serving.
+- assertNotVisible: 'Update required'

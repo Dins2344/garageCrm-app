@@ -100,10 +100,11 @@ Every key goes in exactly one of two lists, and which one is a product decision:
 - **`SESSION_STORAGE_KEYS`** — cleared on sign-out, by both
   `AuthContext.logout()` and the 401 handler in `api/apiInterceptor.ts`.
   **This is the default.**
-- **`DEVICE_STORAGE_KEYS`** — never cleared. Currently only the two walkthrough
-  flags. They are device-scoped because `IdleTimer` signs people out after 10
-  idle minutes; a workshop phone does that several times a day, so a
-  session-scoped "already seen" flag would replay the first-run tour constantly.
+- **`DEVICE_STORAGE_KEYS`** — never cleared. The two walkthrough flags and the
+  update snooze. They are device-scoped because `IdleTimer` signs people out
+  after `IDLE_TIMEOUT_MS` (30 minutes) of inactivity; a workshop phone does that
+  several times a day, so a session-scoped "already seen" flag would replay the
+  first-run tour constantly.
 
 **The test: would the next person to sign in on a shared workshop phone be
 harmed by inheriting this value?** A dismissed banner fails that test. "This
@@ -150,6 +151,29 @@ transitively under `expo/node_modules`, which Metro finds and `tsc` does not.
 **Bump `latestVersion` in the admin console only after the build is live on
 Play**, and never set `minSupportedVersion` above a version the store can
 actually supply.
+
+## Before a Play release
+
+1. `npx tsc --noEmit && npx eslint . && npm test`
+2. Upload to the closed track, then **read the pre-launch report**. It needs
+   test-account credentials set in Play Console (Pre-launch report → Settings)
+   or Robo never gets past the login screen and the report is worthless.
+3. Optionally `npm run test:e2e` — see `.maestro/README.md`.
+
+`npm run test:e2e` drives the installed APK with Maestro. It is **manual only**:
+no CI job runs it, and it is deliberately not in the pre-push checklist. An
+emulator job costs about ten minutes of private-repo Actions minutes per run and
+Play's pre-launch report already crawls every upload on real devices for free.
+
+New garages arrive pre-seeded with demo rows (three customers, four vehicles,
+five job cards, one paid invoice), flagged `isSample` and cleared by
+`DELETE /garage/sample-data`. `SampleDataBanner` on Home offers that, and
+Settings carries the same action via `SampleDataRemoveButton`. The banner is
+**deliberately not dismissible** — it leaves when the data leaves, because a
+dismissible one gets waved away and the demo customers then sit in the list
+unlabelled forever. Both entry points share `useRemoveSampleData`, so the
+confirm wording — which is the only place promising "anything you have added
+yourself is kept" — cannot drift between them.
 
 ## Forms — react-hook-form + zod, and `useController` is not optional
 

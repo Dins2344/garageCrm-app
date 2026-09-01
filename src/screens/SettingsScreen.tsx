@@ -14,6 +14,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Field, ControlledField, ControlledPicker, PrimaryBtn } from '../components/FormControls';
 import BottomSheetPicker from '../components/BottomSheetPicker';
+import { SampleDataRemoveButton } from '../components/SampleDataBanner';
 import { useCountries } from '../hooks/useCountries';
 import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
@@ -290,7 +291,7 @@ const deleteBranchStyles = StyleSheet.create({
 
 export default function SettingsScreen({ navigation }: Props) {
   const { user, logout, hasRole } = useAuth();
-  const { garages, activeGarageId, garagesLoading, switchGarage, addBranch, removeBranch, refreshGarage } = useGarage();
+  const { garages, activeGarageId, activeGarage, garagesLoading, switchGarage, addBranch, removeBranch, refreshGarage } = useGarage();
   const [deleteBranchTarget, setDeleteBranchTarget] = useState<Garage | null>(null);
   const canEditGarage = hasRole('owner', 'admin');
   const isOwner = hasRole('owner');
@@ -625,6 +626,22 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
         </TouchableOpacity>
+
+        {/* ── SAMPLE DATA ──
+            The durable entry point for the banner's action. Shown only while
+            seeded rows exist, so it does not sit here as a dead row forever. */}
+        {canEditGarage && activeGarage?.hasSampleData === true && (
+          <View style={styles.staffShortcut}>
+            <View style={styles.staffShortcutLeft}>
+              <View style={styles.staffShortcutIcon}><Ionicons name="flask-outline" size={22} color={colors.warning} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.staffShortcutTitle}>Sample Data</Text>
+                <Text style={styles.staffShortcutSub}>Remove the example records</Text>
+              </View>
+            </View>
+            <SampleDataRemoveButton onRemoved={refreshGarage} />
+          </View>
+        )}
 
         {/* ── APP INFO ── */}
         {/* <SectionCard title="App Info" icon="information-circle-outline">

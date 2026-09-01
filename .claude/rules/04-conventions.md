@@ -105,10 +105,10 @@ await AsyncStorage.multiRemove([...SESSION_STORAGE_KEYS]);
 ```
 
 **A new key goes in one of two lists, and SESSION is the default.**
-`DEVICE_STORAGE_KEYS` is never cleared — currently just the two walkthrough
-flags, which are device-scoped because `IdleTimer` signs people out after 10
-idle minutes and a session-scoped "already seen" flag would replay the
-first-run tour several times a day.
+`DEVICE_STORAGE_KEYS` is never cleared — the two walkthrough flags and the
+update snooze, which are device-scoped because `IdleTimer` signs people out
+after `IDLE_TIMEOUT_MS` (30 minutes) of inactivity and a session-scoped
+"already seen" flag would replay the first-run tour several times a day.
 
 The test: *would the next person to sign in on a shared workshop phone be
 harmed by inheriting this value?* A dismissed banner fails it. "This phone
