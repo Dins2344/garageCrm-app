@@ -52,12 +52,20 @@ interface FieldProps<T extends FieldValues> {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   secureTextEntry?: boolean;
   icon: IconName;
+  /**
+   * Becomes the Android `resource-id` on the underlying view (verified against
+   * a uiautomator dump — React Native surfaces `testID` there verbatim, with no
+   * package prefix). Play Console's pre-launch report identifies the sign-in
+   * fields by resource id and has no other way to reach them, so without this
+   * Robo cannot log in and every report only ever crawls the login screen.
+   */
+  testID?: string;
 }
 
 // Bound with `useController`, not `register`: a TextInput has no DOM ref and
 // emits no native change event, so `register` typechecks and then never sees a
 // keystroke. See ControlledField in components/FormControls.tsx.
-function Field<T extends FieldValues>({ control, name, label, placeholder, keyboardType, autoCapitalize, secureTextEntry, icon }: FieldProps<T>) {
+function Field<T extends FieldValues>({ control, name, label, placeholder, keyboardType, autoCapitalize, secureTextEntry, icon, testID }: FieldProps<T>) {
   const [show, setShow] = useState(false);
   const { field, fieldState } = useController({ control, name });
   const isPwd = secureTextEntry !== undefined;
@@ -69,6 +77,7 @@ function Field<T extends FieldValues>({ control, name, label, placeholder, keybo
         <Ionicons name={icon} size={18} color={colors.textFaint} style={{ marginRight: 10 }} />
         <TextInput
           accessibilityLabel={label}
+          testID={testID}
           style={styles.inputField}
           value={field.value == null ? '' : String(field.value)}
           onChangeText={field.onChange}
@@ -357,9 +366,16 @@ export default function LoginScreen(_props: Props) {
               <Text style={styles.cardTitle}>Welcome back</Text>
               <Text style={styles.cardSub}>Enter your credentials to continue</Text>
 
-              <Field control={loginForm.control} name="email" label="Email Address"
+              {/* The three testIDs below are the sign-in contract for Play
+                  Console's pre-launch report. Robo identifies the username
+                  field, password field and submit button by Android resource
+                  id, and React Native surfaces `testID` as exactly that. Rename
+                  one and Robo silently stops being able to log in — every
+                  report then crawls nothing but this screen. Keep them in step
+                  with the values entered under Pre-launch report -> Settings. */}
+              <Field control={loginForm.control} name="email" label="Email Address" testID="login-email"
                 placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
-              <Field control={loginForm.control} name="password" label="Password"
+              <Field control={loginForm.control} name="password" label="Password" testID="login-password"
                 placeholder="••••••••" secureTextEntry autoCapitalize="none" icon="lock-closed-outline" />
 
               <TouchableOpacity onPress={() => setForgotPwdVisible(true)} style={styles.forgotPwdRow}>
@@ -367,6 +383,7 @@ export default function LoginScreen(_props: Props) {
               </TouchableOpacity>
 
               <TouchableOpacity
+                testID="login-submit"
                 style={[styles.primaryBtn, loading && { opacity: 0.65 }]}
                 onPress={loginForm.handleSubmit(handleLogin)} disabled={loading} activeOpacity={0.85}
               >

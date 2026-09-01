@@ -158,6 +158,15 @@ actually supply.
 2. Upload to the closed track, then **read the pre-launch report**. It needs
    test-account credentials set in Play Console (Pre-launch report → Settings)
    or Robo never gets past the login screen and the report is worthless.
+
+**The pre-launch sign-in contract.** Robo identifies the login fields by Android
+**resource id**, and a React Native screen has none by default — this app's login
+screen exposed exactly two, both framework containers. `testID` is what fixes
+that: RN surfaces it as the `resource-id` verbatim, with no package prefix
+(verified against a `uiautomator dump`, not assumed). `LoginScreen` therefore
+carries `login-email`, `login-password` and `login-submit`, and those three
+strings are a published contract with Play Console, not free-floating test hooks.
+Rename one and Robo silently stops being able to log in.
 3. Optionally `npm run test:e2e` — see `.maestro/README.md`.
 
 `npm run test:e2e` drives the installed APK with Maestro. It is **manual only**:
