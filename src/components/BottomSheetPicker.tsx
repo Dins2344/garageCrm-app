@@ -1,11 +1,28 @@
-import React, { useState, ComponentProps } from 'react';
+import React, { useState, useEffect, ComponentProps } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, TextInput,
-  KeyboardAvoidingView, Platform
+  KeyboardAvoidingView, Platform, Animated, Easing
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SHEET_MAX_WIDTH } from './ResponsiveScreen';
 import { colors, radius } from '../theme';
+
+/**
+ * Enter is slower than exit on purpose: arriving is the moment that wants to
+ * feel unhurried, leaving should get out of the way. Both are well under the
+ * ~300ms where a transition starts to feel like waiting.
+ */
+const ENTER_MS = 240;
+const EXIT_MS = 160;
+
+/**
+ * How far the sheet travels on entry. Deliberately a short distance rather than
+ * the sheet's own height: `Modal`'s built-in `animationType="slide"` moves the
+ * whole modal — scrim included — the full height of the screen, so the dim
+ * swept up from the bottom edge instead of fading in place. A short rise under
+ * a fading scrim reads as the sheet settling rather than being thrown.
+ */
+const RISE_DISTANCE = 40;
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -34,8 +51,47 @@ export default function BottomSheetPicker({
   label, options, selectedValue, onValueChange,
   placeholder = 'Select...', required, disabled, searchable
 }: BottomSheetPickerProps) {
-  const [visible, setVisible] = useState(false);
+  // Two pieces of state, not one. `open` is the animation target; `mounted`
+  // keeps the Modal on screen through the closing animation, which a single
+  // flag cannot do — flipping it would unmount the sheet mid-fade and the
+  // dim would vanish in one frame.
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState('');
+
+  // `useState`, not `useRef().current`: this repo's React Compiler lint rejects
+  // reading a ref during render (`react-hooks/refs`). The lazy initialiser runs
+  // once, so the Animated.Value is still created a single time.
+  const [anim] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    if (!mounted) return;
+    Animated.timing(anim, {
+      toValue: open ? 1 : 0,
+      duration: open ? ENTER_MS : EXIT_MS,
+      // Decelerate in, accelerate out — the sheet arrives softly and leaves
+      // briskly, which is what makes the dim feel like it settles rather than
+      // snaps.
+      easing: open ? Easing.out(Easing.cubic) : Easing.in(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      // Only unmount when the exit actually completed. An interrupted run
+      // (reopened mid-close) must leave the Modal up.
+      if (finished && !open) setMounted(false);
+    });
+  }, [open, mounted, anim]);
+
+  const openSheet = () => {
+    // Both set here rather than in an effect, so the Modal mounts and the
+    // animation starts in the same commit and there is no unfaded first frame.
+    setMounted(true);
+    setOpen(true);
+  };
+
+  const closeSheet = () => {
+    setOpen(false);
+    setQuery('');
+  };
 
   const selected = options.find(o => o.value === selectedValue);
 
@@ -45,8 +101,7 @@ export default function BottomSheetPicker({
 
   const handleSelect = (val: string) => {
     onValueChange(val);
-    setVisible(false);
-    setQuery('');
+    closeSheet();
   };
 
   return (
@@ -57,7 +112,7 @@ export default function BottomSheetPicker({
 
       <TouchableOpacity
         style={[styles.trigger, disabled && styles.triggerDisabled]}
-        onPress={() => !disabled && setVisible(true)}
+        onPress={() => !disabled && openSheet()}
         activeOpacity={0.7}
       >
         {selected?.icon ? (
@@ -77,15 +132,38 @@ export default function BottomSheetPicker({
         <Ionicons name="chevron-down" size={18} color={colors.textFaint} />
       </TouchableOpacity>
 
-      <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
+      {/* animationType="none": the scrim and the sheet are animated separately
+          below. Modal's own "slide" moves both together, which drags the dim up
+          from the bottom edge — the abrupt part being asked about here. */}
+      <Modal visible={mounted} transparent animationType="none" onRequestClose={closeSheet}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setVisible(false)} />
-          <TouchableOpacity activeOpacity={1} style={styles.sheet} onPress={e => e.stopPropagation()}>
+          <Animated.View
+            style={[styles.scrim, { opacity: anim }]}
+            pointerEvents="none"
+            testID="bottom-sheet-scrim"
+          />
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={closeSheet} />
+
+          <Animated.View
+            testID="bottom-sheet"
+            style={[
+              styles.sheet,
+              {
+                opacity: anim,
+                transform: [{
+                  translateY: anim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [RISE_DISTANCE, 0],
+                  }),
+                }],
+              },
+            ]}
+          >
             <View style={styles.handle} />
 
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>{label || 'Select Option'}</Text>
-              <TouchableOpacity onPress={() => { setVisible(false); setQuery(''); }}>
+              <TouchableOpacity onPress={closeSheet}>
                 <Ionicons name="close" size={24} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
@@ -140,7 +218,7 @@ export default function BottomSheetPicker({
                 <Text style={styles.emptyText}>No options found</Text>
               )}
             </ScrollView>
-          </TouchableOpacity>
+          </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
     </View>
@@ -170,13 +248,30 @@ const styles = StyleSheet.create({
   optIcon: { width: 30, height: 30, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
 
   // Sheet
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
+  //
+  // The overlay itself is transparent — the dim is a separate absolutely
+  // positioned layer so its opacity can be animated without also fading the
+  // sheet sitting on top of it.
+  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
     maxHeight: '65%',
-    minHeight: 200,
+    /**
+     * Proportional, not the old flat 200px.
+     *
+     * 200 left roughly 120px for the list once the handle and header had taken
+     * their share — about two rows. A picker with two or three options rendered
+     * a panel barely taller than its own title bar, which read as a rendering
+     * glitch rather than a sheet. A share of the screen keeps the proportion
+     * right on a small phone and a tablet alike, where a pixel value cannot.
+     *
+     * Below `maxHeight` by a wide margin, so a long list still governs its own
+     * height and the two never fight.
+     */
+    minHeight: '38%',
     width: '100%',
     maxWidth: SHEET_MAX_WIDTH,
   },

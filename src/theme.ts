@@ -200,6 +200,19 @@ export const colors = {
    *  a cool shadow on a warm ground reads as dirt rather than depth. */
   shadowAmbient: palette.bone400,
   shadowHard: palette.black,
+
+  /**
+   * The dim behind a modal or bottom sheet.
+   *
+   * Was written inline as `rgba(0,0,0,0.45)` or `rgba(0,0,0,0.4)` in ten
+   * places, which had already drifted into two different values — a sheet
+   * opened from a screen looked measurably different from the picker opened
+   * inside it. 0.4 is the value the majority used.
+   *
+   * `BottomSheetPicker` is converted; the nine hand-rolled sheets in `screens/`
+   * still carry their literal and should adopt this next time one is touched.
+   */
+  scrim: 'rgba(0,0,0,0.4)',
 } as const;
 
 // ─── Shape ─────────────────────────────────────────────────────────────────
