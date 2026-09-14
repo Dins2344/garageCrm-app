@@ -1,0 +1,26 @@
+# The seeded demo dataset, seen the way a tester sees it.
+#
+# This is the flow guarding the thing the closed test actually failed on: a
+# newly registered garage used to open on six empty screens, so nobody stayed
+# long enough to be a useful tester.
+#
+# Run it against a FRESH account — one that still has its sample data. On an
+# account where the data has already been cleared, the banner assertion fails
+# correctly rather than misleadingly.
+appId: com.dctechs.garagepulse
+---
+- runFlow: 02-login.yaml
+
+# The dashboard must not be an empty shell.
+- assertVisible: 'Sample data'
+- assertVisible: 'Quick Actions'
+
+# Job cards exist. The seeder writes five, spread across five statuses, so the
+# list and the status chips both have something to render.
+- tapOn: 'Job Cards'
+- assertVisible: 'JC-.*'
+
+# Customers live under More, not in the tab dock.
+- tapOn: 'More'
+- tapOn: 'Customers'
+- assertVisible: '.*vehicle.*'

@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useCallback, useMemo, ReactNode } from 'react';
 import { View, PanResponder, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-
-const IDLE_TIME_LIMIT = 10 * 60 * 1000; // 10 minutes
+import { IDLE_TIMEOUT_MS } from '../utils/constants';
 
 const IdleTimer = ({ children }: { children: ReactNode }) => {
   const { user, logout } = useAuth();
@@ -15,7 +14,7 @@ const IdleTimer = ({ children }: { children: ReactNode }) => {
     if (user) {
       timerRef.current = setTimeout(() => {
         logout();
-      }, IDLE_TIME_LIMIT);
+      }, IDLE_TIMEOUT_MS);
     }
   }, [user, logout]);
 

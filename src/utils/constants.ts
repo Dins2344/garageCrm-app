@@ -36,9 +36,9 @@ export const TOUR_SEEN_USERS_KEY = 'garagepulse_tour_seen_users';
  * Applying the classification test below: the next person to sign in on a
  * shared phone inherits a suppressed optional nag for at most 24 hours, and a
  * *mandatory* update never consults this key at all. Not harmed. As a SESSION
- * key, IdleTimer's 10-minute auto-logout would clear it several times a day and
- * the prompt would return constantly — the same failure the DEVICE list below
- * describes for the walkthrough flags.
+ * key, IdleTimer's auto-logout would clear it repeatedly and the prompt would
+ * return constantly — the same failure the DEVICE list below describes for the
+ * walkthrough flags.
  */
 export const UPDATE_SNOOZE_KEY = 'garagepulse_update_snooze';
 
@@ -56,10 +56,10 @@ export const SESSION_STORAGE_KEYS = [
 
 /**
  * Never cleared, on purpose. The reason is IdleTimer: the app signs itself out
- * after 10 minutes of inactivity, which in a workshop happens several times a
- * day. A "already seen" flag in SESSION_STORAGE_KEYS would mean the first-run
- * tour replays every time someone puts the phone down to do the actual work —
- * the exact opposite of "shown once".
+ * after `IDLE_TIMEOUT_MS` of inactivity, which in a workshop happens several
+ * times a day. An "already seen" flag in SESSION_STORAGE_KEYS would mean the
+ * first-run tour replays every time someone puts the phone down to do the
+ * actual work — the exact opposite of "shown once".
  *
  * Adding a key here is a deliberate choice to leak it across sign-ins on a
  * shared device. TOUR_SEEN_USERS_KEY is keyed by user id precisely so "shown
@@ -79,6 +79,23 @@ export const DEVICE_STORAGE_KEYS = [
 
 /** How many user ids TOUR_SEEN_USERS_KEY retains; oldest dropped first. */
 export const TOUR_SEEN_USERS_LIMIT = 20;
+
+// ── Session ───────────────────────────────────────────────────
+
+/**
+ * How long the app sits idle before `IdleTimer` signs the user out.
+ *
+ * Was an unexported literal inside IdleTimer.tsx, which put a tunable duration
+ * in a component file — see 00-shared-constants.md, which names timeouts
+ * explicitly.
+ *
+ * Raised from 10 minutes to 30. Ten was chosen for a shared workshop phone left
+ * on a counter, and it does still protect that case. What it also did was sign
+ * out anyone who put the phone down for a coffee, so someone evaluating the app
+ * met a login screen every time they came back to it. Thirty minutes keeps the
+ * unattended-counter protection and stops punishing an ordinary interruption.
+ */
+export const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 // ── Pagination ────────────────────────────────────────────────
 export const DEFAULT_PAGE_SIZE = 15;

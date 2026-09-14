@@ -1,0 +1,16 @@
+# Maestro configuration for the GaragePulse Android app.
+#
+# These flows are MANUAL ONLY. They are never wired into CI — an Android
+# emulator job costs roughly ten minutes of private-repo Actions minutes per
+# run, and Play's own pre-launch report already crawls every closed-track
+# upload on real devices for free.
+#
+# They drive the *installed* build, so they exercise the release APK exactly as
+# a tester's phone runs it, including the update gate and the seeded sample
+# data that a hand-run jest suite cannot reach.
+appId: com.dctechs.garagepulse
+---
+- runFlow: 01-cold-start.yaml
+- runFlow: 02-login.yaml
+- runFlow: 03-sample-data.yaml
+- runFlow: 04-create-job-card.yaml

@@ -9,7 +9,7 @@ import {
  *
  * Both live in `DEVICE_STORAGE_KEYS` and therefore survive logout — see the
  * note on that list in `utils/constants.ts`. The short version: IdleTimer signs
- * people out after 10 idle minutes, so a flag that logout cleared would replay
+ * people out after 30 idle minutes, so a flag that logout cleared would replay
  * the tour several times a day.
  */
 

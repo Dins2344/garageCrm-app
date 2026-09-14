@@ -5,11 +5,11 @@ import {
   ScrollView, StatusBar, KeyboardTypeOptions, Image, Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import BottomSheet, { SheetActions } from '../components/BottomSheet';
 import { useForm, useController, useWatch, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
-import { toastConfig } from '../components/toastConfig';
 import { getErrorMessage } from '../utils/errors';
 import { forgotPassword } from '../api/authService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
@@ -52,12 +52,20 @@ interface FieldProps<T extends FieldValues> {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   secureTextEntry?: boolean;
   icon: IconName;
+  /**
+   * Becomes the Android `resource-id` on the underlying view (verified against
+   * a uiautomator dump — React Native surfaces `testID` there verbatim, with no
+   * package prefix). Play Console's pre-launch report identifies the sign-in
+   * fields by resource id and has no other way to reach them, so without this
+   * Robo cannot log in and every report only ever crawls the login screen.
+   */
+  testID?: string;
 }
 
 // Bound with `useController`, not `register`: a TextInput has no DOM ref and
 // emits no native change event, so `register` typechecks and then never sees a
 // keystroke. See ControlledField in components/FormControls.tsx.
-function Field<T extends FieldValues>({ control, name, label, placeholder, keyboardType, autoCapitalize, secureTextEntry, icon }: FieldProps<T>) {
+function Field<T extends FieldValues>({ control, name, label, placeholder, keyboardType, autoCapitalize, secureTextEntry, icon, testID }: FieldProps<T>) {
   const [show, setShow] = useState(false);
   const { field, fieldState } = useController({ control, name });
   const isPwd = secureTextEntry !== undefined;
@@ -69,6 +77,7 @@ function Field<T extends FieldValues>({ control, name, label, placeholder, keybo
         <Ionicons name={icon} size={18} color={colors.textFaint} style={{ marginRight: 10 }} />
         <TextInput
           accessibilityLabel={label}
+          testID={testID}
           style={styles.inputField}
           value={field.value == null ? '' : String(field.value)}
           onChangeText={field.onChange}
@@ -127,88 +136,71 @@ function ForgotPasswordModal({ visible, onClose }: ForgotPasswordModalProps) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={forgotPwdStyles.overlay}>
-        <View style={forgotPwdStyles.sheet}>
-          <View style={forgotPwdStyles.handle} />
-          <View style={forgotPwdStyles.header}>
-            <Text style={forgotPwdStyles.title}>Forgot Password</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Forgot Password"
+      maxHeight="90%"
+      // The email step scrolls (keyboard); the two choice steps are a fixed
+      // pair of buttons and must not.
+      scroll={step === 'email'}
+      footer={step === 'email' ? (
+        <SheetActions
+          onCancel={() => setStep('confirm')}
+          cancelLabel="Back"
+          onConfirm={submitForm(handleSubmit)}
+          confirmLabel="Send Link"
+          loading={submitting}
+        />
+      ) : undefined}
+    >
+      {/* ── Step 1: confirm role ── */}
+      {step === 'confirm' && (
+        <>
+          <Text style={forgotPwdStyles.helperText}>Are you the owner of your garage account?</Text>
+          <TouchableOpacity style={forgotPwdStyles.choiceBtnPrimary} onPress={() => setStep('email')}>
+            <Text style={forgotPwdStyles.choiceBtnPrimaryText}>Yes, I'm the owner</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={forgotPwdStyles.choiceBtnSecondary} onPress={() => setStep('not-owner')}>
+            <Text style={forgotPwdStyles.choiceBtnSecondaryText}>No, I'm a staff member</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {/* ── Not the owner: no email collected, no request sent ── */}
+      {step === 'not-owner' && (
+        <>
+          <View style={forgotPwdStyles.noticeBox}>
+            <Text style={forgotPwdStyles.noticeText}>
+              Staff passwords are managed by the garage. Ask your owner or an admin to reset your password from Settings → Staff.
+            </Text>
           </View>
+          <TouchableOpacity style={[forgotPwdStyles.choiceBtnSecondary, { marginTop: 16 }]} onPress={() => setStep('confirm')}>
+            <Text style={forgotPwdStyles.choiceBtnSecondaryText}>Back</Text>
+          </TouchableOpacity>
+        </>
+      )}
 
-          {/* ── Step 1: confirm role ── */}
-          {step === 'confirm' && (
-            <View style={forgotPwdStyles.body}>
-              <Text style={forgotPwdStyles.helperText}>Are you the owner of your garage account?</Text>
-              <TouchableOpacity style={forgotPwdStyles.choiceBtnPrimary} onPress={() => setStep('email')}>
-                <Text style={forgotPwdStyles.choiceBtnPrimaryText}>Yes, I'm the owner</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={forgotPwdStyles.choiceBtnSecondary} onPress={() => setStep('not-owner')}>
-                <Text style={forgotPwdStyles.choiceBtnSecondaryText}>No, I'm a staff member</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* ── Not the owner: no email collected, no request sent ── */}
-          {step === 'not-owner' && (
-            <View style={forgotPwdStyles.body}>
-              <View style={forgotPwdStyles.noticeBox}>
-                <Text style={forgotPwdStyles.noticeText}>
-                  Staff passwords are managed by the garage. Ask your owner or an admin to reset your password from Settings → Staff.
-                </Text>
-              </View>
-              <TouchableOpacity style={[forgotPwdStyles.choiceBtnSecondary, { marginTop: 16 }]} onPress={() => setStep('confirm')}>
-                <Text style={forgotPwdStyles.choiceBtnSecondaryText}>Back</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* ── Step 2: owner enters email ── */}
-          {step === 'email' && (
-            <>
-              <ScrollView style={forgotPwdStyles.body} keyboardShouldPersistTaps="handled">
-                <Text style={forgotPwdStyles.helperText}>
-                  Enter your account email and we'll send you a link to reset your password.
-                </Text>
-                <Field control={control} name="email" label="Email Address"
-                  placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
-              </ScrollView>
-              <View style={forgotPwdStyles.footer}>
-                <TouchableOpacity style={forgotPwdStyles.cancelBtn} onPress={() => setStep('confirm')}>
-                  <Text style={forgotPwdStyles.cancelBtnText}>Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[forgotPwdStyles.submitBtn, submitting && { opacity: 0.6 }]} onPress={submitForm(handleSubmit)} disabled={submitting}>
-                  {submitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={forgotPwdStyles.submitBtnText}>Send Link</Text>}
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </View>
-      </KeyboardAvoidingView>
-      {/* Modal-scoped Toast — RN's Modal renders above the app-root Toast in
-          App.tsx, so the root Toast would be hidden behind this sheet. */}
-      <Toast config={toastConfig} />
-    </Modal>
+      {/* ── Step 2: owner enters email ── */}
+      {step === 'email' && (
+        <>
+          <Text style={forgotPwdStyles.helperText}>
+            Enter your account email and we'll send you a link to reset your password.
+          </Text>
+          <Field control={control} name="email" label="Email Address"
+            placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
 const forgotPwdStyles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
-  title: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
-  body: { padding: 20 },
   helperText: { fontSize: 14, color: colors.textMuted, lineHeight: 20, marginBottom: 16 },
-  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.surfaceMuted },
-  cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
-  submitBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.primary },
-  submitBtnText: { color: colors.textOnPrimary, fontWeight: '700' },
   noticeBox: { backgroundColor: colors.warningSoft, borderWidth: 1, borderColor: palette.amber200, borderRadius: radius.md, padding: 16 },
   noticeText: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
   // Standalone full-width choice buttons (confirm/not-owner steps) — deliberately
-  // NOT flex:1 like submitBtn/cancelBtn above, which only works inside the
+  // NOT flex:1 like the SheetActions pair, which only works inside the sheet's
   // row-direction footer; flex:1 in a plain column View collapses to zero height.
   choiceBtnPrimary: { width: '100%', paddingVertical: 14, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   choiceBtnPrimaryText: { color: colors.textOnPrimary, fontWeight: '700', fontSize: 15 },
@@ -357,9 +349,16 @@ export default function LoginScreen(_props: Props) {
               <Text style={styles.cardTitle}>Welcome back</Text>
               <Text style={styles.cardSub}>Enter your credentials to continue</Text>
 
-              <Field control={loginForm.control} name="email" label="Email Address"
+              {/* The three testIDs below are the sign-in contract for Play
+                  Console's pre-launch report. Robo identifies the username
+                  field, password field and submit button by Android resource
+                  id, and React Native surfaces `testID` as exactly that. Rename
+                  one and Robo silently stops being able to log in — every
+                  report then crawls nothing but this screen. Keep them in step
+                  with the values entered under Pre-launch report -> Settings. */}
+              <Field control={loginForm.control} name="email" label="Email Address" testID="login-email"
                 placeholder="you@example.com" keyboardType="email-address" autoCapitalize="none" icon="mail-outline" />
-              <Field control={loginForm.control} name="password" label="Password"
+              <Field control={loginForm.control} name="password" label="Password" testID="login-password"
                 placeholder="••••••••" secureTextEntry autoCapitalize="none" icon="lock-closed-outline" />
 
               <TouchableOpacity onPress={() => setForgotPwdVisible(true)} style={styles.forgotPwdRow}>
@@ -367,6 +366,7 @@ export default function LoginScreen(_props: Props) {
               </TouchableOpacity>
 
               <TouchableOpacity
+                testID="login-submit"
                 style={[styles.primaryBtn, loading && { opacity: 0.65 }]}
                 onPress={loginForm.handleSubmit(handleLogin)} disabled={loading} activeOpacity={0.85}
               >

@@ -11,6 +11,7 @@ import StatusStepper from '../components/StatusStepper';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
+import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { JobCard, User, AssignedStaff } from '../types/models';
@@ -27,6 +28,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const { hasRole } = useAuth();
   const { activeGarageId, locale } = useGarage();
+  const { withLoader } = useGlobalLoader();
   const [jobCard, setJobCard] = useState<JobCard | null>(null);
   const [mechanics, setMechanics] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,15 +135,15 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Approve', onPress: async () => {
+          text: 'Approve', onPress: () => withLoader(async () => {
             try {
               await approveJobCardEstimation(id);
               Toast.show({ type: 'success', text1: 'Estimation approved!' });
-              fetchData();
-            } catch {
-              Toast.show({ type: 'error', text1: 'Failed to approve' });
+              await fetchData();
+            } catch (e) {
+              Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to approve') });
             }
-          }
+          }, 'Approving...')
         }
       ]
     );
@@ -155,15 +157,18 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Generate Invoice',
-          onPress: async () => {
+          // Overlay, not a button spinner: the tap that starts this is on an
+          // Alert, and the request runs long enough (invoice number under
+          // the garage lock, stock deduction, reminder) to invite a second tap.
+          onPress: () => withLoader(async () => {
             try {
               const { data } = await createInvoice({ jobCardId: id });
               Toast.show({ type: 'success', text1: `Invoice ${data.invoiceNumber} created!` });
-              fetchData();
+              await fetchData();
             } catch (e) {
               Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to create invoice') });
             }
-          }
+          }, 'Generating invoice...')
         }
       ]
     );

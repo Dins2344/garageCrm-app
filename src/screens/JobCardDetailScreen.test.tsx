@@ -1,8 +1,11 @@
 import React from 'react';
-import { render, screen, waitFor, userEvent, within } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { render, screen, waitFor, userEvent, within, act } from '@testing-library/react-native';
 import JobCardDetailScreen from './JobCardDetailScreen';
 import * as jobCardService from '../api/jobCardService';
 import * as userService from '../api/userService';
+import * as invoiceService from '../api/invoiceService';
+import { GlobalLoaderProvider } from '../context/GlobalLoaderContext';
 import type { JobCard, User } from '../types/models';
 import type { RootStackScreenProps } from '../types/navigation';
 
@@ -178,5 +181,69 @@ describe('JobCardDetailScreen — mechanic assignment', () => {
     // Regex, not an exact string: the header renders "Job Card" and the number
     // as two sibling text nodes.
     expect(screen.getByText(/JC-260815-0001/)).toBeTruthy();
+  });
+});
+
+describe('JobCardDetailScreen — actions launched from an Alert show the app-wide loader', () => {
+  // The screen is rendered inside the real provider here, because the point
+  // is the overlay: a confirm on an Alert has no button to carry a spinner,
+  // and before this the screen sat inert between the tap and the toast.
+  const alertSpy = jest.spyOn(Alert, 'alert');
+
+  const approvedCard = {
+    ...baseJobCard,
+    status: 'ready_for_pickup',
+    estimation: { ...baseJobCard.estimation, grandTotal: 2360, approvedByCustomer: true },
+  } as unknown as JobCard;
+
+  /** Presses the Alert button whose label matches, as the user would. */
+  const pressAlertButton = (label: string) => {
+    const buttons = alertSpy.mock.calls.at(-1)![2] as { text: string; onPress?: () => void }[];
+    buttons.find(b => b.text === label)!.onPress!();
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHasRole.mockReturnValue(true);
+    jest.mocked(userService.getMechanics).mockResolvedValue(MECHANICS);
+    alertSpy.mockImplementation(() => {});
+  });
+
+  it('keeps "Generating invoice..." on screen until the request resolves', async () => {
+    let finish!: (v: { success: boolean; data: { invoiceNumber: string } }) => void;
+    jest.mocked(invoiceService.createInvoice).mockReturnValue(new Promise(resolve => { finish = resolve; }) as never);
+    jest.mocked(jobCardService.getJobCard).mockResolvedValue({ success: true, data: approvedCard });
+
+    const user = userEvent.setup();
+    await render(<GlobalLoaderProvider><JobCardDetailScreen {...props} /></GlobalLoaderProvider>);
+    await waitFor(() => expect(screen.getByText('Generate Invoice')).toBeTruthy());
+
+    await user.press(screen.getByText('Generate Invoice'));
+    expect(alertSpy).toHaveBeenCalledWith('Generate Invoice?', expect.any(String), expect.any(Array));
+
+    await act(async () => { pressAlertButton('Generate Invoice'); });
+
+    expect(invoiceService.createInvoice).toHaveBeenCalledWith({ jobCardId: 'jc1' });
+    expect(screen.getByTestId('global-loader')).toBeTruthy();
+    expect(screen.getByText('Generating invoice...')).toBeTruthy();
+
+    await act(async () => { finish({ success: true, data: { invoiceNumber: 'INV-260914-0001' } }); });
+
+    await waitFor(() => expect(screen.queryByTestId('global-loader')).toBeNull());
+  });
+
+  it('clears the loader when the request fails', async () => {
+    jest.mocked(invoiceService.createInvoice).mockRejectedValue({ response: { data: { message: 'Daily invoice limit reached' } } });
+    jest.mocked(jobCardService.getJobCard).mockResolvedValue({ success: true, data: approvedCard });
+
+    const user = userEvent.setup();
+    await render(<GlobalLoaderProvider><JobCardDetailScreen {...props} /></GlobalLoaderProvider>);
+    await waitFor(() => expect(screen.getByText('Generate Invoice')).toBeTruthy());
+    await user.press(screen.getByText('Generate Invoice'));
+
+    await act(async () => { pressAlertButton('Generate Invoice'); });
+
+    await waitFor(() => expect(screen.queryByTestId('global-loader')).toBeNull());
+    expect(screen.getByText('Generate Invoice')).toBeTruthy();
   });
 });

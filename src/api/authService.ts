@@ -1,5 +1,5 @@
 import api from './apiInterceptor';
-import type { User } from '../types/models';
+import type { User, VerificationChannel, VerificationStatus, VerificationSendResult } from '../types/models';
 import type { ApiMessageResponse, ApiItemResponse } from '../types/api';
 
 export interface AuthResponse {
@@ -49,5 +49,22 @@ export const changePassword = async (data: { currentPassword: string; newPasswor
 
 export const forgotPassword = async (email: string): Promise<ApiMessageResponse> => {
   const res = await api.post('/auth/forgotpassword', { email });
+  return res.data;
+};
+
+// ─── Owner verification (Settings) ───────────────────────────────────────────
+
+export const getVerificationStatus = async (): Promise<ApiItemResponse<VerificationStatus>> => {
+  const res = await api.get('/auth/verification');
+  return res.data;
+};
+
+export const sendVerificationCode = async (channel: VerificationChannel): Promise<ApiItemResponse<VerificationSendResult>> => {
+  const res = await api.post(`/auth/verification/${channel}/send`);
+  return res.data;
+};
+
+export const confirmVerificationCode = async (channel: VerificationChannel, code: string): Promise<ApiItemResponse<User>> => {
+  const res = await api.post(`/auth/verification/${channel}/confirm`, { code });
   return res.data;
 };

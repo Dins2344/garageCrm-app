@@ -30,6 +30,20 @@ and this app must tolerate fields it does not know about.
    every keystroke. Module scope, always.
 6. **Install dependencies under Node 20 / npm 10** — a lock file from a newer
    npm fails CI's `npm ci`.
+7. **Every action that awaits the API shows something while it waits.** A
+   button carries its own `loading` (`PrimaryBtn`, `SheetActions`,
+   `isSubmitting`). An action launched from an `Alert` confirm has no button,
+   so it runs inside `useGlobalLoader().withLoader(fn, 'Deleting...')` — the
+   app-wide overlay in `context/GlobalLoaderContext.tsx`, the same shape as
+   the web app's. Seven confirm-launched actions (generate/cancel invoice,
+   approve estimation, delete customer/vehicle/staff, toggle staff) sat inert
+   between tap and toast before this, and a second tap fired the request
+   twice. Branch switching uses the same overlay.
+8. **Settings is a directory, not a destination.** A feature gets its own
+   screen and a *tile* on Settings that navigates to it (`EditProfile`,
+   `ChangePassword`, `Staff`, `ContactVerification`). Never build a complete
+   feature — its form, its sheet, its state — inside `SettingsScreen.tsx`.
+   See *Settings is a directory* below.
 
 ## Everything visual comes from `src/theme.ts`
 
@@ -68,10 +82,22 @@ Screens own data fetching and local state, and define `StyleSheet.create()` at
 the bottom of the file. Components take props and never call API services or
 navigation hooks. API modules in `src/api/` never touch UI state or toasts.
 
+**Never hand-roll a bottom sheet.** `components/BottomSheet.tsx` is the one
+implementation: the dim fades in place while the sheet rises a short way,
+it stays mounted through its closing animation, it has a proportional
+minimum height, and it carries the modal-scoped Toast. There were eleven
+copies before it — with three scrim values, two animation styles and one
+sheet that did not animate at all — and the fix made to one reached none of
+the others. A new sheet is `<BottomSheet visible onClose title footer>`
+with its body as children; `SheetActions` is the cancel/confirm pair. Do not
+write `<Modal animationType="slide">` with a `flex-end` overlay again.
+
 ## Use the components that exist
 
 | Need | Use |
 | --- | --- |
+| A wait with no button to spin | `useGlobalLoader().withLoader(fn, label)` |
+| Anything that slides up from the bottom | `BottomSheet` (+ `SheetActions` for a cancel/confirm footer) |
 | Dropdown / option list | `BottomSheetPicker` (supports `searchable`) |
 | Labelled text input | `Field` from `FormControls` |
 | Primary action button | `PrimaryBtn` from `FormControls` |
@@ -100,10 +126,11 @@ Every key goes in exactly one of two lists, and which one is a product decision:
 - **`SESSION_STORAGE_KEYS`** — cleared on sign-out, by both
   `AuthContext.logout()` and the 401 handler in `api/apiInterceptor.ts`.
   **This is the default.**
-- **`DEVICE_STORAGE_KEYS`** — never cleared. Currently only the two walkthrough
-  flags. They are device-scoped because `IdleTimer` signs people out after 10
-  idle minutes; a workshop phone does that several times a day, so a
-  session-scoped "already seen" flag would replay the first-run tour constantly.
+- **`DEVICE_STORAGE_KEYS`** — never cleared. The two walkthrough flags and the
+  update snooze. They are device-scoped because `IdleTimer` signs people out
+  after `IDLE_TIMEOUT_MS` (30 minutes) of inactivity; a workshop phone does that
+  several times a day, so a session-scoped "already seen" flag would replay the
+  first-run tour constantly.
 
 **The test: would the next person to sign in on a shared workshop phone be
 harmed by inheriting this value?** A dismissed banner fails that test. "This
@@ -150,6 +177,72 @@ transitively under `expo/node_modules`, which Metro finds and `tsc` does not.
 **Bump `latestVersion` in the admin console only after the build is live on
 Play**, and never set `minSupportedVersion` above a version the store can
 actually supply.
+
+## Before a Play release
+
+1. `npx tsc --noEmit && npx eslint . && npm test`
+2. Upload to the closed track, then **read the pre-launch report**. It needs
+   test-account credentials set in Play Console (Pre-launch report → Settings)
+   or Robo never gets past the login screen and the report is worthless.
+
+**The pre-launch sign-in contract.** Robo identifies the login fields by Android
+**resource id**, and a React Native screen has none by default — this app's login
+screen exposed exactly two, both framework containers. `testID` is what fixes
+that: RN surfaces it as the `resource-id` verbatim, with no package prefix
+(verified against a `uiautomator dump`, not assumed). `LoginScreen` therefore
+carries `login-email`, `login-password` and `login-submit`, and those three
+strings are a published contract with Play Console, not free-floating test hooks.
+Rename one and Robo silently stops being able to log in.
+3. Optionally `npm run test:e2e` — see `.maestro/README.md`.
+
+`npm run test:e2e` drives the installed APK with Maestro. It is **manual only**:
+no CI job runs it, and it is deliberately not in the pre-push checklist. An
+emulator job costs about ten minutes of private-repo Actions minutes per run and
+Play's pre-launch report already crawls every upload on real devices for free.
+
+New garages arrive pre-seeded with demo rows (three customers, four vehicles,
+five job cards, one paid invoice), flagged `isSample` and cleared by
+`DELETE /garage/sample-data`. `SampleDataBanner` on Home offers that, and
+Settings carries the same action via `SampleDataRemoveButton`. The banner is
+**deliberately not dismissible** — it leaves when the data leaves, because a
+dismissible one gets waved away and the demo customers then sit in the list
+unlabelled forever. Both entry points share `useRemoveSampleData`, so the
+confirm wording — which is the only place promising "anything you have added
+yourself is kept" — cannot drift between them.
+
+## Settings is a directory
+
+`SettingsScreen.tsx` is the index of the account: garage information, the
+branch list, and a column of **tiles** (`styles.staffShortcut`) that lead to
+features — Staff, Edit Profile, Change Password, Contact Verification. Each of
+those features is its own screen on the root stack.
+
+**Never build a complete feature inside Settings.** The Verification card was
+built there first — rows, badges, the code-entry sheet, its state — and was
+moved out to `ContactVerificationScreen` the same day. The reasons it does not
+belong:
+
+- Settings already carries two forms, two modals and a staff list; every
+  feature added inline makes it slower to open and harder to test (the
+  country tests had to start mocking `authService` because the sheet's import
+  reached axios).
+- A tile can summarise ("Email and phone verified") without rendering the
+  feature; a screen gets a header, a back gesture and a deep-link target.
+- The web app's Settings *is* one long page — this is a place the two
+  clients deliberately differ, because a phone screen is a tenth of the size.
+
+The pattern, concretely: add the route to `types/navigation.ts` and
+`AppNavigator.tsx` with `headerShown: true`, put the feature in
+`screens/<Feature>Screen.tsx`, and add a `staffShortcut` tile on Settings whose
+subtitle reflects state where there is state to reflect. `ContactVerification`
+is the reference: the tile reads `user.emailVerifiedAt` / `phoneVerifiedAt`
+from AuthContext, the screen owns `VerifyCodeSheet` and calls `refreshUser()`
+on success — the flags are the server's, never set locally.
+
+While the garage information loads, Settings shows `SkeletonRows` (eight, the
+shape of the info list) rather than a spinner, so nothing jumps when the data
+arrives. `components/Skeleton.tsx` is the one to reuse for any list-shaped
+placeholder.
 
 ## Forms — react-hook-form + zod, and `useController` is not optional
 

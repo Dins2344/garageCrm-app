@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGarage } from '../context/GarageContext';
+import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import { formatMoney, formatNumber, formatDate } from '../utils/format';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Platform, StatusBar, SafeAreaView
@@ -13,6 +14,7 @@ import { TOKEN_KEY, ACTIVE_GARAGE_KEY } from '../utils/constants';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import BottomSheetPicker from '../components/BottomSheetPicker';
+import BottomSheet, { SheetActions } from '../components/BottomSheet';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Invoice, PaymentMethod } from '../types/models';
@@ -23,6 +25,7 @@ type Props = RootStackScreenProps<'InvoiceViewer'>;
 
 export default function InvoiceViewerScreen({ route, navigation }: Props) {
   const { locale } = useGarage();
+  const { withLoader } = useGlobalLoader();
   const money = (n?: number) => formatMoney(n, locale);
   const { invoiceId } = route.params;
   const { hasRole } = useAuth();
@@ -76,7 +79,7 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
         { text: 'Keep Invoice', style: 'cancel' },
         {
           text: 'Cancel Invoice', style: 'destructive',
-          onPress: async () => {
+          onPress: () => withLoader(async () => {
             try {
               await deleteInvoice(invoiceId);
               Toast.show({ type: 'success', text1: 'Invoice cancelled & job reopened!' });
@@ -84,7 +87,7 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
             } catch (e) {
               Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to cancel invoice') });
             }
-          }
+          }, 'Cancelling invoice...')
         }
       ]
     );
@@ -387,47 +390,38 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
     </View>
     </ResponsiveScreen>
 
-      {/* ── PAYMENT METHOD MODAL ── kept outside ResponsiveScreen so the
-          backdrop dims the true full screen width on tablets, not just the
-          capped content column. */}
-      {showPayModal && (
-        <View style={s.payOverlay}>
-          <View style={s.paySheet}>
-            <View style={s.payHandle} />
-            <Text style={s.payTitle}>Record Payment</Text>
-            <Text style={s.payAmount}>Amount: {fmt(invoice.grandTotal)}</Text>
+      {/* ── PAYMENT SHEET ── a Modal, so its scrim dims the true full screen
+          width on tablets rather than just the capped content column. Was an
+          absolutely-positioned View that popped in with no animation at all. */}
+      <BottomSheet
+        visible={showPayModal}
+        onClose={() => setShowPayModal(false)}
+        title="Record Payment"
+        scroll={false}
+        footer={
+          <SheetActions
+            onCancel={() => setShowPayModal(false)}
+            onConfirm={handleMarkPaid}
+            confirmLabel="Confirm Payment"
+            loading={paying}
+            tone="success"
+          />
+        }
+      >
+        <Text style={s.payAmount}>Amount: {fmt(invoice.grandTotal)}</Text>
 
-            <BottomSheetPicker
-              label="Payment Method"
-              options={[
-                { value: 'cash', label: 'Cash', icon: 'cash-outline', color: colors.success },
-                { value: 'upi', label: 'UPI', icon: 'phone-portrait-outline', color: palette.violet500 },
-                { value: 'card', label: 'Card', icon: 'card-outline', color: colors.info },
-                { value: 'bank_transfer', label: 'Bank Transfer', icon: 'business-outline', color: colors.warning },
-              ]}
-              selectedValue={paymentMethod}
-              onValueChange={v => setPaymentMethod(v as PaymentMethod)}
-            />
-
-            <View style={s.payActions}>
-              <TouchableOpacity style={s.payCancelBtn} onPress={() => setShowPayModal(false)}>
-                <Text style={s.payCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.payConfirmBtn, paying && { opacity: 0.6 }]}
-                onPress={handleMarkPaid}
-                disabled={paying}
-              >
-                {paying ? (
-                  <ActivityIndicator color={colors.textOnPrimary} size="small" />
-                ) : (
-                  <Text style={s.payConfirmText}>Confirm Payment</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
+        <BottomSheetPicker
+          label="Payment Method"
+          options={[
+            { value: 'cash', label: 'Cash', icon: 'cash-outline', color: colors.success },
+            { value: 'upi', label: 'UPI', icon: 'phone-portrait-outline', color: palette.violet500 },
+            { value: 'card', label: 'Card', icon: 'card-outline', color: colors.info },
+            { value: 'bank_transfer', label: 'Bank Transfer', icon: 'business-outline', color: colors.warning },
+          ]}
+          selectedValue={paymentMethod}
+          onValueChange={v => setPaymentMethod(v as PaymentMethod)}
+        />
+      </BottomSheet>
     </>
   );
 }
@@ -544,28 +538,6 @@ const s = StyleSheet.create({
     borderStyle: 'dashed',
   },
 
-  // Payment modal
-  payOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end', alignItems: 'center',
-  },
-  paySheet: {
-    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, paddingBottom: 40, width: '100%', maxWidth: SHEET_MAX_WIDTH,
-  },
-  payHandle: {
-    width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border,
-    alignSelf: 'center', marginBottom: 16,
-  },
-  payTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 4 },
+  // Payment sheet
   payAmount: { fontSize: 14, color: colors.textMuted, marginBottom: 16 },
-  payActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  payCancelBtn: {
-    flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center',
-  },
-  payCancelText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
-  payConfirmBtn: {
-    flex: 1.5, padding: 14, borderRadius: radius.lg, backgroundColor: colors.success, alignItems: 'center',
-  },
-  payConfirmText: { fontSize: 15, fontWeight: 'bold', color: colors.textOnPrimary },
 });

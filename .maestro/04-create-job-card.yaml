@@ -1,0 +1,20 @@
+# The core job of the app: start a job card.
+#
+# Runs after login against a seeded account, so a customer and a vehicle
+# already exist — creating those first would make this flow test three things
+# and fail ambiguously about which one broke.
+appId: com.dctechs.garagepulse
+---
+- runFlow: 02-login.yaml
+
+- tapOn: 'Job Cards'
+- tapOn:
+    id: 'add-job-card-fab'
+
+# The wizard gates Next behind the schema. Reaching the customer step at all
+# proves the screen mounted and its pickers loaded, which is the part that
+# breaks when a release ships a bad bundle.
+- assertVisible:
+    text: 'Customer'
+
+- takeScreenshot: create-job-card-step-1

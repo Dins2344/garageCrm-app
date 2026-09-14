@@ -7,6 +7,7 @@ import {
   SafeAreaView, StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import BottomSheet from '../components/BottomSheet';
 import Toast from 'react-native-toast-message';
 import { getCustomers, createCustomer } from '../api/customerService';
 import { getVehicles, createVehicle } from '../api/vehicleService';
@@ -143,7 +144,7 @@ function CalendarModal({ visible, selected, onSelect, onClose }: CalendarModalPr
 }
 
 const cal = StyleSheet.create({
-  overlay:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
+  overlay:        { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center' },
   card:           { backgroundColor: colors.surface, borderRadius: radius.xl, padding: 20, width: 320, shadowColor: colors.shadowAmbient, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 4 },
   header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   navBtn:         { padding: 6 },
@@ -176,41 +177,25 @@ function SearchModal<T extends { _id: string }>({ visible, onClose, title, items
   const [q, setQ] = useState('');
   const filtered = items.filter(i => searchKeys.some(k => String(i[k] || '').toLowerCase().includes(q.toLowerCase())));
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={ms.overlay}>
-        <View style={ms.sheet}>
-          <View style={ms.handle} />
-          <View style={ms.header}>
-            <Text style={ms.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
-          </View>
-          <View style={ms.searchRow}>
-            <Ionicons name="search" size={16} color={colors.textFaint} />
-            <TextInput style={ms.searchInput} value={q} onChangeText={setQ} placeholder="Search..." placeholderTextColor={colors.textFaint} autoFocus />
-          </View>
-          <ScrollView style={ms.list} keyboardShouldPersistTaps="handled">
-            {filtered.slice(0, 50).map(item => (
-              <TouchableOpacity key={item._id} style={ms.option} onPress={() => { onSelect(item); onClose(); setQ(''); }}>
-                {renderItem(item)}
-              </TouchableOpacity>
-            ))}
-            {filtered.length === 0 && <Text style={ms.empty}>No results found</Text>}
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    <BottomSheet visible={visible} onClose={onClose} title={title} maxHeight="80%" bodyStyle={ms.list}>
+      <View style={ms.searchRow}>
+        <Ionicons name="search" size={16} color={colors.textFaint} />
+        <TextInput style={ms.searchInput} value={q} onChangeText={setQ} placeholder="Search..." placeholderTextColor={colors.textFaint} autoFocus />
+      </View>
+      {filtered.slice(0, 50).map(item => (
+        <TouchableOpacity key={item._id} style={ms.option} onPress={() => { onSelect(item); onClose(); setQ(''); }}>
+          {renderItem(item)}
+        </TouchableOpacity>
+      ))}
+      {filtered.length === 0 && <Text style={ms.empty}>No results found</Text>}
+    </BottomSheet>
   );
 }
 
 const ms = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
-  title: { fontSize: 17, fontWeight: 'bold', color: colors.textPrimary },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, margin: 16, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44 },
   searchInput: { flex: 1, fontSize: 15, color: colors.textStrong },
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
+  list: { padding: 16, paddingBottom: 32 },
   option: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.surfaceSunken },
   empty: { textAlign: 'center', color: colors.textFaint, marginTop: 32, fontSize: 14 },
 });

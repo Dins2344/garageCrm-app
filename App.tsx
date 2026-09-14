@@ -2,6 +2,7 @@ import React from 'react';
 import UpdateGate from './src/components/UpdateGate';
 import { AuthProvider } from './src/context/AuthContext';
 import { GarageProvider } from './src/context/GarageContext';
+import { GlobalLoaderProvider } from './src/context/GlobalLoaderContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import Toast from 'react-native-toast-message';
 import { toastConfig } from './src/components/toastConfig';
@@ -17,11 +18,13 @@ export default function App() {
           mandatory update is showing, nothing below here mounts: no session
           check, no idle timer, no garage fetch. */}
       <UpdateGate>
-        <AuthProvider>
-          <GarageProvider>
-            <AppNavigator />
-          </GarageProvider>
-        </AuthProvider>
+        <GlobalLoaderProvider>
+          <AuthProvider>
+            <GarageProvider>
+              <AppNavigator />
+            </GarageProvider>
+          </AuthProvider>
+        </GlobalLoaderProvider>
       </UpdateGate>
       {/* Lifted clear of the floating dock so toasts never sit behind it. */}
       <Toast position='bottom' config={toastConfig} bottomOffset={TAB_BAR_CLEARANCE} />
