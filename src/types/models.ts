@@ -25,8 +25,34 @@ export interface User {
    * fetches branches for owners only.
    */
   locale?: ResolvedLocale;
+  /**
+   * When the owner confirmed a code sent to that address; null until then.
+   * Owner-only feature for now — staff never see these set. The subscription
+   * gate will require both.
+   */
+  emailVerifiedAt?: string | null;
+  phoneVerifiedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/** The channels an owner can verify from Settings — mirrors backend/types/domain.ts. */
+export type VerificationChannel = 'email' | 'phone';
+
+/** GET /api/auth/verification */
+export interface VerificationStatus {
+  email: { value: string; verifiedAt: string | null };
+  phone: { value: string; verifiedAt: string | null };
+}
+
+/** POST /api/auth/verification/:channel/send */
+export interface VerificationSendResult {
+  status: 'sent' | 'already-verified';
+  channel: VerificationChannel;
+  /** Masked, e.g. `d***n@example.com` or `****3210` — safe to show. */
+  target: string;
+  expiresInSeconds: number;
+  resendAfterSeconds: number;
 }
 
 export interface GarageSettings {

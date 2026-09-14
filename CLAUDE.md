@@ -30,6 +30,20 @@ and this app must tolerate fields it does not know about.
    every keystroke. Module scope, always.
 6. **Install dependencies under Node 20 / npm 10** — a lock file from a newer
    npm fails CI's `npm ci`.
+7. **Every action that awaits the API shows something while it waits.** A
+   button carries its own `loading` (`PrimaryBtn`, `SheetActions`,
+   `isSubmitting`). An action launched from an `Alert` confirm has no button,
+   so it runs inside `useGlobalLoader().withLoader(fn, 'Deleting...')` — the
+   app-wide overlay in `context/GlobalLoaderContext.tsx`, the same shape as
+   the web app's. Seven confirm-launched actions (generate/cancel invoice,
+   approve estimation, delete customer/vehicle/staff, toggle staff) sat inert
+   between tap and toast before this, and a second tap fired the request
+   twice. Branch switching uses the same overlay.
+8. **Settings is a directory, not a destination.** A feature gets its own
+   screen and a *tile* on Settings that navigates to it (`EditProfile`,
+   `ChangePassword`, `Staff`, `ContactVerification`). Never build a complete
+   feature — its form, its sheet, its state — inside `SettingsScreen.tsx`.
+   See *Settings is a directory* below.
 
 ## Everything visual comes from `src/theme.ts`
 
@@ -68,10 +82,22 @@ Screens own data fetching and local state, and define `StyleSheet.create()` at
 the bottom of the file. Components take props and never call API services or
 navigation hooks. API modules in `src/api/` never touch UI state or toasts.
 
+**Never hand-roll a bottom sheet.** `components/BottomSheet.tsx` is the one
+implementation: the dim fades in place while the sheet rises a short way,
+it stays mounted through its closing animation, it has a proportional
+minimum height, and it carries the modal-scoped Toast. There were eleven
+copies before it — with three scrim values, two animation styles and one
+sheet that did not animate at all — and the fix made to one reached none of
+the others. A new sheet is `<BottomSheet visible onClose title footer>`
+with its body as children; `SheetActions` is the cancel/confirm pair. Do not
+write `<Modal animationType="slide">` with a `flex-end` overlay again.
+
 ## Use the components that exist
 
 | Need | Use |
 | --- | --- |
+| A wait with no button to spin | `useGlobalLoader().withLoader(fn, label)` |
+| Anything that slides up from the bottom | `BottomSheet` (+ `SheetActions` for a cancel/confirm footer) |
 | Dropdown / option list | `BottomSheetPicker` (supports `searchable`) |
 | Labelled text input | `Field` from `FormControls` |
 | Primary action button | `PrimaryBtn` from `FormControls` |
@@ -183,6 +209,40 @@ dismissible one gets waved away and the demo customers then sit in the list
 unlabelled forever. Both entry points share `useRemoveSampleData`, so the
 confirm wording — which is the only place promising "anything you have added
 yourself is kept" — cannot drift between them.
+
+## Settings is a directory
+
+`SettingsScreen.tsx` is the index of the account: garage information, the
+branch list, and a column of **tiles** (`styles.staffShortcut`) that lead to
+features — Staff, Edit Profile, Change Password, Contact Verification. Each of
+those features is its own screen on the root stack.
+
+**Never build a complete feature inside Settings.** The Verification card was
+built there first — rows, badges, the code-entry sheet, its state — and was
+moved out to `ContactVerificationScreen` the same day. The reasons it does not
+belong:
+
+- Settings already carries two forms, two modals and a staff list; every
+  feature added inline makes it slower to open and harder to test (the
+  country tests had to start mocking `authService` because the sheet's import
+  reached axios).
+- A tile can summarise ("Email and phone verified") without rendering the
+  feature; a screen gets a header, a back gesture and a deep-link target.
+- The web app's Settings *is* one long page — this is a place the two
+  clients deliberately differ, because a phone screen is a tenth of the size.
+
+The pattern, concretely: add the route to `types/navigation.ts` and
+`AppNavigator.tsx` with `headerShown: true`, put the feature in
+`screens/<Feature>Screen.tsx`, and add a `staffShortcut` tile on Settings whose
+subtitle reflects state where there is state to reflect. `ContactVerification`
+is the reference: the tile reads `user.emailVerifiedAt` / `phoneVerifiedAt`
+from AuthContext, the screen owns `VerifyCodeSheet` and calls `refreshUser()`
+on success — the flags are the server's, never set locally.
+
+While the garage information loads, Settings shows `SkeletonRows` (eight, the
+shape of the info list) rather than a spinner, so nothing jumps when the data
+arrives. `components/Skeleton.tsx` is the one to reuse for any list-shaped
+placeholder.
 
 ## Forms — react-hook-form + zod, and `useController` is not optional
 

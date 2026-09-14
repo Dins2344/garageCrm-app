@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
-import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import { getGarage, updateGarage, getBranchStaff } from '../api/garageService';
@@ -15,6 +14,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Field, ControlledField, ControlledPicker, PrimaryBtn } from '../components/FormControls';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import { SampleDataRemoveButton } from '../components/SampleDataBanner';
+import { SkeletonRows } from '../components/Skeleton';
+import BottomSheet, { SheetActions } from '../components/BottomSheet';
 import { useCountries } from '../hooks/useCountries';
 import { DEFAULT_LOCALE, timezoneChoicesFor } from '../utils/locale';
 import type { RootStackScreenProps } from '../types/navigation';
@@ -103,48 +104,21 @@ function AddBranchModal({ visible, onClose, onSave }: AddBranchModalProps) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={branchModalStyles.overlay}>
-        <View style={branchModalStyles.sheet}>
-          <View style={branchModalStyles.handle} />
-          <View style={branchModalStyles.header}>
-            <Text style={branchModalStyles.title}>Add Branch</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
-          </View>
-          <ScrollView style={branchModalStyles.body} keyboardShouldPersistTaps="handled">
-            <ControlledField control={control} name="name" label="Branch Name" required placeholder="e.g. Downtown Branch" />
-            <ControlledField control={control} name="phone" label="Phone" required placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
-          </ScrollView>
-          <View style={branchModalStyles.footer}>
-            <TouchableOpacity style={branchModalStyles.cancelBtn} onPress={onClose}>
-              <Text style={branchModalStyles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[branchModalStyles.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
-              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={branchModalStyles.saveBtnText}>Add Branch</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-      {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
-          is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
-      <Toast config={toastConfig} />
-    </Modal>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Add Branch"
+      maxHeight="90%"
+      footer={
+        <SheetActions onCancel={onClose} onConfirm={handleSubmit(handleSave)} confirmLabel="Add Branch" loading={isSubmitting} />
+      }
+    >
+      <ControlledField control={control} name="name" label="Branch Name" required placeholder="e.g. Downtown Branch" />
+      <ControlledField control={control} name="phone" label="Phone" required placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
+    </BottomSheet>
   );
 }
 
-const branchModalStyles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
-  title: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
-  body: { padding: 20 },
-  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.surfaceMuted },
-  cancelBtnText: { color: colors.textSecondary, fontWeight: '600' },
-  saveBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.primary },
-  saveBtnText: { color: colors.textOnPrimary, fontWeight: '700' },
-});
 
 interface DeleteBranchModalProps {
   visible: boolean;
@@ -197,82 +171,73 @@ function DeleteBranchModal({ visible, branch, otherBranches, onClose, onConfirm 
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={branchModalStyles.overlay}>
-        <View style={branchModalStyles.sheet}>
-          <View style={branchModalStyles.handle} />
-          <View style={branchModalStyles.header}>
-            <Text style={branchModalStyles.title} numberOfLines={1}>Delete "{branch.name}"?</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
-          </View>
-          <ScrollView style={branchModalStyles.body} keyboardShouldPersistTaps="handled">
-            {checking ? (
-              <ActivityIndicator color={colors.primary} style={{ paddingVertical: 20 }} />
-            ) : staff.length === 0 ? (
-              <Text style={deleteBranchStyles.warningText}>
-                This will permanently delete this branch and all of its customers, vehicles, job cards,
-                invoices, inventory, and reminders. This cannot be undone.
-              </Text>
-            ) : (
-              <>
-                <Text style={deleteBranchStyles.warningText}>
-                  This branch has {staff.length} staff member{staff.length > 1 ? 's' : ''} assigned
-                  ({staff.map(s => s.name).join(', ')}). What should happen to them?
-                </Text>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={`Delete "${branch.name}"?`}
+      maxHeight="90%"
+      footer={
+        <SheetActions
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel="Delete Branch"
+          loading={deleting}
+          disabled={checking}
+          tone="danger"
+        />
+      }
+    >
+      {checking ? (
+        <ActivityIndicator color={colors.primary} style={{ paddingVertical: 20 }} />
+      ) : staff.length === 0 ? (
+        <Text style={deleteBranchStyles.warningText}>
+          This will permanently delete this branch and all of its customers, vehicles, job cards,
+          invoices, inventory, and reminders. This cannot be undone.
+        </Text>
+      ) : (
+        <>
+          <Text style={deleteBranchStyles.warningText}>
+            This branch has {staff.length} staff member{staff.length > 1 ? 's' : ''} assigned
+            ({staff.map(s => s.name).join(', ')}). What should happen to them?
+          </Text>
+          <TouchableOpacity
+            style={deleteBranchStyles.choiceRow}
+            activeOpacity={0.7}
+            onPress={() => setStaffChoice('reassign')}
+          >
+            <Ionicons name={staffChoice === 'reassign' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'reassign' ? colors.primary : colors.textFaint} />
+            <Text style={deleteBranchStyles.choiceText}>Reassign them to another branch</Text>
+          </TouchableOpacity>
+          {staffChoice === 'reassign' && (
+            <View style={deleteBranchStyles.targetList}>
+              {otherBranches.map(g => (
                 <TouchableOpacity
-                  style={deleteBranchStyles.choiceRow}
+                  key={g._id}
+                  style={deleteBranchStyles.targetRow}
                   activeOpacity={0.7}
-                  onPress={() => setStaffChoice('reassign')}
+                  onPress={() => setReassignTarget(g._id)}
                 >
-                  <Ionicons name={staffChoice === 'reassign' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'reassign' ? colors.primary : colors.textFaint} />
-                  <Text style={deleteBranchStyles.choiceText}>Reassign them to another branch</Text>
+                  <Ionicons name={reassignTarget === g._id ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={reassignTarget === g._id ? colors.primary : colors.textFaint} />
+                  <Text style={deleteBranchStyles.targetText}>{g.name}</Text>
                 </TouchableOpacity>
-                {staffChoice === 'reassign' && (
-                  <View style={deleteBranchStyles.targetList}>
-                    {otherBranches.map(g => (
-                      <TouchableOpacity
-                        key={g._id}
-                        style={deleteBranchStyles.targetRow}
-                        activeOpacity={0.7}
-                        onPress={() => setReassignTarget(g._id)}
-                      >
-                        <Ionicons name={reassignTarget === g._id ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={reassignTarget === g._id ? colors.primary : colors.textFaint} />
-                        <Text style={deleteBranchStyles.targetText}>{g.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-                <TouchableOpacity
-                  style={deleteBranchStyles.choiceRow}
-                  activeOpacity={0.7}
-                  onPress={() => setStaffChoice('delete')}
-                >
-                  <Ionicons name={staffChoice === 'delete' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'delete' ? colors.primary : colors.textFaint} />
-                  <Text style={deleteBranchStyles.choiceText}>Delete their accounts too</Text>
-                </TouchableOpacity>
-                <Text style={deleteBranchStyles.footnote}>
-                  The branch itself and all of its customers, vehicles, job cards, invoices, inventory,
-                  and reminders will be permanently deleted either way.
-                </Text>
-              </>
-            )}
-          </ScrollView>
-          <View style={branchModalStyles.footer}>
-            <TouchableOpacity style={branchModalStyles.cancelBtn} onPress={onClose} disabled={deleting}>
-              <Text style={branchModalStyles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[deleteBranchStyles.deleteBtn, (checking || deleting) && { opacity: 0.6 }]}
-              onPress={handleConfirm}
-              disabled={checking || deleting}
-            >
-              {deleting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={branchModalStyles.saveBtnText}>Delete Branch</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-      <Toast config={toastConfig} />
-    </Modal>
+              ))}
+            </View>
+          )}
+          <TouchableOpacity
+            style={deleteBranchStyles.choiceRow}
+            activeOpacity={0.7}
+            onPress={() => setStaffChoice('delete')}
+          >
+            <Ionicons name={staffChoice === 'delete' ? 'radio-button-on' : 'radio-button-off'} size={20} color={staffChoice === 'delete' ? colors.primary : colors.textFaint} />
+            <Text style={deleteBranchStyles.choiceText}>Delete their accounts too</Text>
+          </TouchableOpacity>
+          <Text style={deleteBranchStyles.footnote}>
+            The branch itself and all of its customers, vehicles, job cards, invoices, inventory,
+            and reminders will be permanently deleted either way.
+          </Text>
+        </>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -284,7 +249,6 @@ const deleteBranchStyles = StyleSheet.create({
   targetRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
   targetText: { fontSize: 14, color: colors.textSecondary },
   footnote: { fontSize: 12, color: colors.textFaint, marginTop: 12, borderTopWidth: 1, borderTopColor: colors.surfaceMuted, paddingTop: 12 },
-  deleteBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.md, alignItems: 'center', backgroundColor: colors.danger },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -493,7 +457,9 @@ export default function SettingsScreen({ navigation }: Props) {
           ) : null}
         >
           {garageLoading ? (
-            <ActivityIndicator color={colors.primary} style={{ paddingVertical: 20 }} />
+            // Eight rows, the shape of the info list below, so nothing jumps
+            // when the garage arrives.
+            <SkeletonRows rows={8} testID="garage-info-skeleton" />
           ) : editingGarage ? (
             <>
               <ControlledField control={garageControl} name="name" label="Garage Name" required placeholder="Your garage name" />
@@ -602,6 +568,34 @@ export default function SettingsScreen({ navigation }: Props) {
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
         </TouchableOpacity>
+
+        {/* ── CONTACT VERIFICATION TILE (owners) ──
+            A tile only. The feature lives on ContactVerificationScreen — see
+            "Settings is a directory" in CLAUDE.md. */}
+        {hasRole('owner') && (() => {
+          const bothVerified = !!user?.emailVerifiedAt && !!user?.phoneVerifiedAt;
+          return (
+            <TouchableOpacity
+              style={styles.staffShortcut}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('ContactVerification')}
+              testID="verification-tile"
+            >
+              <View style={styles.staffShortcutLeft}>
+                <View style={styles.staffShortcutIcon}>
+                  <Ionicons name={bothVerified ? 'shield-checkmark' : 'shield-checkmark-outline'} size={22} color={bothVerified ? colors.success : colors.primary} />
+                </View>
+                <View>
+                  <Text style={styles.staffShortcutTitle}>Contact Verification</Text>
+                  <Text style={styles.staffShortcutSub}>
+                    {bothVerified ? 'Email and phone verified' : 'Verify your email and phone number'}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
+            </TouchableOpacity>
+          );
+        })()}
 
         {/* ── MY PROFILE SHORTCUT ── */}
         <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('EditProfile')}>

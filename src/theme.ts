@@ -207,10 +207,10 @@ export const colors = {
    * Was written inline as `rgba(0,0,0,0.45)` or `rgba(0,0,0,0.4)` in ten
    * places, which had already drifted into two different values — a sheet
    * opened from a screen looked measurably different from the picker opened
-   * inside it. 0.4 is the value the majority used.
-   *
-   * `BottomSheetPicker` is converted; the nine hand-rolled sheets in `screens/`
-   * still carry their literal and should adopt this next time one is touched.
+   * inside it. 0.4 is the value the majority used. Every sheet now renders
+   * through `components/BottomSheet.tsx`, which is the only file that reads
+   * this for a sheet; the centred calendar dialog in CreateJobCard is the one
+   * other consumer.
    */
   scrim: 'rgba(0,0,0,0.4)',
 } as const;

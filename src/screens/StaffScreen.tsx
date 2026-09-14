@@ -5,13 +5,14 @@ import {
   TextInput, KeyboardAvoidingView, Platform, ListRenderItem,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import BottomSheet, { SheetActions } from '../components/BottomSheet';
 import { useForm, useController, type Control, type FieldValues, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ControlledPicker } from '../components/FormControls';
 import Toast from 'react-native-toast-message';
-import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
+import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/userService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
@@ -136,63 +137,51 @@ function StaffModal({ visible, onClose, onSave, editingUser, canSetAdmin }: Staf
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
-          <View style={styles.modalHandle} />
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{editingUser ? 'Edit Staff Member' : 'Add Staff Member'}</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
-          </View>
-          <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
-            <Field control={control} name="name" label="Full Name *" placeholder="Staff member's name" />
-            <Field control={control} name="email" label="Email *" placeholder="email@example.com" keyboardType="email-address" autoCapitalize="none" />
-            <Field control={control} name="phone" label="Phone *" placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
-            <Field
-              control={control}
-              name="password"
-              label={editingUser ? 'New Password (leave blank to keep)' : 'Password *'}
-              placeholder="Min. 6 characters"
-              secureTextEntry
-              autoCapitalize="none"
-            />
-            <ControlledPicker
-              control={control}
-              name="role"
-              label="Role"
-              required
-              options={[
-                { value: 'mechanic', label: 'Mechanic', icon: 'hammer-outline', color: colors.warning },
-                { value: 'service_advisor', label: 'Service Advisor', icon: 'clipboard-outline', color: colors.success },
-                { value: 'receptionist', label: 'Receptionist', icon: 'desktop-outline', color: palette.teal700 },
-                ...(canSetAdmin ? [{ value: 'admin', label: 'Admin', icon: 'shield-outline' as const, color: palette.violet600 }] : []),
-              ]}
-            />
-          </ScrollView>
-          <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
-              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={styles.saveBtnText}>{editingUser ? 'Save Changes' : 'Add Staff'}</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-      {/* Modal-scoped Toast — RN's Modal renders in its own native layer above
-          the app root, so the root <Toast/> in App.tsx is hidden behind it.
-          Mounting a second instance here makes it the active one (by mount
-          order) while this modal is open; it falls back to the root instance
-          once this one unmounts. See react-native-toast-message's docs on
-          showing a Toast inside a Modal. */}
-      <Toast config={toastConfig} />
-    </Modal>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={editingUser ? 'Edit Staff Member' : 'Add Staff Member'}
+      maxHeight="90%"
+      footer={
+        <SheetActions
+          onCancel={onClose}
+          onConfirm={handleSubmit(handleSave)}
+          confirmLabel={editingUser ? 'Save Changes' : 'Add Staff'}
+          loading={isSubmitting}
+        />
+      }
+    >
+      <Field control={control} name="name" label="Full Name *" placeholder="Staff member's name" />
+      <Field control={control} name="email" label="Email *" placeholder="email@example.com" keyboardType="email-address" autoCapitalize="none" />
+      <Field control={control} name="phone" label="Phone *" placeholder={locale.phoneExample} keyboardType="phone-pad" autoCapitalize="none" />
+      <Field
+        control={control}
+        name="password"
+        label={editingUser ? 'New Password (leave blank to keep)' : 'Password *'}
+        placeholder="Min. 6 characters"
+        secureTextEntry
+        autoCapitalize="none"
+      />
+      <ControlledPicker
+        control={control}
+        name="role"
+        label="Role"
+        required
+        options={[
+          { value: 'mechanic', label: 'Mechanic', icon: 'hammer-outline', color: colors.warning },
+          { value: 'service_advisor', label: 'Service Advisor', icon: 'clipboard-outline', color: colors.success },
+          { value: 'receptionist', label: 'Receptionist', icon: 'desktop-outline', color: palette.teal700 },
+          ...(canSetAdmin ? [{ value: 'admin', label: 'Admin', icon: 'shield-outline' as const, color: palette.violet600 }] : []),
+        ]}
+      />
+    </BottomSheet>
   );
 }
 
 export default function StaffScreen(_props: Props) {
   const { user, hasRole } = useAuth();
   const { activeGarageId } = useGarage();
+  const { withLoader } = useGlobalLoader();
   const [staff, setStaff] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -268,13 +257,13 @@ export default function StaffScreen(_props: Props) {
         {
           text: u.isActive ? 'Deactivate' : 'Activate',
           style: u.isActive ? 'destructive' : 'default',
-          onPress: async () => {
+          onPress: () => withLoader(async () => {
             try {
               await updateUser(u._id, { isActive: !u.isActive });
               Toast.show({ type: 'success', text1: `${u.name} ${u.isActive ? 'deactivated' : 'activated'}` });
-              fetchStaff();
-            } catch { Toast.show({ type: 'error', text1: 'Update failed' }); }
-          }
+              await fetchStaff();
+            } catch (e) { Toast.show({ type: 'error', text1: getErrorMessage(e, 'Update failed') }); }
+          })
         }
       ]
     );
@@ -285,13 +274,13 @@ export default function StaffScreen(_props: Props) {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive',
-        onPress: async () => {
+        onPress: () => withLoader(async () => {
           try {
             await deleteUser(u._id);
             Toast.show({ type: 'success', text1: 'Staff member deleted' });
-            fetchStaff();
-          } catch { Toast.show({ type: 'error', text1: 'Delete failed' }); }
-        }
+            await fetchStaff();
+          } catch (e) { Toast.show({ type: 'error', text1: getErrorMessage(e, 'Delete failed') }); }
+        }, 'Deleting...')
       }
     ]);
   };
@@ -534,21 +523,10 @@ const styles = StyleSheet.create({
     shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6,
   },
   // Modal
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  modalSheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
-  modalBody: { padding: 20 },
-  modalFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
   fieldWrap: { marginBottom: 16 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
   inputError: { borderColor: colors.danger },
   fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
 
-  cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
-  saveBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: colors.textOnPrimary },
 });

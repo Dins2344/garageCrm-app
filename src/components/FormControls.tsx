@@ -20,12 +20,20 @@ interface FieldProps {
   /** Message from the field's schema rule. Its presence is what marks the field invalid. */
   error?: string;
   required?: boolean;
+  maxLength?: number;
+  /** iOS autofill hint — `oneTimeCode` lets the keyboard offer an SMS code. */
+  textContentType?: ComponentProps<typeof TextInput>['textContentType'];
+  autoFocus?: boolean;
+  testID?: string;
 }
 
 // Shared by SettingsScreen, EditProfileScreen and ChangePasswordScreen — kept
 // here (rather than redefined per-screen) so the three stay visually
 // identical without copy-pasted style drift.
-export function Field({ label, value, onChangeText, onBlur, placeholder, keyboardType, autoCapitalize, editable = true, secureTextEntry, error, required }: FieldProps) {
+export function Field({
+  label, value, onChangeText, onBlur, placeholder, keyboardType, autoCapitalize, editable = true, secureTextEntry, error, required,
+  maxLength, textContentType, autoFocus, testID
+}: FieldProps) {
   const [show, setShow] = useState(false);
   const isPwd = secureTextEntry !== undefined;
   return (
@@ -48,6 +56,10 @@ export function Field({ label, value, onChangeText, onBlur, placeholder, keyboar
           autoCapitalize={autoCapitalize || 'sentences'}
           editable={editable}
           secureTextEntry={isPwd ? !show : false}
+          maxLength={maxLength}
+          textContentType={textContentType}
+          autoFocus={autoFocus}
+          testID={testID}
         />
         {isPwd && (
           <TouchableOpacity onPress={() => setShow(s => !s)} style={{ padding: 4 }}>

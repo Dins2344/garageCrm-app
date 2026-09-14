@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { listBranches, createBranch, deleteBranch, getGarage, type DeleteBranchPayload } from '../api/garageService';
 import { useAuth } from './AuthContext';
+import { useGlobalLoader } from './GlobalLoaderContext';
 import { DEFAULT_LOCALE } from '../utils/locale';
 import { ACTIVE_GARAGE_KEY } from '../utils/constants';
 import type { Garage, ResolvedLocale } from '../types/models';
-import { colors } from '../theme';
 
 
 // Minimum time the "switching branch" overlay stays up, so screens that
@@ -33,12 +32,12 @@ const GarageContext = createContext<GarageContextValue | null>(null);
 
 export function GarageProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { withLoader } = useGlobalLoader();
   // Only ever populated/used for owners — non-owners are always scoped to
   // their single assigned garage, derived below rather than stored.
   const [ownerGarages, setOwnerGarages] = useState<Garage[]>([]);
   const [ownerActiveGarageId, setOwnerActiveGarageId] = useState<string | null>(null);
   const [garagesLoading, setGaragesLoading] = useState(false);
-  const [switching, setSwitching] = useState(false);
 
   // Depend on stable primitives, not the `user` object reference. AuthContext's
   // boot-time checkToken() calls setUser() twice — once with the cached user,
@@ -99,14 +98,13 @@ export function GarageProvider({ children }: { children: ReactNode }) {
 
   const switchGarage = async (garageId: string) => {
     if (garageId === ownerActiveGarageId) return;
-    setSwitching(true);
-    try {
+    // The app-wide overlay, not a local one: it has to sit above whatever
+    // sheet the switch was started from.
+    await withLoader(async () => {
       setOwnerActiveGarageId(garageId);
       await AsyncStorage.setItem(ACTIVE_GARAGE_KEY, garageId);
       await new Promise(resolve => setTimeout(resolve, SWITCH_SETTLE_MS));
-    } finally {
-      setSwitching(false);
-    }
+    }, 'Switching branch...');
   };
 
   const addBranch = async (data: Pick<Garage, 'name' | 'phone'>): Promise<Garage> => {
@@ -133,12 +131,6 @@ export function GarageProvider({ children }: { children: ReactNode }) {
       refreshGarage, switchGarage, addBranch, removeBranch
     }}>
       {children}
-      {switching && (
-        <View style={styles.overlay} pointerEvents="auto">
-          <ActivityIndicator size="large" color={colors.textOnPrimary} />
-          <Text style={styles.overlayText}>Switching branch…</Text>
-        </View>
-      )}
     </GarageContext.Provider>
   );
 }
@@ -148,23 +140,3 @@ export const useGarage = (): GarageContextValue => {
   if (!context) throw new Error('useGarage must be used within GarageProvider');
   return context;
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(17, 24, 39, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 999,
-  },
-  overlayText: {
-    marginTop: 12,
-    color: colors.textOnPrimary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});

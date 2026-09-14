@@ -8,12 +8,13 @@ import { useForm, useController, Controller, type Control, type FieldValues, typ
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ControlledPicker } from '../components/FormControls';
 import { Ionicons } from '@expo/vector-icons';
+import BottomSheet, { SheetActions } from '../components/BottomSheet';
 import Toast from 'react-native-toast-message';
-import { toastConfig } from '../components/toastConfig';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../api/vehicleService';
 import { getCustomers } from '../api/customerService';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
+import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
@@ -159,69 +160,60 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.overlay}>
-        <View style={s.sheet}>
-          <View style={s.handle} />
-          <View style={s.sheetHeader}>
-            <Text style={s.sheetTitle}>{editing ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
-          </View>
-          <ScrollView style={s.sheetBody} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={editing ? 'Edit Vehicle' : 'Add Vehicle'}
+      maxHeight="92%"
+      footer={
+        <SheetActions
+          onCancel={onClose}
+          onConfirm={handleSubmit(handleSave)}
+          confirmLabel={editing ? 'Update' : 'Add Vehicle'}
+          loading={isSubmitting}
+        />
+      }
+    >
 
-            <Text style={s.sectionLabel}>Owner</Text>
-            <Controller
-              control={control}
-              name="customer"
-              render={({ field, fieldState }) => (
-                <CustomerPicker customers={customers} value={field.value} onChange={field.onChange} error={fieldState.error?.message} />
-              )}
-            />
+      <Text style={s.sectionLabel}>Owner</Text>
+      <Controller
+        control={control}
+        name="customer"
+        render={({ field, fieldState }) => (
+          <CustomerPicker customers={customers} value={field.value} onChange={field.onChange} error={fieldState.error?.message} />
+        )}
+      />
 
-            <View style={s.divider} />
+      <View style={s.divider} />
 
-            <F control={control} name="licensePlate" label="License Plate *" placeholder="KA01AB1234"
-              cap="characters" transform={v => v.toUpperCase()} />
+      <F control={control} name="licensePlate" label="License Plate *" placeholder="KA01AB1234"
+        cap="characters" transform={v => v.toUpperCase()} />
 
-            <View style={s.row}>
-              <View style={{ flex: 1 }}><F control={control} name="make" label="Make *" placeholder="Honda, Maruti..." /></View>
-              <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}><F control={control} name="model" label="Model *" placeholder="City, Swift..." /></View>
-            </View>
+      <View style={s.row}>
+        <View style={{ flex: 1 }}><F control={control} name="make" label="Make *" placeholder="Honda, Maruti..." /></View>
+        <View style={{ width: 12 }} />
+        <View style={{ flex: 1 }}><F control={control} name="model" label="Model *" placeholder="City, Swift..." /></View>
+      </View>
 
-            <View style={s.row}>
-              <View style={{ flex: 1 }}><F control={control} name="year" label="Year" placeholder="2024" keyboard="numeric" cap="none" /></View>
-              <View style={{ width: 12 }} />
-              <View style={{ flex: 1 }}><F control={control} name="color" label="Color" placeholder="White, Black..." /></View>
-            </View>
+      <View style={s.row}>
+        <View style={{ flex: 1 }}><F control={control} name="year" label="Year" placeholder="2024" keyboard="numeric" cap="none" /></View>
+        <View style={{ width: 12 }} />
+        <View style={{ flex: 1 }}><F control={control} name="color" label="Color" placeholder="White, Black..." /></View>
+      </View>
 
-            <ControlledPicker
-              control={control}
-              name="fuelType"
-              label="Fuel Type"
-              options={[
-                { value: 'petrol', label: 'Petrol', color: colors.danger },
-                { value: 'diesel', label: 'Diesel', color: colors.info },
-                { value: 'cng', label: 'CNG', color: colors.warning },
-                { value: 'electric', label: 'Electric', color: colors.success },
-                { value: 'hybrid', label: 'Hybrid', color: palette.violet500 },
-              ]}
-            />
-          </ScrollView>
-          <View style={s.footer}>
-            <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
-              <Text style={s.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
-              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Vehicle'}</Text>}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-      {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
-          is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
-      <Toast config={toastConfig} />
-    </Modal>
+      <ControlledPicker
+        control={control}
+        name="fuelType"
+        label="Fuel Type"
+        options={[
+          { value: 'petrol', label: 'Petrol', color: colors.danger },
+          { value: 'diesel', label: 'Diesel', color: colors.info },
+          { value: 'cng', label: 'CNG', color: colors.warning },
+          { value: 'electric', label: 'Electric', color: colors.success },
+          { value: 'hybrid', label: 'Hybrid', color: palette.violet500 },
+        ]}
+      />
+    </BottomSheet>
   );
 }
 
@@ -229,6 +221,7 @@ function VehicleModal({ visible, onClose, onSave, editing, customers }: VehicleM
 export default function VehiclesScreen({ navigation }: Props) {
   const { hasRole } = useAuth();
   const { activeGarageId } = useGarage();
+  const { withLoader } = useGlobalLoader();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -271,10 +264,10 @@ export default function VehiclesScreen({ navigation }: Props) {
     Alert.alert('Delete Vehicle', `Delete ${v.licensePlate}? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          try { await deleteVehicle(v._id); Toast.show({ type: 'success', text1: 'Vehicle deleted' }); fetchVehicles(1); }
-          catch { Toast.show({ type: 'error', text1: 'Failed to delete' }); }
-        }
+        text: 'Delete', style: 'destructive', onPress: () => withLoader(async () => {
+          try { await deleteVehicle(v._id); Toast.show({ type: 'success', text1: 'Vehicle deleted' }); await fetchVehicles(1); }
+          catch (e) { Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to delete') }); }
+        }, 'Deleting...')
       }
     ]);
   };
@@ -390,13 +383,6 @@ const s = StyleSheet.create({
   emptySub: { fontSize: 13, color: colors.textFaint },
   fab: { position: 'absolute', bottom: TAB_BAR_CLEARANCE, right: 24, width: 56, height: 56, borderRadius: radius.xxl, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   // Modal
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
-  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
-  sheetBody: { padding: 20 },
-  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
   sectionLabel: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 8 },
   field: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
@@ -405,10 +391,6 @@ const s = StyleSheet.create({
   fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
 
   row: { flexDirection: 'row' },
-  cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
-  saveBtn: { flex: 1.5, padding: 14, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: colors.textOnPrimary },
   // Customer picker
   searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 10, height: 42, marginBottom: 8 },
   searchInput: { flex: 1, fontSize: 14, color: colors.textStrong },

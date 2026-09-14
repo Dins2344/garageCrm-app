@@ -111,6 +111,14 @@ navigation.navigate('JobCardDetail', { jobCard: entireJobCardObject });
 
 ---
 
+### Settings holds tiles, not features
+
+`SettingsScreen` is a directory. A feature reached from it — profile, password,
+staff, contact verification — is its own stack screen with a header, and
+Settings shows a `staffShortcut` tile that navigates there and, where useful,
+summarises state in its subtitle. Do not add a feature's form, sheet or state
+to `SettingsScreen.tsx`; see "Settings is a directory" in `CLAUDE.md`.
+
 ## Screen Patterns
 
 ### Standard Data-Fetching Screen

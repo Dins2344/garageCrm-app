@@ -5,6 +5,7 @@ import {
   Modal, SafeAreaView, StatusBar, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import BottomSheet from '../components/BottomSheet';
 import { useFocusEffect } from '@react-navigation/native';
 import { getDashboardStats, DashboardStats } from '../api/dashboardService';
 import { useAuth } from '../context/AuthContext';
@@ -75,38 +76,30 @@ function BranchSwitcher({ garages, activeGarageId, onSwitch }: BranchSwitcherPro
         <Ionicons name="chevron-down" size={18} color={colors.textFaint} />
       </TouchableOpacity>
 
-      <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
-        <View style={styles.sheetOverlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setVisible(false)} />
-          <View style={styles.sheet}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Switch Branch</Text>
-              <TouchableOpacity onPress={() => setVisible(false)}>
-                <Ionicons name="close" size={24} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.sheetList} keyboardShouldPersistTaps="handled">
-              {garages.map(g => {
-                const isActive = g._id === activeGarageId;
-                return (
-                  <TouchableOpacity
-                    key={g._id}
-                    style={[styles.branchOption, isActive && styles.branchOptionActive]}
-                    onPress={() => { onSwitch(g._id); setVisible(false); }}
-                    activeOpacity={0.6}
-                  >
-                    <Ionicons name={isActive ? 'radio-button-on' : 'radio-button-off'} size={20} color={isActive ? colors.primary : colors.textFaint} />
-                    <Text style={[styles.branchOptionText, isActive && styles.branchOptionTextActive]} numberOfLines={1}>
-                      {g.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      <BottomSheet
+        visible={visible}
+        onClose={() => setVisible(false)}
+        title="Switch Branch"
+        maxHeight="70%"
+        bodyStyle={styles.sheetList}
+      >
+        {garages.map(g => {
+          const isActive = g._id === activeGarageId;
+          return (
+            <TouchableOpacity
+              key={g._id}
+              style={[styles.branchOption, isActive && styles.branchOptionActive]}
+              onPress={() => { onSwitch(g._id); setVisible(false); }}
+              activeOpacity={0.6}
+            >
+              <Ionicons name={isActive ? 'radio-button-on' : 'radio-button-off'} size={20} color={isActive ? colors.primary : colors.textFaint} />
+              <Text style={[styles.branchOptionText, isActive && styles.branchOptionTextActive]} numberOfLines={1}>
+                {g.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </BottomSheet>
     </>
   );
 }
@@ -496,41 +489,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: '700',
     marginTop: 1,
-  },
-  sheetOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '70%',
-    width: '100%',
-    maxWidth: SHEET_MAX_WIDTH,
-  },
-  sheetHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-    alignSelf: 'center',
-    marginTop: 12,
-  },
-  sheetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceMuted,
-  },
-  sheetTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
   },
   sheetList: {
     paddingHorizontal: 12,

@@ -10,10 +10,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../api/customerService';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import BottomSheet, { SheetActions } from '../components/BottomSheet';
 import Toast from 'react-native-toast-message';
-import { toastConfig } from '../components/toastConfig';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
+import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer } from '../types/models';
@@ -109,50 +110,42 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.overlay}>
-        <View style={s.sheet}>
-          <View style={s.handle} />
-          <View style={s.sheetHeader}>
-            <Text style={s.sheetTitle}>{editing ? 'Edit Customer' : 'Add Customer'}</Text>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={colors.textMuted} /></TouchableOpacity>
-          </View>
-          <ScrollView style={s.sheetBody} keyboardShouldPersistTaps="handled">
-            <F control={control} name="name" label="Full Name *" placeholder="John Doe" />
-            <F control={control} name="phone" label="Phone Number *" placeholder={locale.phoneExample} keyboard="phone-pad" cap="none" />
-            <F control={control} name="email" label="Email" placeholder="customer@email.com (optional)" keyboard="email-address" cap="none" />
-            <View style={s.row}>
-              <View style={{ flex: 1 }}><F control={control} name="address.city" label="City" placeholder="City" /></View>
-              <View style={{ width: 12 }} />
-              {/* Label, keypad and example all follow the garage's country —
-                  this used to be hardcoded to an Indian pincode. */}
-              <View style={{ flex: 1 }}>
-                <F control={control} name="address.pincode" label={locale.postalLabel} placeholder={locale.postalLabel}
-                  keyboard={locale.postalInputMode === 'numeric' ? 'numeric' : 'default'} cap="characters" />
-              </View>
-            </View>
-            <F control={control} name="notes" label="Notes" placeholder="Any notes..." multiline />
-          </ScrollView>
-          <View style={s.footer}>
-            <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
-              <Text style={s.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.saveBtn, isSubmitting && { opacity: 0.6 }]} onPress={handleSubmit(handleSave)} disabled={isSubmitting}>
-              {isSubmitting ? <ActivityIndicator color={colors.textOnPrimary} size="small" /> : <Text style={s.saveBtnText}>{editing ? 'Update' : 'Add Customer'}</Text>}
-            </TouchableOpacity>
-          </View>
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title={editing ? 'Edit Customer' : 'Add Customer'}
+      maxHeight="92%"
+      footer={
+        <SheetActions
+          onCancel={onClose}
+          onConfirm={handleSubmit(handleSave)}
+          confirmLabel={editing ? 'Update' : 'Add Customer'}
+          loading={isSubmitting}
+        />
+      }
+    >
+      <F control={control} name="name" label="Full Name *" placeholder="John Doe" />
+      <F control={control} name="phone" label="Phone Number *" placeholder={locale.phoneExample} keyboard="phone-pad" cap="none" />
+      <F control={control} name="email" label="Email" placeholder="customer@email.com (optional)" keyboard="email-address" cap="none" />
+      <View style={s.row}>
+        <View style={{ flex: 1 }}><F control={control} name="address.city" label="City" placeholder="City" /></View>
+        <View style={{ width: 12 }} />
+        {/* Label, keypad and example all follow the garage's country —
+            this used to be hardcoded to an Indian pincode. */}
+        <View style={{ flex: 1 }}>
+          <F control={control} name="address.pincode" label={locale.postalLabel} placeholder={locale.postalLabel}
+            keyboard={locale.postalInputMode === 'numeric' ? 'numeric' : 'default'} cap="characters" />
         </View>
-      </KeyboardAvoidingView>
-      {/* Modal-scoped Toast — see StaffModal in StaffScreen.tsx for why this
-          is needed (RN's Modal renders above the app-root Toast in App.tsx). */}
-      <Toast config={toastConfig} />
-    </Modal>
+      </View>
+      <F control={control} name="notes" label="Notes" placeholder="Any notes..." multiline />
+    </BottomSheet>
   );
 }
 
 export default function CustomersScreen(_props: Props) {
   const { hasRole } = useAuth();
   const { activeGarageId, locale } = useGarage();
+  const { withLoader } = useGlobalLoader();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -202,10 +195,10 @@ export default function CustomersScreen(_props: Props) {
     Alert.alert('Delete Customer', `Delete ${c.name}? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          try { await deleteCustomer(c._id); Toast.show({ type: 'success', text1: 'Customer deleted' }); fetchCustomers(1); }
-          catch { Toast.show({ type: 'error', text1: 'Failed to delete' }); }
-        }
+        text: 'Delete', style: 'destructive', onPress: () => withLoader(async () => {
+          try { await deleteCustomer(c._id); Toast.show({ type: 'success', text1: 'Customer deleted' }); await fetchCustomers(1); }
+          catch (e) { Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to delete') }); }
+        }, 'Deleting...')
       }
     ]);
   };
@@ -313,22 +306,10 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 17, fontWeight: 'bold', color: colors.textSecondary },
   emptySub: { fontSize: 13, color: colors.textFaint },
   fab: { position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: radius.xxl, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
-  // Modal
-  overlay: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', width: '100%', maxWidth: SHEET_MAX_WIDTH },
-  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginTop: 12 },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
-  sheetTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary },
-  sheetBody: { padding: 20 },
-  footer: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
   field: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 },
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.lg, paddingHorizontal: 12, height: 44, fontSize: 15, color: colors.textStrong },
   inputError: { borderColor: colors.danger },
   fieldError: { fontSize: 12, color: colors.danger, marginTop: 5 },
   row: { flexDirection: 'row' },
-  cancelBtn: { flex: 1, padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceMuted, alignItems: 'center' },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
-  saveBtn: { flex: 1.5, padding: 14, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: 'bold', color: colors.textOnPrimary },
 });
