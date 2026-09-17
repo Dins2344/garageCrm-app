@@ -12,7 +12,6 @@ import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import Toast from 'react-native-toast-message';
 import WebAppBanner from '../components/WebAppBanner';
-import SampleDataBanner from '../components/SampleDataBanner';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
@@ -109,7 +108,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { user, hasRole } = useAuth();
-  const { activeGarageId, activeGarage, garages, switchGarage, locale, refreshGarage } = useGarage();
+  const { activeGarageId, garages, switchGarage, locale } = useGarage();
 
   const fetchDashboard = async () => {
     try {
@@ -252,10 +251,6 @@ export default function HomeScreen({ navigation }: Props) {
 
       {/* Above the fold, unlike WebAppBanner below: this one explains the
           numbers directly under it, so it is useless further down the page. */}
-      <SampleDataBanner
-        visible={activeGarage?.hasSampleData === true}
-        onRemoved={() => { refreshGarage(); fetchDashboard(); }}
-      />
 
       {/* ── Branch switcher (owners only) ── */}
       {hasRole('owner') && (

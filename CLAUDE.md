@@ -200,16 +200,6 @@ no CI job runs it, and it is deliberately not in the pre-push checklist. An
 emulator job costs about ten minutes of private-repo Actions minutes per run and
 Play's pre-launch report already crawls every upload on real devices for free.
 
-New garages arrive pre-seeded with demo rows (three customers, four vehicles,
-five job cards, one paid invoice), flagged `isSample` and cleared by
-`DELETE /garage/sample-data`. `SampleDataBanner` on Home offers that, and
-Settings carries the same action via `SampleDataRemoveButton`. The banner is
-**deliberately not dismissible** — it leaves when the data leaves, because a
-dismissible one gets waved away and the demo customers then sit in the list
-unlabelled forever. Both entry points share `useRemoveSampleData`, so the
-confirm wording — which is the only place promising "anything you have added
-yourself is kept" — cannot drift between them.
-
 ## Settings is a directory
 
 `SettingsScreen.tsx` is the index of the account: garage information, the
