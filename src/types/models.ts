@@ -86,6 +86,37 @@ export interface ResolvedLocale {
   timezone: string;
 }
 
+/** GET /api/meta/plans — the Free / Plus / Pro catalog, priced for one country. */
+export type PlanId = 'free' | 'plus' | 'pro';
+
+export interface PlanCatalogEntry {
+  id: PlanId;
+  name: string;
+  tagline: string;
+  features: string[];
+  /** `null` means unlimited. */
+  limits: {
+    maxGaragesPerOwner: number | null;
+    maxJobCardsPerGaragePerDay: number | null;
+    maxInvoicesPerGaragePerDay: number | null;
+    maxStaffPerGarage: number | null;
+  };
+  /** Major units of `PlanCatalog.currency`; 0 for Free. */
+  price: { monthly: number; annual: number };
+}
+
+export interface PlanCatalog {
+  country: string;
+  currency: string;
+  plans: PlanCatalogEntry[];
+  /**
+   * Server-owned. While `enabled` is false the clients show `message` on the
+   * plan buttons instead of a checkout, so turning purchasing on needs no
+   * app release.
+   */
+  purchasing: { enabled: boolean; message: string };
+}
+
 /** One row of GET /api/meta/countries — powers the signup/settings pickers. */
 export interface CountryOption {
   code: string;

@@ -21,6 +21,7 @@ jest.mock('../api/garageService', () => ({
 
 jest.mock('../api/metaService', () => ({
   listCountries: jest.fn(),
+  getPlans: jest.fn(),
 }));
 
 jest.mock('../api/userService', () => ({
@@ -101,6 +102,31 @@ describe('SettingsScreen — Contact Verification tile', () => {
 
     await waitFor(() => expect(screen.getAllByText('Speed Auto Works').length).toBeGreaterThan(0));
     expect(screen.queryByTestId('verification-tile')).toBeNull();
+  });
+});
+
+describe('SettingsScreen — Plans tile', () => {
+  it('shows a tile to owners and admins that navigates to the Plans screen, and fetches no catalog itself', async () => {
+    mockAuth.user = owner({ role: 'admin' });
+    const user = userEvent.setup();
+    await render(<SettingsScreen {...props} />);
+
+    const tile = await screen.findByTestId('plans-tile');
+    expect(screen.getByText('Free plan - paid plans coming soon')).toBeTruthy();
+    // The catalog lives on PlansScreen; Settings only points at it.
+    expect(screen.queryByTestId('plan-plus')).toBeNull();
+    expect(metaService.getPlans).not.toHaveBeenCalled();
+
+    await user.press(tile);
+    expect(mockNavigate).toHaveBeenCalledWith('Plans');
+  });
+
+  it('is not shown to staff', async () => {
+    mockAuth.user = owner({ role: 'service_advisor' });
+    await render(<SettingsScreen {...props} />);
+
+    await waitFor(() => expect(screen.getAllByText('Speed Auto Works').length).toBeGreaterThan(0));
+    expect(screen.queryByTestId('plans-tile')).toBeNull();
   });
 });
 

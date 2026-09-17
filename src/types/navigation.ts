@@ -25,6 +25,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   ChangePassword: undefined;
   ContactVerification: undefined;
+  Plans: undefined;
   Walkthrough: undefined;
 };
 

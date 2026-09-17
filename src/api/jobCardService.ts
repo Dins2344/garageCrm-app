@@ -3,6 +3,7 @@ import type { JobCard, Complaint, EstimationPart, EstimationLabor } from '../typ
 import type { ApiListResponse, ApiItemResponse, ApiMessageResponse } from '../types/api';
 
 export interface JobCardListParams {
+  /** One status or several comma-separated (`new,approved`) — the API matches any. */
   status?: string;
   mechanicId?: string;
   vehicle?: string;

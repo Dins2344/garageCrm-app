@@ -596,6 +596,29 @@ export default function SettingsScreen({ navigation }: Props) {
           );
         })()}
 
+        {/* ── PLANS TILE (owners and admins) ──
+            A tile only; the catalog and the coming-soon notice live on
+            PlansScreen. Purchasing is not offered anywhere in the app. */}
+        {hasRole('owner', 'admin') && (
+          <TouchableOpacity
+            style={styles.staffShortcut}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Plans')}
+            testID="plans-tile"
+          >
+            <View style={styles.staffShortcutLeft}>
+              <View style={styles.staffShortcutIcon}>
+                <Ionicons name="card-outline" size={22} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.staffShortcutTitle}>Plans</Text>
+                <Text style={styles.staffShortcutSub}>Free plan - paid plans coming soon</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
+          </TouchableOpacity>
+        )}
+
         {/* ── MY PROFILE SHORTCUT ── */}
         <TouchableOpacity style={styles.staffShortcut} activeOpacity={0.8} onPress={() => navigation.navigate('EditProfile')}>
           <View style={styles.staffShortcutLeft}>
