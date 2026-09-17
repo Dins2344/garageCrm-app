@@ -42,6 +42,7 @@ import InvoicesScreen from '../screens/InvoicesScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import ContactVerificationScreen from '../screens/ContactVerificationScreen';
+import PlansScreen from '../screens/PlansScreen';
 import WalkthroughScreen from '../screens/WalkthroughScreen';
 import WalkthroughGate from '../components/WalkthroughGate';
 import { colors } from '../theme';
@@ -139,6 +140,11 @@ export default function AppNavigator() {
               name="ContactVerification"
               component={ContactVerificationScreen}
               options={{ headerShown: true, title: 'Contact Verification', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="Plans"
+              component={PlansScreen}
+              options={{ headerShown: true, title: 'Plans', headerTitleStyle: { fontWeight: 'bold' } }}
             />
             {/* The replay route only — both first-run paths are handled by
                 WalkthroughGate below and never navigate here. */}

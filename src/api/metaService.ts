@@ -1,5 +1,5 @@
 import api from './apiInterceptor';
-import type { CountryOption } from '../types/models';
+import type { CountryOption, PlanCatalog } from '../types/models';
 import type { ApiItemResponse } from '../types/api';
 
 /**
@@ -11,3 +11,12 @@ import type { ApiItemResponse } from '../types/api';
  */
 export const listCountries = (): Promise<ApiItemResponse<CountryOption[]>> =>
   api.get('/meta/countries').then(r => r.data);
+
+/**
+ * The Free / Plus / Pro catalog priced for a country. Public. The
+ * `purchasing` block is server-owned: while `enabled` is false the Plans
+ * screen is read-only and shows `message` — no price change or launch of
+ * paid plans needs a binary release.
+ */
+export const getPlans = (country?: string): Promise<ApiItemResponse<PlanCatalog>> =>
+  api.get('/meta/plans', { params: country ? { country } : undefined }).then(r => r.data);

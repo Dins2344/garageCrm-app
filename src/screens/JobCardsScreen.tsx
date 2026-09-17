@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { formatMoney } from '../utils/format';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, ActivityIndicator, ListRenderItem } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, ListRenderItem } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getJobCards } from '../api/jobCardService';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +26,18 @@ const STATUS_COLORS: Partial<Record<JobStatus, string>> = {
   cancelled: colors.danger,
 };
 
+// The filter chips, in workflow order. Values match backend/types/domain.ts.
+const STATUS_FILTERS: { value: JobStatus; label: string }[] = [
+  { value: 'new', label: 'New' },
+  { value: 'estimation_sent', label: 'Estimation Sent' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'quality_check', label: 'Quality Check' },
+  { value: 'ready_for_pickup', label: 'Ready for Pickup' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
 export default function JobCardsScreen({ navigation }: Props) {
   const { activeGarageId, locale } = useGarage();
   const [jobCards, setJobCards] = useState<JobCard[]>([]);
@@ -34,6 +46,8 @@ export default function JobCardsScreen({ navigation }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
+  // Any number of statuses; [] means all. Sent comma-joined — the API matches any of them.
+  const [statuses, setStatuses] = useState<JobStatus[]>([]);
   const [page, setPage] = useState(1);
   const isFetchingMore = useRef(false);
 
@@ -50,7 +64,12 @@ export default function JobCardsScreen({ navigation }: Props) {
     }
 
     try {
-      const { data } = await getJobCards({ search, page: currentPage, limit: PAGE_LIMIT });
+      const { data } = await getJobCards({
+        search,
+        status: statuses.join(',') || undefined,
+        page: currentPage,
+        limit: PAGE_LIMIT
+      });
 
       setHasMore(data.length === PAGE_LIMIT);
 
@@ -75,8 +94,11 @@ export default function JobCardsScreen({ navigation }: Props) {
       setHasMore(true);
       fetchJobCards(1);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, activeGarageId])
+    }, [search, statuses, activeGarageId])
   );
+
+  const toggleStatus = (value: JobStatus) =>
+    setStatuses(prev => (prev.includes(value) ? prev.filter(s => s !== value) : [...prev, value]));
 
   const onRefresh = () => {
     setPage(1);
@@ -146,6 +168,42 @@ export default function JobCardsScreen({ navigation }: Props) {
         />
       </View>
 
+      {/* Multi-select: each chip toggles on its own; "All" clears them. */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipScroll}
+        contentContainerStyle={styles.chipRow}
+        keyboardShouldPersistTaps="handled"
+        testID="status-filter"
+      >
+        <TouchableOpacity
+          style={[styles.chip, statuses.length === 0 && styles.chipOn]}
+          onPress={() => setStatuses([])}
+          accessibilityRole="button"
+          accessibilityState={{ selected: statuses.length === 0 }}
+          testID="status-chip-all"
+        >
+          <Text style={[styles.chipText, statuses.length === 0 && styles.chipTextOn]} numberOfLines={1}>All</Text>
+        </TouchableOpacity>
+        {STATUS_FILTERS.map(({ value, label }) => {
+          const on = statuses.includes(value);
+          return (
+            <TouchableOpacity
+              key={value}
+              style={[styles.chip, on && styles.chipOn]}
+              onPress={() => toggleStatus(value)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              testID={`status-chip-${value}`}
+            >
+              {on && <Ionicons name="checkmark" size={14} color={colors.textOnPrimary} />}
+              <Text style={[styles.chipText, on && styles.chipTextOn]} numberOfLines={1}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       {loading && page === 1 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -165,6 +223,9 @@ export default function JobCardsScreen({ navigation }: Props) {
             <View style={styles.emptyContainer}>
               <Ionicons name="clipboard-outline" size={48} color={colors.borderStrong} />
               <Text style={styles.emptyText}>No job cards found</Text>
+              {statuses.length > 0 && (
+                <Text style={styles.emptyHint}>Try a different status filter</Text>
+              )}
             </View>
           }
         />
@@ -209,6 +270,43 @@ const styles = StyleSheet.create({
     height: 44,
     fontSize: 16,
     color: colors.textStrong,
+  },
+  // ScrollView defaults to flexGrow 1 / flexShrink 1. Left alone, the list
+  // below (which grows) squashes this row until the chips are clipped.
+  chipScroll: { flexGrow: 0, flexShrink: 0 },
+  chipRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // Never squeezed to fit the row: the row scrolls, the chips do not shrink.
+    flexShrink: 0,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.surface,
+  },
+  chipOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipText: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    // Android adds font padding that clips descenders at this size.
+    includeFontPadding: false,
+  },
+  chipTextOn: {
+    color: colors.textOnPrimary,
   },
   listContainer: {
     paddingHorizontal: 16,
@@ -273,6 +371,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: colors.textMuted,
+  },
+  emptyHint: {
+    marginTop: 4,
+    fontSize: 13,
+    color: colors.textFaint,
   },
   fab: {
     position: 'absolute',
