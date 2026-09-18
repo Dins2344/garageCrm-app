@@ -332,27 +332,31 @@ export default function HomeScreen({ navigation }: Props) {
           in the status card, here, and again in the overview list below. */}
       <Text style={styles.sectionTitle}>Today</Text>
       <View style={styles.statsGrid}>
-        <TouchableOpacity
-          style={[styles.statCard, { borderLeftColor: colors.info, borderLeftWidth: 4 }]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('JobCards')}
-        >
+        <TouchableOpacity style={styles.statCard} activeOpacity={0.7} onPress={() => navigation.navigate('JobCards')}>
+          <View style={[styles.statIcon, { backgroundColor: `${colors.info}15` }]}>
+            <Ionicons name="clipboard-outline" size={16} color={colors.info} />
+          </View>
           <Text style={styles.statLabel}>Active Job Cards</Text>
           <Text style={styles.statValue}>{activeJobCards}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.statCard, { borderLeftColor: palette.violet500, borderLeftWidth: 4 }]}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('JobCards')}
-        >
+        <TouchableOpacity style={styles.statCard} activeOpacity={0.7} onPress={() => navigation.navigate('JobCards')}>
+          <View style={[styles.statIcon, { backgroundColor: `${palette.violet500}15` }]}>
+            <Ionicons name="add-circle-outline" size={16} color={palette.violet500} />
+          </View>
           <Text style={styles.statLabel}>New Jobs Today</Text>
           <Text style={styles.statValue}>{stats?.overview?.todayJobCards || 0}</Text>
         </TouchableOpacity>
-        <View style={[styles.statCard, { borderLeftColor: colors.success, borderLeftWidth: 4 }]}>
+        <View style={styles.statCard}>
+          <View style={[styles.statIcon, { backgroundColor: `${colors.success}15` }]}>
+            <Ionicons name="cash-outline" size={16} color={colors.success} />
+          </View>
           <Text style={styles.statLabel}>Today's Revenue</Text>
           <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.today)}</Text>
         </View>
-        <View style={[styles.statCard, { borderLeftColor: colors.warning, borderLeftWidth: 4 }]}>
+        <View style={styles.statCard}>
+          <View style={[styles.statIcon, { backgroundColor: `${colors.warning}15` }]}>
+            <Ionicons name="calendar-outline" size={16} color={colors.warning} />
+          </View>
           <Text style={styles.statLabel}>This Month</Text>
           <Text style={styles.statValue}>{formatCurrency(stats?.revenue?.month)}</Text>
         </View>
@@ -672,6 +676,16 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
+  },
+  // A tinted icon chip carries the meaning the old coloured left edge did,
+  // the way Quick Actions and Needs Attention already do it.
+  statIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   statLabel: {
     fontSize: 13,

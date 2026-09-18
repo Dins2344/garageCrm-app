@@ -57,6 +57,15 @@ export default function MoreScreen({ navigation }: Props) {
       onPress: () => navigation.navigate('Invoices'),
     },
     {
+      title: 'Expenses',
+      subtitle: 'Track what the garage spends',
+      icon: 'wallet-outline',
+      iconBg: colors.dangerSoft,
+      iconColor: colors.danger,
+      onPress: () => navigation.navigate('Expenses'),
+      roles: ['owner', 'admin'],
+    },
+    {
       title: 'Staff',
       subtitle: 'Manage team members',
       icon: 'people-outline',

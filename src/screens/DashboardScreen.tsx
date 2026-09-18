@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl }
 import { useFocusEffect } from '@react-navigation/native';
 import { getDashboardStats, DashboardStats } from '../api/dashboardService';
 import { useGarage } from '../context/GarageContext';
+import { useAuth } from '../context/AuthContext';
+import MonthlyBusinessCard from '../components/MonthlyBusinessCard';
 import Toast from 'react-native-toast-message';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
@@ -43,6 +45,7 @@ export default function DashboardScreen(_props: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { activeGarageId, locale } = useGarage();
+  const { hasRole } = useAuth();
 
   const fetchStats = async () => {
     try {
@@ -101,6 +104,9 @@ export default function DashboardScreen(_props: Props) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* ── Monthly business figures — owner/admin, the roles who see expenses ── */}
+        {hasRole('owner', 'admin') && <MonthlyBusinessCard />}
+
         {/* ── Weekly Revenue ── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Weekly Revenue</Text>

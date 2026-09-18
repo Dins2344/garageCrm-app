@@ -44,6 +44,7 @@ import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import ContactVerificationScreen from '../screens/ContactVerificationScreen';
 import PlansScreen from '../screens/PlansScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
+import ExpensesScreen from '../screens/ExpensesScreen';
 import WalkthroughScreen from '../screens/WalkthroughScreen';
 import WalkthroughGate from '../components/WalkthroughGate';
 import { colors } from '../theme';
@@ -151,6 +152,11 @@ export default function AppNavigator() {
               name="DeleteAccount"
               component={DeleteAccountScreen}
               options={{ headerShown: true, title: 'Delete Account', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="Expenses"
+              component={ExpensesScreen}
+              options={{ headerShown: true, title: 'Expenses', headerTitleStyle: { fontWeight: 'bold' } }}
             />
             {/* The replay route only — both first-run paths are handled by
                 WalkthroughGate below and never navigate here. */}

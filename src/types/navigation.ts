@@ -27,6 +27,7 @@ export type RootStackParamList = {
   ContactVerification: undefined;
   Plans: undefined;
   DeleteAccount: undefined;
+  Expenses: undefined;
   Walkthrough: undefined;
 };
 
