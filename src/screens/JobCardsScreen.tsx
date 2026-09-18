@@ -6,6 +6,7 @@ import { getJobCards } from '../api/jobCardService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useGarage } from '../context/GarageContext';
+import { useDebounce } from '../hooks/useDebounce';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import { TAB_BAR_CLEARANCE } from '../components/FloatingTabBar';
 import type { MainTabScreenProps } from '../types/navigation';
@@ -46,6 +47,8 @@ export default function JobCardsScreen({ navigation }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
+  // One request per pause in typing, not per keystroke.
+  const debouncedSearch = useDebounce(search);
   // Any number of statuses; [] means all. Sent comma-joined — the API matches any of them.
   const [statuses, setStatuses] = useState<JobStatus[]>([]);
   const [page, setPage] = useState(1);
@@ -65,7 +68,7 @@ export default function JobCardsScreen({ navigation }: Props) {
 
     try {
       const { data } = await getJobCards({
-        search,
+        search: debouncedSearch,
         status: statuses.join(',') || undefined,
         page: currentPage,
         limit: PAGE_LIMIT
@@ -94,7 +97,7 @@ export default function JobCardsScreen({ navigation }: Props) {
       setHasMore(true);
       fetchJobCards(1);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, statuses, activeGarageId])
+    }, [debouncedSearch, statuses, activeGarageId])
   );
 
   const toggleStatus = (value: JobStatus) =>
@@ -161,7 +164,7 @@ export default function JobCardsScreen({ navigation }: Props) {
         <Ionicons name="search" size={20} color={colors.textFaint} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search job cards..."
+          placeholder="Search job no., plate, make, model or customer..."
           value={search}
           onChangeText={setSearch}
           placeholderTextColor={colors.textFaint}

@@ -13,6 +13,7 @@ import Toast from 'react-native-toast-message';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../api/vehicleService';
 import { getCustomers } from '../api/customerService';
 import { useAuth } from '../context/AuthContext';
+import { useDebounce } from '../hooks/useDebounce';
 import { useGarage } from '../context/GarageContext';
 import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
@@ -226,6 +227,8 @@ export default function VehiclesScreen({ navigation }: Props) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  // One request per pause in typing, not per keystroke.
+  const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -237,11 +240,11 @@ export default function VehiclesScreen({ navigation }: Props) {
   const fetchVehicles = useCallback(async (currentPage = 1, refresh = false) => {
     if (refresh) setRefreshing(true);
     try {
-      const { data } = await getVehicles({ search, page: currentPage, limit: 15 });
+      const { data } = await getVehicles({ search: debouncedSearch, page: currentPage, limit: 15 });
       setVehicles(prev => currentPage === 1 ? data : [...prev, ...data]);
     } catch { Toast.show({ type: 'error', text1: 'Failed to load vehicles' }); }
     finally { setLoading(false); setRefreshing(false); }
-  }, [search]);
+  }, [debouncedSearch]);
 
   useEffect(() => { setPage(1); setLoading(true); fetchVehicles(1); }, [fetchVehicles, activeGarageId]);
 
@@ -323,7 +326,7 @@ export default function VehiclesScreen({ navigation }: Props) {
     <View style={s.container}>
       <View style={s.searchBox}>
         <Ionicons name="search" size={20} color={colors.textFaint} style={{ marginRight: 8 }} />
-        <TextInput style={s.searchInput2} placeholder="Search plate, make or model..." value={search}
+        <TextInput style={s.searchInput2} placeholder="Search plate, make, model or customer..." value={search}
           onChangeText={setSearch} placeholderTextColor={colors.textFaint} />
         {search ? <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={18} color={colors.textFaint} /></TouchableOpacity> : null}
       </View>

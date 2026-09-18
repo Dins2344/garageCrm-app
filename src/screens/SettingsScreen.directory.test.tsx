@@ -130,6 +130,30 @@ describe('SettingsScreen — Plans tile', () => {
   });
 });
 
+describe('SettingsScreen — Delete Account tile', () => {
+  it('is a tile for everyone that leads to the DeleteAccount screen, with role-specific wording', async () => {
+    mockAuth.user = owner();
+    const user = userEvent.setup();
+    await render(<SettingsScreen {...props} />);
+
+    const tile = await screen.findByTestId('delete-account-tile');
+    expect(screen.getByText('Removes your garage and all its data')).toBeTruthy();
+    // No password field or confirm on this page — the feature lives elsewhere.
+    expect(screen.queryByTestId('delete-account-password')).toBeNull();
+
+    await user.press(tile);
+    expect(mockNavigate).toHaveBeenCalledWith('DeleteAccount');
+  });
+
+  it('tells staff only their login goes', async () => {
+    mockAuth.user = owner({ role: 'mechanic' });
+    await render(<SettingsScreen {...props} />);
+
+    await screen.findByTestId('delete-account-tile');
+    expect(screen.getByText('Removes your login only')).toBeTruthy();
+  });
+});
+
 describe('SettingsScreen — garage information loading', () => {
   it('shows skeleton rows until the garage arrives, then the real rows', async () => {
     mockAuth.user = owner();
