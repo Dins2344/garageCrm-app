@@ -616,7 +616,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
                 </View>
                 <View style={s.summaryRow}>
                   <Ionicons name="car-outline" size={15} color={colors.textMuted} />
-                  <Text style={s.summaryText}>{vehTab === 0 ? `${selVehicle?.licensePlate} · ${selVehicle?.make} ${selVehicle?.model}` : ((newPlate || newMake || newModel) ? `${newPlate} · ${newMake} ${newModel}` : '—')}</Text>
+                  <Text style={s.summaryText}>{vehTab === 0 ? `${selVehicle?.licensePlate}, ${selVehicle?.make} ${selVehicle?.model}` : ((newPlate || newMake || newModel) ? `${newPlate}, ${newMake} ${newModel}` : '—')}</Text>
                 </View>
               </View>
 
@@ -646,7 +646,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
           renderItem={c => (
             <>
               <Text style={{ fontSize: 15, fontWeight: '600', color: colors.textPrimary }}>{c.name}</Text>
-              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>{c.phone}{c.email ? ` · ${c.email}` : ''}</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>{c.phone}{c.email ? `, ${c.email}` : ''}</Text>
             </>
           )}
         />
@@ -661,7 +661,7 @@ export default function CreateJobCardScreen({ navigation }: Props) {
             <>
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary, letterSpacing: 0.5 }}>{v.licensePlate}</Text>
               <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 2 }}>
-                {v.make} {v.model}{v.year ? ` (${v.year})` : ''} · {(typeof v.customer === 'object' ? v.customer?.name : '') || ''}
+                {v.make} {v.model}{v.year ? ` (${v.year})` : ''}{typeof v.customer === 'object' && v.customer?.name ? `, ${v.customer.name}` : ''}
               </Text>
             </>
           )}
