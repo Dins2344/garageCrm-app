@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
@@ -65,7 +65,7 @@ function CustomerPicker({ customers, value, onChange, error }: CustomerPickerPro
       {selected && (
         <View style={s.selectedChip}>
           <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-          <Text style={s.selectedChipText}>{selected.name} · {selected.phone}</Text>
+          <Text style={s.selectedChipText}>{selected.name}, {selected.phone}</Text>
           <TouchableOpacity onPress={() => onChange('')}><Ionicons name="close-circle" size={14} color={colors.textFaint} /></TouchableOpacity>
         </View>
       )}
@@ -230,6 +230,13 @@ export default function VehiclesScreen({ navigation }: Props) {
   // One request per pause in typing, not per keystroke.
   const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
+  // Same guard as InvoicesScreen: onEndReached fires repeatedly while a page
+  // loads, so a load-more in flight blocks the next and the page only advances
+  // once its rows are in. A page-1 reset always wins and supersedes any
+  // load-more still in flight.
+  const inFlight = useRef(false);
+  const hasMore = useRef(true);
+  const reqSeq = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
@@ -238,12 +245,18 @@ export default function VehiclesScreen({ navigation }: Props) {
   const canDelete = hasRole('owner', 'admin');
 
   const fetchVehicles = useCallback(async (currentPage = 1, refresh = false) => {
+    if (currentPage > 1 && inFlight.current) return;
+    const seq = ++reqSeq.current;
+    inFlight.current = true;
     if (refresh) setRefreshing(true);
     try {
       const { data } = await getVehicles({ search: debouncedSearch, page: currentPage, limit: 15 });
+      if (seq !== reqSeq.current) return;
+      hasMore.current = data.length === 15;
+      setPage(currentPage);
       setVehicles(prev => currentPage === 1 ? data : [...prev, ...data]);
     } catch { Toast.show({ type: 'error', text1: 'Failed to load vehicles' }); }
-    finally { setLoading(false); setRefreshing(false); }
+    finally { if (seq === reqSeq.current) inFlight.current = false; setLoading(false); setRefreshing(false); }
   }, [debouncedSearch]);
 
   useEffect(() => { setPage(1); setLoading(true); fetchVehicles(1); }, [fetchVehicles, activeGarageId]);
@@ -337,7 +350,7 @@ export default function VehiclesScreen({ navigation }: Props) {
         <FlatList data={vehicles} keyExtractor={keyExtractor} renderItem={renderItem}
           contentContainerStyle={s.list} refreshing={refreshing}
           onRefresh={() => { setPage(1); fetchVehicles(1, true); }}
-          onEndReached={() => { const n = page + 1; setPage(n); fetchVehicles(n); }}
+          onEndReached={() => { if (hasMore.current && !inFlight.current) fetchVehicles(page + 1); }}
           onEndReachedThreshold={0.5}
           ListEmptyComponent={
             <View style={s.empty}>
