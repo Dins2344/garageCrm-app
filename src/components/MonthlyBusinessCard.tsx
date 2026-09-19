@@ -48,17 +48,26 @@ export default function MonthlyBusinessCard() {
   const [month, setMonth] = useState(currentMonthKey());
   // Ten taps on the arrow are one request, for the month the taps end on.
   const debouncedMonth = useDebounce(month, 350);
-  const [metrics, setMetrics] = useState<MonthlyMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
+  // The figures are kept with the request they answer, so a month or branch
+  // change shows the skeleton until its own figures land instead of leaving
+  // last month's under the stepper. `data: null` records a failed request.
+  const requestKey = `${activeGarageId}:${debouncedMonth}`;
+  const [result, setResult] = useState<{ key: string; data: MonthlyMetrics | null } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     getMonthlyMetrics(debouncedMonth)
-      .then(res => { if (!cancelled) setMetrics(res.data); })
-      .catch(() => { if (!cancelled) Toast.show({ type: 'error', text1: 'Failed to load monthly figures' }); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .then(res => { if (!cancelled) setResult({ key: requestKey, data: res.data }); })
+      .catch(() => {
+        if (cancelled) return;
+        Toast.show({ type: 'error', text1: 'Failed to load monthly figures' });
+        setResult({ key: requestKey, data: null });
+      });
     return () => { cancelled = true; };
-  }, [debouncedMonth, activeGarageId]);
+  }, [debouncedMonth, requestKey]);
+
+  const metrics = result?.key === requestKey ? result.data : null;
+  const loading = result?.key !== requestKey;
 
   const money = (n: number) => formatMoney(n, locale);
   const profitPositive = (metrics?.netProfit ?? 0) >= 0;
@@ -73,7 +82,7 @@ export default function MonthlyBusinessCard() {
       </View>
       <MonthStepper value={month} onChange={setMonth} locale={locale.locale} />
 
-      {loading && !metrics ? (
+      {loading ? (
         <View style={styles.grid} testID="monthly-skeleton">
           {[0, 1, 2, 3].map(i => (
             <View key={i} style={styles.tile}>
