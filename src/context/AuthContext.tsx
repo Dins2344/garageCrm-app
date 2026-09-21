@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login as authLogin, register as authRegister, getMe, RegisterFormData } from '../api/authService';
 import IdleTimer from '../components/IdleTimer';
-import { TOKEN_KEY, USER_KEY, SESSION_STORAGE_KEYS } from '../utils/constants';
+import { TOKEN_KEY, USER_KEY, LAST_ACTIVITY_KEY, IDLE_TIMEOUT_MS, SESSION_STORAGE_KEYS } from '../utils/constants';
 import type { User } from '../types/models';
 
 export interface AuthContextValue {
@@ -38,10 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkToken = async () => {
     try {
-      const [token, savedUserStr] = await Promise.all([
+      const [token, savedUserStr, lastActivity] = await Promise.all([
         AsyncStorage.getItem(TOKEN_KEY),
         AsyncStorage.getItem(USER_KEY),
+        AsyncStorage.getItem(LAST_ACTIVITY_KEY),
       ]);
+
+      // The app was killed (or swiped away) mid-session: IdleTimer never got
+      // to fire, so apply its rule here before trusting the stored token.
+      if (lastActivity && Date.now() - Number(lastActivity) > IDLE_TIMEOUT_MS) {
+        await logout();
+        return;
+      }
 
       if (token && savedUserStr) {
         setUser(JSON.parse(savedUserStr));
@@ -64,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const { token, data } = await authLogin(email, password);
     await AsyncStorage.setItem(TOKEN_KEY, token);
+    await AsyncStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data));
     setUser(data);
     return data;
@@ -72,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (formData: RegisterFormData) => {
     const { token, data } = await authRegister(formData);
     await AsyncStorage.setItem(TOKEN_KEY, token);
+    await AsyncStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(data));
     setUser(data);
     return data;

@@ -97,6 +97,22 @@ describe('AuthContext', () => {
     expect(await AsyncStorage.getItem('garagepulse_token')).toBeNull();
   });
 
+  it('signs out on launch when the stored session was last used over ten minutes ago', async () => {
+    await seedStoredSession();
+    await AsyncStorage.setItem('garagepulse_last_activity', String(Date.now() - 11 * 60 * 1000));
+    jest.mocked(authService.getMe).mockResolvedValue({ success: true, data: mockUser });
+
+    await render(
+      <AuthProvider>
+        <Consumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading').props.children).toBe('false'));
+    expect(screen.getByTestId('user').props.children).toBe('none');
+    expect(await AsyncStorage.getItem('garagepulse_token')).toBeNull();
+  });
+
   it('login() stores the user and updates hasRole()', async () => {
     jest.mocked(authService.login).mockResolvedValue({ success: true, token: 'tok', data: mockUser });
     const user = userEvent.setup();

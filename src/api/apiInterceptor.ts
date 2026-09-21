@@ -32,7 +32,16 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => response,
+  async (response) => {
+    // Sliding session: the server re-issues the token on activity and hands
+    // it back in this header. Not storing it means a 401 ten minutes after
+    // login no matter how busy the user is.
+    const fresh = response.headers?.['x-token'];
+    if (typeof fresh === 'string' && fresh) {
+      await AsyncStorage.setItem(TOKEN_KEY, fresh);
+    }
+    return response;
+  },
   async (error) => {
     // Only when the request actually carried a token. A 401 on a request that
     // never sent one is not a session expiry — and the public /meta/app-update

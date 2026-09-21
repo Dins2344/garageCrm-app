@@ -22,6 +22,8 @@
 export const TOKEN_KEY = 'garagepulse_token';
 export const USER_KEY = 'garagepulse_user';
 export const ACTIVE_GARAGE_KEY = 'garagepulse_active_garage';
+/** Epoch ms of the last touch; lets a cold start know the session went idle. */
+export const LAST_ACTIVITY_KEY = 'garagepulse_last_activity';
 export const WEB_BANNER_DISMISSED_KEY = 'garagepulse_web_banner_dismissed';
 
 /** Install-scoped: the pre-auth intro carousel has run once on this device. */
@@ -51,6 +53,7 @@ export const SESSION_STORAGE_KEYS = [
   TOKEN_KEY,
   USER_KEY,
   ACTIVE_GARAGE_KEY,
+  LAST_ACTIVITY_KEY,
   WEB_BANNER_DISMISSED_KEY,
 ] as const;
 
@@ -89,13 +92,14 @@ export const TOUR_SEEN_USERS_LIMIT = 20;
  * in a component file — see 00-shared-constants.md, which names timeouts
  * explicitly.
  *
- * Raised from 10 minutes to 30. Ten was chosen for a shared workshop phone left
- * on a counter, and it does still protect that case. What it also did was sign
- * out anyone who put the phone down for a coffee, so someone evaluating the app
- * met a login screen every time they came back to it. Thirty minutes keeps the
- * unattended-counter protection and stops punishing an ordinary interruption.
+ * Ten minutes, matching the web client and the server: the API token itself
+ * expires ten minutes after its last use (JWT_EXPIRE), so a longer value here
+ * would only mean meeting a 401 instead of the login screen. Raising it means
+ * raising JWT_EXPIRE on the backend first.
  */
-export const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+export const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+/** While active, ping the server this often so its sliding token stays alive. */
+export const KEEP_ALIVE_MS = 5 * 60 * 1000;
 
 // ── Pagination ────────────────────────────────────────────────
 export const DEFAULT_PAGE_SIZE = 15;
