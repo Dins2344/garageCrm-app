@@ -643,6 +643,29 @@ export default function SettingsScreen({ navigation }: Props) {
           <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
         </TouchableOpacity>
 
+        {/* ── DELETE ACCOUNT TILE ──
+            A tile only; the confirmation and the deletion live on
+            DeleteAccountScreen (Settings is a directory). */}
+        <TouchableOpacity
+          style={styles.staffShortcut}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('DeleteAccount')}
+          testID="delete-account-tile"
+        >
+          <View style={styles.staffShortcutLeft}>
+            <View style={[styles.staffShortcutIcon, { backgroundColor: colors.dangerSoft }]}>
+              <Ionicons name="trash-outline" size={22} color={colors.danger} />
+            </View>
+            <View>
+              <Text style={styles.staffShortcutTitle}>Delete Account</Text>
+              <Text style={styles.staffShortcutSub}>
+                {hasRole('owner') ? 'Removes your garage and all its data' : 'Removes your login only'}
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.borderStrong} />
+        </TouchableOpacity>
+
         {/* ── APP INFO ── */}
         {/* <SectionCard title="App Info" icon="information-circle-outline">
           <InfoRow label="App" value="GaragePulse" />

@@ -68,3 +68,12 @@ export const confirmVerificationCode = async (channel: VerificationChannel, code
   const res = await api.post(`/auth/verification/${channel}/confirm`, { code });
   return res.data;
 };
+
+/**
+ * Delete the signed-in account. The password is the confirmation. Owners lose
+ * every garage they own and everything in them; staff lose only their user.
+ */
+export const deleteAccount = async (password: string): Promise<ApiMessageResponse> => {
+  const res = await api.delete('/auth/account', { data: { password } });
+  return res.data;
+};

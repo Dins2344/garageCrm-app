@@ -1,5 +1,5 @@
 import api from './apiInterceptor';
-import type { JobCard, Invoice, ServiceReminder } from '../types/models';
+import type { JobCard, Invoice, ServiceReminder, MonthlyMetrics } from '../types/models';
 import type { ApiItemResponse } from '../types/api';
 
 export interface StaffAchievement {
@@ -47,5 +47,11 @@ export const getDashboardStats = async (): Promise<ApiItemResponse<DashboardStat
 
 export const triggerCron = async (): Promise<{ success: boolean; message: string; data: CronResult }> => {
   const res = await api.post('/reminders/trigger-cron');
+  return res.data;
+};
+
+/** One month's revenue, services, expenses and profit (owner/admin). `month` is YYYY-MM. */
+export const getMonthlyMetrics = async (month?: string): Promise<ApiItemResponse<MonthlyMetrics>> => {
+  const res = await api.get('/dashboard/monthly', { params: month ? { month } : undefined });
   return res.data;
 };

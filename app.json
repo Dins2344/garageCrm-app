@@ -2,7 +2,7 @@
   "expo": {
     "name": "Garage Pulse",
     "slug": "garage-pulse",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "orientation": "portrait",
     "icon": "./assets/transFavi.png",
     "userInterfaceStyle": "light",
@@ -23,7 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.dctechs.garagepulse",
-      "versionCode": 10,
+      "versionCode": 11,
       "permissions": [
         "INTERNET",
         "CAMERA"

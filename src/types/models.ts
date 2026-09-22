@@ -334,3 +334,41 @@ export interface ServiceReminder {
   reminderSentAt?: string | null;
   isOverdue?: boolean;
 }
+
+// ─── Expenses ─────────────────────────────────────────────────────────────
+// Mirrors backend/types/domain.ts EXPENSE_CATEGORIES.
+export type ExpenseCategory = 'parts' | 'salaries' | 'rent' | 'utilities' | 'tools' | 'marketing' | 'transport' | 'other';
+
+export interface Expense {
+  _id: string;
+  title: string;
+  category: ExpenseCategory;
+  amount: number;
+  /** ISO timestamp of when the money left, not when it was recorded. */
+  expenseDate: string;
+  paymentMethod: PaymentMethod;
+  notes: string;
+  garage: string;
+  createdBy?: { _id: string; name: string; role?: Role } | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** GET /api/dashboard/monthly — one month of business figures, owner/admin. */
+export interface MonthFigures {
+  /** YYYY-MM */
+  month: string;
+  /** Paid invoices, by the date they were paid. */
+  revenue: number;
+  /** Invoices raised in the month. */
+  services: number;
+  /** Sum of expenses by expense date. */
+  expenses: number;
+  /** revenue - expenses; negative when the month lost money. */
+  netProfit: number;
+}
+
+export interface MonthlyMetrics extends MonthFigures {
+  previous: MonthFigures;
+  expensesByCategory: { category: ExpenseCategory; total: number; count: number }[];
+}

@@ -118,7 +118,7 @@ export default function VehicleDetailScreen({ route, navigation }: Props) {
         <Text style={styles.heroPlate}>{vehicle.licensePlate}</Text>
         <Text style={styles.heroMakeModel}>
           {vehicle.make} {vehicle.model}
-          {vehicle.year ? ` · ${vehicle.year}` : ''}
+          {vehicle.year ? `, ${vehicle.year}` : ''}
         </Text>
         {vehicle.color && (
           <View style={styles.colorTag}>

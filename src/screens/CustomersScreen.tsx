@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { formatMoney } from '../utils/format';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
@@ -150,6 +150,13 @@ export default function CustomersScreen(_props: Props) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  // Same guard as InvoicesScreen: onEndReached fires repeatedly while a page
+  // loads, so a load-more in flight blocks the next and the page only advances
+  // once its rows are in. A page-1 reset always wins and supersedes any
+  // load-more still in flight.
+  const inFlight = useRef(false);
+  const hasMore = useRef(true);
+  const reqSeq = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -158,12 +165,18 @@ export default function CustomersScreen(_props: Props) {
   const canDelete = hasRole('owner', 'admin');
 
   const fetchCustomers = useCallback(async (currentPage = 1, refresh = false) => {
+    if (currentPage > 1 && inFlight.current) return;
+    const seq = ++reqSeq.current;
+    inFlight.current = true;
     if (refresh) setRefreshing(true);
     try {
       const { data } = await getCustomers({ search, page: currentPage, limit: 15 });
+      if (seq !== reqSeq.current) return;
+      hasMore.current = data.length === 15;
+      setPage(currentPage);
       setCustomers(prev => currentPage === 1 ? data : [...prev, ...data]);
     } catch { Toast.show({ type: 'error', text1: 'Failed to load customers' }); }
-    finally { setLoading(false); setRefreshing(false); }
+    finally { if (seq === reqSeq.current) inFlight.current = false; setLoading(false); setRefreshing(false); }
   }, [search]);
 
   // Re-fetch when the screen comes into focus, matching InvoicesScreen and
@@ -213,7 +226,7 @@ export default function CustomersScreen(_props: Props) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.customerName}>{c.name}</Text>
-          <Text style={s.customerSub}>{c.phone}{c.email ? ` · ${c.email}` : ''}</Text>
+          <Text style={s.customerSub}>{c.phone}{c.email ? `, ${c.email}` : ''}</Text>
         </View>
         <Text style={s.spentText}>{formatMoney(c.totalSpent, locale)}</Text>
       </View>
@@ -255,7 +268,7 @@ export default function CustomersScreen(_props: Props) {
         <FlatList data={customers} keyExtractor={keyExtractor} renderItem={renderItem}
           contentContainerStyle={s.list} refreshing={refreshing}
           onRefresh={() => { setPage(1); fetchCustomers(1, true); }}
-          onEndReached={() => { const n = page + 1; setPage(n); fetchCustomers(n); }}
+          onEndReached={() => { if (hasMore.current && !inFlight.current) fetchCustomers(page + 1); }}
           onEndReachedThreshold={0.5}
           ListEmptyComponent={
             <View style={s.empty}>

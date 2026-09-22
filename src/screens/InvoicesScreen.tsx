@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { formatMoney, formatDate } from '../utils/format';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
@@ -35,10 +35,20 @@ export default function InvoicesScreen({ navigation }: Props) {
   const [page, setPage]             = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore]       = useState(true);
+  // FlatList fires onEndReached repeatedly while a page is still loading, and
+  // every firing closes over the same `page` -- without this the same page
+  // was fetched and appended several times over (duplicate keys). A reset
+  // (search, filter, focus, pull-to-refresh) always wins: it supersedes any
+  // load-more still in flight, whose response is then dropped.
+  const inFlight = useRef(false);
+  const reqSeq = useRef(0);
 
   const fetchInvoices = useCallback(async (reset = false) => {
     const currentPage = reset ? 1 : page;
     if (!reset && !hasMore) return;
+    if (!reset && inFlight.current) return;
+    const seq = ++reqSeq.current;
+    inFlight.current = true;
 
     if (reset) setLoading(true);
     else setLoadingMore(true);
@@ -51,6 +61,7 @@ export default function InvoicesScreen({ navigation }: Props) {
         ...(filter !== 'all' && { paymentStatus: filter }),
       };
       const res = await getInvoices(params);
+      if (seq !== reqSeq.current) return;
       const data = res.data || [];
 
       if (reset) {
@@ -66,6 +77,7 @@ export default function InvoicesScreen({ navigation }: Props) {
     } catch {
       Toast.show({ type: 'error', text1: 'Failed to load invoices' });
     } finally {
+      if (seq === reqSeq.current) inFlight.current = false;
       setLoading(false);
       setRefreshing(false);
       setLoadingMore(false);

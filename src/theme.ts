@@ -106,6 +106,7 @@ export const palette = {
 
   // Status — danger
   red500: '#ef4444',
+  red700: '#b91c1c',
   red50: '#fef2f2',
   red100: '#fee2e2',
   red200: '#fecaca',

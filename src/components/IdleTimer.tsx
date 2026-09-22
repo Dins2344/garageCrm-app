@@ -1,76 +1,76 @@
-import React, { useEffect, useRef, useCallback, useMemo, ReactNode } from 'react';
-import { View, PanResponder, StyleSheet } from 'react-native';
+import React, { useEffect, ReactNode } from 'react';
+import { View, PanResponder, StyleSheet, AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
-import { IDLE_TIMEOUT_MS } from '../utils/constants';
+import { getMe } from '../api/authService';
+import { IDLE_TIMEOUT_MS, KEEP_ALIVE_MS, LAST_ACTIVITY_KEY } from '../utils/constants';
 
+const CHECK_EVERY_MS = 30 * 1000;
+// A touch this soon after the last persisted one is not worth a storage write.
+const PERSIST_THROTTLE_MS = 30 * 1000;
+
+// Module state rather than refs: there is one IdleTimer per app, and the
+// PanResponder (created once) must read the latest value without a
+// ref-in-render dance the React compiler rules reject.
+let lastTouch = 0;
+let lastPersisted = 0;
+
+const touch = () => {
+  const now = Date.now();
+  lastTouch = now;
+  if (now - lastPersisted > PERSIST_THROTTLE_MS) {
+    lastPersisted = now;
+    AsyncStorage.setItem(LAST_ACTIVITY_KEY, String(now)).catch(() => {});
+  }
+};
+
+// Returning false lets touches pass through to child components normally.
+const panResponder = PanResponder.create({
+  onStartShouldSetPanResponder: () => { touch(); return false; },
+  onMoveShouldSetPanResponder: () => { touch(); return false; },
+});
+
+/**
+ * Signs the user out after IDLE_TIMEOUT_MS without a touch, and pings the
+ * server while they are active so its sliding token stays alive.
+ *
+ * The last touch is kept in memory and mirrored (throttled) to AsyncStorage:
+ * the copy is what lets AuthContext apply the same rule on a cold start, and
+ * the foreground check is what applies it when the app was merely
+ * backgrounded — JS timers do not run there, so the interval alone would
+ * let a phone that sat in a pocket for an hour come back signed in.
+ */
 const IdleTimer = ({ children }: { children: ReactNode }) => {
   const { user, logout } = useAuth();
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const resetTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-    if (user) {
-      timerRef.current = setTimeout(() => {
+  useEffect(() => {
+    if (!user) return;
+    touch();
+    let lastKeepAlive = Date.now();
+
+    const check = () => {
+      const now = Date.now();
+      if (now - lastTouch > IDLE_TIMEOUT_MS) {
         logout();
-      }, IDLE_TIMEOUT_MS);
-    }
-  }, [user, logout]);
-
-  // Always keep a ref to the latest resetTimer.
-  // PanResponder is created once — without this ref it would hold
-  // a stale closure and never actually reset the timer on touches.
-  const resetTimerRef = useRef(resetTimer);
-  useEffect(() => {
-    resetTimerRef.current = resetTimer;
-  }, [resetTimer]);
-
-  // PanResponder created once via useMemo; reads from resetTimerRef so it
-  // always calls the current version regardless of re-renders.
-  // Uses the correct PanResponder callback names (not the Responder API).
-  // Returning false lets touches pass through to child components normally.
-  //
-  // resetTimerRef.current is only read inside onStart/onMoveShouldSetPanResponder,
-  // which the native gesture system invokes on a real touch event, never
-  // during render. The rule's static analysis can't see that the read is
-  // inside a callback that isn't itself called synchronously here.
-  /* eslint-disable react-hooks/refs */
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => {
-          resetTimerRef.current?.();
-          return false;
-        },
-        onMoveShouldSetPanResponder: () => {
-          resetTimerRef.current?.();
-          return false;
-        },
-      }),
-    []
-  );
-  /* eslint-enable react-hooks/refs */
-
-  useEffect(() => {
-    if (user) {
-      resetTimer(); // Start timer on login
-    } else {
-      // Clear timer on logout so it doesn't fire after user is gone
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+      } else if (now - lastKeepAlive > KEEP_ALIVE_MS) {
+        lastKeepAlive = now;
+        getMe().catch(() => logout());
       }
     };
-  }, [user, resetTimer]);
+
+    const interval = setInterval(check, CHECK_EVERY_MS);
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') check();
+    });
+    return () => {
+      clearInterval(interval);
+      appState.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
+    <View style={styles.container} testID="idle-timer" {...panResponder.panHandlers}>
       {children}
     </View>
   );

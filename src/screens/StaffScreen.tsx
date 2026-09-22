@@ -401,7 +401,7 @@ export default function StaffScreen(_props: Props) {
                 <Text style={styles.summaryText}>
                   {staffSearch || staffRoleFilter !== 'all'
                     ? `${filteredStaff.length} of ${staff.length} staff shown`
-                    : `${staff.length} staff · ${staff.filter(s => s.isActive).length} active`
+                    : `${staff.length} staff, ${staff.filter(s => s.isActive).length} active`
                   }
                 </Text>
                 {(staffSearch || staffRoleFilter !== 'all') && (

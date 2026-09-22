@@ -351,3 +351,16 @@ export type BranchFormValues = z.infer<typeof branchSchema>;
 export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+// ─── Expense ───────────────────────────────────────────────────────────────
+
+export const expenseSchema = z.object({
+  title: requiredText('Title', 120),
+  category: z.enum(['parts', 'salaries', 'rent', 'utilities', 'tools', 'marketing', 'transport', 'other']),
+  amount: z.coerce.number({ message: 'Amount must be a number' }).gt(0, 'Amount must be greater than zero'),
+  expenseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date'),
+  paymentMethod: z.enum(['', 'cash', 'upi', 'card', 'bank_transfer', 'other']),
+  notes: optionalText(500),
+});
+export type ExpenseFormValues = z.input<typeof expenseSchema>;
+export type ExpenseFormOutput = z.output<typeof expenseSchema>;

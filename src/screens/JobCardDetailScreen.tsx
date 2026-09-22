@@ -530,7 +530,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                       </View>
                       <Text style={styles.timelineMeta}>
                         {fmtDate(entry.changedAt, locale, { hour: '2-digit', minute: '2-digit' })}
-                        {changedBy?.name ? ` · ${changedBy.name}` : ''}
+                        {changedBy?.name ? `, ${changedBy.name}` : ''}
                       </Text>
                       {entry.notes ? <Text style={styles.timelineNotes}>{entry.notes}</Text> : null}
                     </View>
