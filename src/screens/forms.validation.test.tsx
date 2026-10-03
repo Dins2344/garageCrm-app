@@ -30,6 +30,9 @@ jest.mock('@react-navigation/native', () => ({
 
 // Explicit factories — a bare automock has to require() the real module, which
 // pulls in apiInterceptor's axios.create() and crashes under jest-expo.
+// CustomersScreen imports it for the header export; the real module reaches apiInterceptor.
+jest.mock('../api/exportService', () => ({ downloadExport: jest.fn(), XLSX_MIME: '' }));
+
 jest.mock('../api/customerService', () => ({
   getCustomers: jest.fn(),
   createCustomer: jest.fn(),
@@ -76,7 +79,7 @@ jest.mock('../context/GarageContext', () => ({
 
 const emptyList = { success: true as const, count: 0, total: 0, pages: 1, currentPage: 1, data: [] };
 
-const customerProps = { navigation: { navigate: jest.fn(), goBack: jest.fn() }, route: { params: undefined } } as unknown as RootStackScreenProps<'Customers'>;
+const customerProps = { navigation: { navigate: jest.fn(), goBack: jest.fn(), setOptions: jest.fn() }, route: { params: undefined } } as unknown as RootStackScreenProps<'Customers'>;
 const staffProps = { navigation: { navigate: jest.fn(), goBack: jest.fn() }, route: { params: undefined } } as unknown as RootStackScreenProps<'Staff'>;
 const loginProps = { navigation: { navigate: jest.fn(), goBack: jest.fn() }, route: { params: undefined } } as unknown as RootStackScreenProps<'Login'>;
 
