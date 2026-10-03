@@ -108,6 +108,19 @@ describe('CustomersScreen', () => {
     expect(Sharing.shareAsync).not.toHaveBeenCalled();
   });
 
+  it('searches once per pause in typing, not once per keystroke', async () => {
+    await render(<CustomersScreen {...props} />);
+    await waitFor(() => expect(customerService.getCustomers).toHaveBeenCalledTimes(1));
+
+    await userEvent.type(screen.getByPlaceholderText('Search by name or phone...'), 'rah');
+
+    await waitFor(() => expect(customerService.getCustomers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: 'rah', page: 1 }),
+    ));
+    const searched = jest.mocked(customerService.getCustomers).mock.calls.map(([p]) => p?.search);
+    expect(searched).toEqual(['', 'rah']);
+  });
+
   it('offers no export to staff who cannot export', async () => {
     mockRole.current = 'mechanic';
     await render(<CustomersScreen {...props} />);

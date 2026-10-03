@@ -18,6 +18,7 @@ import HeaderIconButton from '../components/HeaderIconButton';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import { useGlobalLoader } from '../context/GlobalLoaderContext';
+import { useDebounce } from '../hooks/useDebounce';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer } from '../types/models';
@@ -152,6 +153,8 @@ export default function CustomersScreen({ navigation }: Props) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  // One request per pause in typing, not per keystroke.
+  const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
   // Same guard as InvoicesScreen: onEndReached fires repeatedly while a page
   // loads, so a load-more in flight blocks the next and the page only advances
@@ -193,14 +196,14 @@ export default function CustomersScreen({ navigation }: Props) {
     inFlight.current = true;
     if (refresh) setRefreshing(true);
     try {
-      const { data } = await getCustomers({ search, page: currentPage, limit: 15 });
+      const { data } = await getCustomers({ search: debouncedSearch, page: currentPage, limit: 15 });
       if (seq !== reqSeq.current) return;
       hasMore.current = data.length === 15;
       setPage(currentPage);
       setCustomers(prev => currentPage === 1 ? data : [...prev, ...data]);
     } catch { Toast.show({ type: 'error', text1: 'Failed to load customers' }); }
     finally { if (seq === reqSeq.current) inFlight.current = false; setLoading(false); setRefreshing(false); }
-  }, [search]);
+  }, [debouncedSearch]);
 
   // Re-fetch when the screen comes into focus, matching InvoicesScreen and
   // DashboardScreen. Customers is a *tab*, so React Navigation keeps it mounted
@@ -213,7 +216,7 @@ export default function CustomersScreen({ navigation }: Props) {
       setLoading(true);
       fetchCustomers(1);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, activeGarageId])
+    }, [debouncedSearch, activeGarageId])
   );
 
   const handleSave = async (form: CustomerFormValues) => {
