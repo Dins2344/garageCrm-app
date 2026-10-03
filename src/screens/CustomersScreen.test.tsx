@@ -4,6 +4,9 @@ import CustomersScreen from './CustomersScreen';
 import * as customerService from '../api/customerService';
 import type { Customer } from '../types/models';
 import type { RootStackScreenProps } from '../types/navigation';
+import * as exportService from '../api/exportService';
+import * as Sharing from 'expo-sharing';
+import Toast from 'react-native-toast-message';
 
 // See HomeScreen.test.tsx — the screen refetches through useFocusEffect, which
 // needs a NavigationContainer we deliberately don't mount.
@@ -24,8 +27,21 @@ jest.mock('../api/customerService', () => ({
   deleteCustomer: jest.fn(),
 }));
 
+jest.mock('../api/exportService', () => ({
+  downloadExport: jest.fn(),
+  XLSX_MIME: 'application/xlsx',
+}));
+
+jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }));
+
+// Role-aware so a test can sign in as staff; every other test runs as owner.
+const mockRole = { current: 'owner' };
 jest.mock('../context/AuthContext', () => ({
-  useAuth: () => ({ hasRole: () => true, user: { _id: 'u1', role: 'owner' }, loading: false }),
+  useAuth: () => ({
+    hasRole: (...roles: string[]) => roles.includes(mockRole.current),
+    user: { _id: 'u1', role: mockRole.current },
+    loading: false,
+  }),
 }));
 
 jest.mock('../context/GarageContext', () => ({
@@ -50,11 +66,66 @@ const sampleCustomer: Customer = {
   vehicles: [],
 };
 
-const props = {} as RootStackScreenProps<'Customers'>;
+const setOptions = jest.fn();
+const props = { navigation: { setOptions } } as unknown as RootStackScreenProps<'Customers'>;
+
+/** Renders whatever the screen last put in the header's right slot. */
+const renderHeaderRight = async () => {
+  const { headerRight } = setOptions.mock.calls.at(-1)[0];
+  await render(headerRight());
+};
 
 describe('CustomersScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRole.current = 'owner';
+    jest.mocked(customerService.getCustomers).mockResolvedValue({
+      success: true, count: 0, total: 0, pages: 1, currentPage: 1, data: [],
+    });
+  });
+
+  it('exports customers and opens the share sheet', async () => {
+    jest.mocked(exportService.downloadExport).mockResolvedValue('file:///cache/customers.xlsx');
+    await render(<CustomersScreen {...props} />);
+
+    await renderHeaderRight();
+    await userEvent.press(screen.getByLabelText('Export to Excel'));
+
+    expect(exportService.downloadExport).toHaveBeenCalledWith('customers');
+    expect(Sharing.shareAsync).toHaveBeenCalledWith('file:///cache/customers.xlsx', expect.objectContaining({ mimeType: 'application/xlsx' }));
+  });
+
+  it('shows an error and skips sharing when the export fails', async () => {
+    jest.mocked(exportService.downloadExport).mockRejectedValue(new Error('Export failed with status 403'));
+    const toast = jest.spyOn(Toast, 'show').mockImplementation(() => {});
+    await render(<CustomersScreen {...props} />);
+
+    await renderHeaderRight();
+    await userEvent.press(screen.getByLabelText('Export to Excel'));
+
+    expect(toast).toHaveBeenCalledWith({ type: 'error', text1: 'Failed to export customers' });
+    toast.mockRestore();
+    expect(Sharing.shareAsync).not.toHaveBeenCalled();
+  });
+
+  it('searches once per pause in typing, not once per keystroke', async () => {
+    await render(<CustomersScreen {...props} />);
+    await waitFor(() => expect(customerService.getCustomers).toHaveBeenCalledTimes(1));
+
+    await userEvent.type(screen.getByPlaceholderText('Search by name or phone...'), 'rah');
+
+    await waitFor(() => expect(customerService.getCustomers).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: 'rah', page: 1 }),
+    ));
+    const searched = jest.mocked(customerService.getCustomers).mock.calls.map(([p]) => p?.search);
+    expect(searched).toEqual(['', 'rah']);
+  });
+
+  it('offers no export to staff who cannot export', async () => {
+    mockRole.current = 'mechanic';
+    await render(<CustomersScreen {...props} />);
+
+    expect(setOptions).toHaveBeenLastCalledWith({ headerRight: undefined });
   });
 
   it('fetches and renders the customer list', async () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { formatMoney } from '../utils/format';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
@@ -12,9 +12,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet, { SheetActions } from '../components/BottomSheet';
 import Toast from 'react-native-toast-message';
+import * as Sharing from 'expo-sharing';
+import { downloadExport, XLSX_MIME } from '../api/exportService';
+import HeaderIconButton from '../components/HeaderIconButton';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import { useGlobalLoader } from '../context/GlobalLoaderContext';
+import { useDebounce } from '../hooks/useDebounce';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Customer } from '../types/models';
@@ -142,13 +146,15 @@ function CustomerModal({ visible, onClose, onSave, editing }: CustomerModalProps
   );
 }
 
-export default function CustomersScreen(_props: Props) {
+export default function CustomersScreen({ navigation }: Props) {
   const { hasRole } = useAuth();
   const { activeGarageId, locale } = useGarage();
   const { withLoader } = useGlobalLoader();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  // One request per pause in typing, not per keystroke.
+  const debouncedSearch = useDebounce(search);
   const [page, setPage] = useState(1);
   // Same guard as InvoicesScreen: onEndReached fires repeatedly while a page
   // loads, so a load-more in flight blocks the next and the page only advances
@@ -164,20 +170,40 @@ export default function CustomersScreen(_props: Props) {
   const canManage = hasRole('owner', 'admin', 'service_advisor', 'receptionist');
   const canDelete = hasRole('owner', 'admin');
 
+  const canExport = hasRole('owner', 'admin');
+
+  // The loader covers only the download; the share sheet is the OS's own UI.
+  const handleExport = useCallback(async () => {
+    try {
+      const uri = await withLoader(() => downloadExport('customers'), 'Exporting...');
+      await Sharing.shareAsync(uri, { mimeType: XLSX_MIME, dialogTitle: 'Export customers' });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to export customers' });
+    }
+  }, [withLoader]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: canExport
+        ? () => <HeaderIconButton icon="download-outline" label="Export to Excel" onPress={handleExport} />
+        : undefined,
+    });
+  }, [navigation, canExport, handleExport]);
+
   const fetchCustomers = useCallback(async (currentPage = 1, refresh = false) => {
     if (currentPage > 1 && inFlight.current) return;
     const seq = ++reqSeq.current;
     inFlight.current = true;
     if (refresh) setRefreshing(true);
     try {
-      const { data } = await getCustomers({ search, page: currentPage, limit: 15 });
+      const { data } = await getCustomers({ search: debouncedSearch, page: currentPage, limit: 15 });
       if (seq !== reqSeq.current) return;
       hasMore.current = data.length === 15;
       setPage(currentPage);
       setCustomers(prev => currentPage === 1 ? data : [...prev, ...data]);
     } catch { Toast.show({ type: 'error', text1: 'Failed to load customers' }); }
     finally { if (seq === reqSeq.current) inFlight.current = false; setLoading(false); setRefreshing(false); }
-  }, [search]);
+  }, [debouncedSearch]);
 
   // Re-fetch when the screen comes into focus, matching InvoicesScreen and
   // DashboardScreen. Customers is a *tab*, so React Navigation keeps it mounted
@@ -190,7 +216,7 @@ export default function CustomersScreen(_props: Props) {
       setLoading(true);
       fetchCustomers(1);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, activeGarageId])
+    }, [debouncedSearch, activeGarageId])
   );
 
   const handleSave = async (form: CustomerFormValues) => {

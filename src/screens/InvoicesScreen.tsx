@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getInvoices } from '../api/invoiceService';
 import Toast from 'react-native-toast-message';
 import { useGarage } from '../context/GarageContext';
+import { useDebounce } from '../hooks/useDebounce';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Invoice, PaymentStatus } from '../types/models';
@@ -30,6 +31,8 @@ export default function InvoicesScreen({ navigation }: Props) {
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch]         = useState('');
+  // One request per pause in typing, not per keystroke.
+  const debouncedSearch = useDebounce(search);
   const [filter, setFilter]         = useState('all'); // all | unpaid | partial | paid
   const [total, setTotal]           = useState(0);
   const [page, setPage]             = useState(1);
@@ -57,7 +60,7 @@ export default function InvoicesScreen({ navigation }: Props) {
       const params = {
         page: currentPage,
         limit: LIMIT,
-        ...(search.trim() && { search: search.trim() }),
+        ...(debouncedSearch.trim() && { search: debouncedSearch.trim() }),
         ...(filter !== 'all' && { paymentStatus: filter }),
       };
       const res = await getInvoices(params);
@@ -82,7 +85,7 @@ export default function InvoicesScreen({ navigation }: Props) {
       setRefreshing(false);
       setLoadingMore(false);
     }
-  }, [page, hasMore, search, filter]);
+  }, [page, hasMore, debouncedSearch, filter]);
 
   // Re-fetch when screen comes into focus
   useFocusEffect(
@@ -90,7 +93,7 @@ export default function InvoicesScreen({ navigation }: Props) {
       setHasMore(true);
       fetchInvoices(true);
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, filter, activeGarageId])
+    }, [debouncedSearch, filter, activeGarageId])
   );
 
   const onRefresh = () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity,
   ActivityIndicator, Modal, ScrollView, KeyboardAvoidingView, Platform, Alert,
@@ -10,6 +10,9 @@ import { ControlledPicker } from '../components/FormControls';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet, { SheetActions } from '../components/BottomSheet';
 import Toast from 'react-native-toast-message';
+import * as Sharing from 'expo-sharing';
+import { downloadExport, XLSX_MIME } from '../api/exportService';
+import HeaderIconButton from '../components/HeaderIconButton';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../api/vehicleService';
 import { getCustomers } from '../api/customerService';
 import { useAuth } from '../context/AuthContext';
@@ -243,6 +246,26 @@ export default function VehiclesScreen({ navigation }: Props) {
 
   const canManage = hasRole('owner', 'admin', 'service_advisor', 'receptionist');
   const canDelete = hasRole('owner', 'admin');
+
+  const canExport = hasRole('owner', 'admin');
+
+  // The loader covers only the download; the share sheet is the OS's own UI.
+  const handleExport = useCallback(async () => {
+    try {
+      const uri = await withLoader(() => downloadExport('vehicles'), 'Exporting...');
+      await Sharing.shareAsync(uri, { mimeType: XLSX_MIME, dialogTitle: 'Export vehicles' });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to export vehicles' });
+    }
+  }, [withLoader]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: canExport
+        ? () => <HeaderIconButton icon="download-outline" label="Export to Excel" onPress={handleExport} />
+        : undefined,
+    });
+  }, [navigation, canExport, handleExport]);
 
   const fetchVehicles = useCallback(async (currentPage = 1, refresh = false) => {
     if (currentPage > 1 && inFlight.current) return;
