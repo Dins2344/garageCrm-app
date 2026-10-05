@@ -197,6 +197,28 @@ export const jobCardSchema = z.object({
 });
 
 /**
+ * Owner/admin correcting a job card's recorded odometer reading. There is no
+ * "not below the last visit" floor here — this *is* the way past that rule —
+ * which is why remarks are required. Bounds and the 500-char remark mirror
+ * `backend/models/JobCard.ts`. A blank field is an error, not 0, which is
+ * what `z.coerce` alone would make of ''. Kept on `z.coerce` (input type
+ * `unknown`) like every other numeric field, so mobile's ControlledField
+ * accepts the form.
+ */
+export const odometerCorrectionSchema = z.object({
+  odometerAtIntake: z.preprocess(
+    v => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.coerce.number({ message: 'Enter the reading as a whole number' })
+      .int('Enter the reading as a whole number')
+      .min(0, 'Odometer cannot be negative')
+      .max(9999999, 'Odometer reading looks too large — please check the value'),
+  ),
+  odometerRemarks: requiredText('Remarks', 500),
+});
+export type OdometerCorrectionFormValues = z.input<typeof odometerCorrectionSchema>;
+export type OdometerCorrectionFormOutput = z.output<typeof odometerCorrectionSchema>;
+
+/**
  * The estimation line-item editor on `pages/JobCardDetail.tsx`.
  *
  * That editor is not a conventional form — rows are added and removed

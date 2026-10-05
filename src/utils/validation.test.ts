@@ -12,6 +12,7 @@ import {
   estimationSchema,
   describeEstimationIssue,
   branchSchema,
+  odometerCorrectionSchema,
 } from './validation';
 import { DEFAULT_LOCALE } from './locale';
 import type { ResolvedLocale } from '../types/models';
@@ -302,5 +303,14 @@ describe('optional fields are validated when filled', () => {
     expect(check(jobCardSchema, { ...base, odometerAtIntake: '' }).ok).toBe(true);
     expect(check(jobCardSchema, { ...base, odometerAtIntake: '48210' }).ok).toBe(true);
     expect(check(jobCardSchema, { ...base, odometerAtIntake: '-1' }).ok).toBe(false);
+  });
+
+  it('odometer correction: whole-number reading and remarks both required; blank is not 0', () => {
+    expect(check(odometerCorrectionSchema, { odometerAtIntake: '12000', odometerRemarks: 'Meter replaced' }).ok).toBe(true);
+    expect(check(odometerCorrectionSchema, { odometerAtIntake: '0', odometerRemarks: 'Not recorded' }).ok).toBe(true);
+    expect(check(odometerCorrectionSchema, { odometerAtIntake: '', odometerRemarks: 'x' }).ok).toBe(false);
+    expect(check(odometerCorrectionSchema, { odometerAtIntake: '12.5', odometerRemarks: 'x' }).ok).toBe(false);
+    expect(check(odometerCorrectionSchema, { odometerAtIntake: '10000000', odometerRemarks: 'x' }).ok).toBe(false);
+    expect(check(odometerCorrectionSchema, { odometerAtIntake: '12000', odometerRemarks: '   ' }).ok).toBe(false);
   });
 });
