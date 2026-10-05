@@ -82,6 +82,9 @@ export default function JobCardsScreen({ navigation }: Props) {
         setJobCards(prev => [...prev, ...data]);
       }
     } catch {
+      // `page` already advanced in handleLoadMore, so leaving hasMore true let
+      // onEndReached walk page 2, 3, 4... on every failure. Pull-to-refresh resets it.
+      if (currentPage > 1) setHasMore(false);
       Toast.show({ type: 'error', text1: 'Failed to load job cards' });
     } finally {
       setLoading(false);

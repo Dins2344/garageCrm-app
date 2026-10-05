@@ -8,9 +8,24 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || (Platform.OS === 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    // Android's OkHttp cache answers a 304 by rebuilding the response from its
+    // stored copy, headers included — so a days-old X-Token came back and was
+    // saved as the session, 401ing everything seconds after login. no-cache
+    // makes OkHttp skip the stored copy and use only what the server sent.
+    'Cache-Control': 'no-cache'
   }
 });
+
+/** `exp` of a JWT, or NaN if it cannot be read (then comparisons are false). */
+const expOf = (token: string | null): number => {
+  try {
+    const payload = token!.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return Number(JSON.parse(atob(payload)).exp);
+  } catch {
+    return NaN;
+  }
+};
 
 api.interceptors.request.use(
   async (config) => {
@@ -38,7 +53,15 @@ api.interceptors.response.use(
     // login no matter how busy the user is.
     const fresh = response.headers?.['x-token'];
     if (typeof fresh === 'string' && fresh) {
-      await AsyncStorage.setItem(TOKEN_KEY, fresh);
+      // Only ever move the session forward: no stored token means the user
+      // signed out (a late response must not sign them back in), and a token
+      // that is already expired or older than the stored one is a replay.
+      // An unreadable exp is NaN, which fails both checks and so is accepted.
+      const current = await AsyncStorage.getItem(TOKEN_KEY);
+      const exp = expOf(fresh);
+      if (current && !(exp * 1000 <= Date.now()) && !(exp <= expOf(current))) {
+        await AsyncStorage.setItem(TOKEN_KEY, fresh);
+      }
     }
     return response;
   },
