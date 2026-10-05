@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney, formatNumber, formatDate as fmtDate } from '../utils/format';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,6 +11,11 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import StatusStepper from '../components/StatusStepper';
 import BottomSheetPicker from '../components/BottomSheetPicker';
+import BottomSheet, { SheetActions } from '../components/BottomSheet';
+import { ControlledField } from '../components/FormControls';
+import {
+  odometerCorrectionSchema, type OdometerCorrectionFormValues, type OdometerCorrectionFormOutput,
+} from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import { useGlobalLoader } from '../context/GlobalLoaderContext';
@@ -24,6 +31,65 @@ type Props = RootStackScreenProps<'JobCardDetail'>;
 const humanize = (value?: string | null) =>
   value ? value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
 
+interface OdometerSheetProps {
+  visible: boolean;
+  current: number;
+  onClose: () => void;
+  onSave: (values: OdometerCorrectionFormOutput) => Promise<void>;
+}
+
+/**
+ * Owner/admin correction of the recorded reading. New job cards cannot go
+ * below the last visit, so this is how a replaced meter or a mistyped visit
+ * gets fixed; the API records the remarks on the timeline.
+ */
+function OdometerSheet({ visible, current, onClose, onSave }: OdometerSheetProps) {
+  const { control, handleSubmit, reset, setError, formState: { isSubmitting } } =
+    useForm<OdometerCorrectionFormValues, unknown, OdometerCorrectionFormOutput>({
+      resolver: zodResolver(odometerCorrectionSchema),
+      defaultValues: { odometerAtIntake: '', odometerRemarks: '' },
+    });
+
+  useEffect(() => {
+    if (visible) reset({ odometerAtIntake: String(current), odometerRemarks: '' });
+  }, [visible, current, reset]);
+
+  const handleSave = async (values: OdometerCorrectionFormOutput) => {
+    // The API treats an unchanged reading as no change and records nothing.
+    if (values.odometerAtIntake === current) {
+      setError('odometerAtIntake', { message: 'Enter a different reading' });
+      return;
+    }
+    try {
+      await onSave(values);
+      onClose();
+    } catch (e) {
+      Toast.show({ type: 'error', text1: getErrorMessage(e, 'Failed to update odometer') });
+    }
+  };
+
+  return (
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      title="Correct Odometer"
+      testID="odometer-sheet"
+      footer={
+        <SheetActions
+          onCancel={onClose}
+          onConfirm={handleSubmit(handleSave)}
+          confirmLabel="Save Reading"
+          loading={isSubmitting}
+          testID="odometer-save"
+        />
+      }
+    >
+      <ControlledField control={control} name="odometerAtIntake" label="Odometer (km)" keyboardType="number-pad" required testID="odometer-reading" />
+      <ControlledField control={control} name="odometerRemarks" label="Remarks" placeholder="Why the reading is being changed" required testID="odometer-remarks" />
+    </BottomSheet>
+  );
+}
+
 export default function JobCardDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
   const { hasRole } = useAuth();
@@ -34,6 +100,7 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [assigningMechanic, setAssigningMechanic] = useState(false);
+  const [odometerSheetOpen, setOdometerSheetOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -64,6 +131,14 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, activeGarageId])
   );
+
+  // Errors are left to the sheet, which shows them and stays open.
+  const saveOdometer = async (values: OdometerCorrectionFormOutput) => {
+    await updateJobCard(id, values);
+    // Re-fetch (see assignMechanic) — the timeline gains the correction entry.
+    await fetchData();
+    Toast.show({ type: 'success', text1: 'Odometer updated' });
+  };
 
   const assignMechanic = async (mechanicId: string) => {
     setAssigningMechanic(true);
@@ -203,6 +278,9 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
   const assignedAdvisor = (typeof jobCard?.assignedAdvisor === 'object' ? jobCard.assignedAdvisor : null) as AssignedStaff | null;
   // Same roles the web app allows to reassign work.
   const canAssignMechanic = hasRole('owner', 'admin', 'service_advisor');
+  // The API refuses every other role.
+  const canCorrectOdometer = hasRole('owner', 'admin');
+  const odometer = jobCard?.odometerAtIntake ?? 0;
   const timeline = (jobCard?.statusHistory || []).slice().reverse();
 
   return (
@@ -272,10 +350,22 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                   <Text style={styles.detailValue}>{humanize(jobCard.serviceType)}</Text>
                 </View>
               )}
-              {!!jobCard?.odometerAtIntake && jobCard.odometerAtIntake > 0 && (
+              {/* Shown at 0 too for owner/admin, so an unrecorded reading can be filled in. */}
+              {(odometer > 0 || canCorrectOdometer) && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Odometer</Text>
-                  <Text style={styles.detailValue}>{formatNumber(jobCard.odometerAtIntake, locale)} km</Text>
+                  <Text style={styles.detailValue}>{odometer > 0 ? `${formatNumber(odometer, locale)} km` : 'Not recorded'}</Text>
+                  {canCorrectOdometer && (
+                    <TouchableOpacity
+                      onPress={() => setOdometerSheetOpen(true)}
+                      style={styles.odometerEdit}
+                      accessibilityLabel="Correct odometer reading"
+                      testID="odometer-edit"
+                    >
+                      <Ionicons name="create-outline" size={14} color={colors.primary} />
+                      <Text style={styles.odometerEditText}>Correct</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
               <View style={styles.detailItem}>
@@ -542,6 +632,15 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
         )}
 
       </ScrollView>
+
+      {canCorrectOdometer && (
+        <OdometerSheet
+          visible={odometerSheetOpen}
+          current={odometer}
+          onClose={() => setOdometerSheetOpen(false)}
+          onSave={saveOdometer}
+        />
+      )}
     </View>
     </ResponsiveScreen>
   );
@@ -582,6 +681,8 @@ const styles = StyleSheet.create({
   detailItem: { flex: 1, minWidth: '45%' },
   detailLabel: { fontSize: 11, fontWeight: '700', color: colors.textFaint, textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 2 },
   detailValue: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  odometerEdit: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, alignSelf: 'flex-start', paddingVertical: 2 },
+  odometerEditText: { fontSize: 12, fontWeight: '700', color: colors.primary },
   emptyText: { fontSize: 14, color: colors.textFaint, fontStyle: 'italic' },
   notesBox: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
   notesTitle: { fontSize: 12, fontWeight: 'bold', color: colors.textMuted, marginBottom: 4 },

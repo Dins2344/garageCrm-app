@@ -247,3 +247,69 @@ describe('JobCardDetailScreen — actions launched from an Alert show the app-wi
     expect(screen.getByText('Generate Invoice')).toBeTruthy();
   });
 });
+
+describe('JobCardDetailScreen — odometer correction', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHasRole.mockReturnValue(true);
+    jest.mocked(userService.getMechanics).mockResolvedValue(MECHANICS);
+    jest.mocked(jobCardService.updateJobCard).mockResolvedValue({ success: true, data: baseJobCard });
+  });
+
+  const openSheet = async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+    await user.press(screen.getByTestId('odometer-edit'));
+    await user.clear(screen.getByTestId('odometer-reading'));
+    return user;
+  };
+
+  it('sends the new reading with remarks and re-fetches for the timeline', async () => {
+    const user = await openSheet();
+    await user.type(screen.getByTestId('odometer-reading'), '12000');
+    await user.type(screen.getByTestId('odometer-remarks'), 'Odometer replaced');
+    await user.press(screen.getByText('Save Reading'));
+
+    await waitFor(() => expect(jobCardService.updateJobCard).toHaveBeenCalledWith('jc1', {
+      odometerAtIntake: 12000, odometerRemarks: 'Odometer replaced',
+    }));
+    await waitFor(() => expect(jobCardService.getJobCard).toHaveBeenCalledTimes(2));
+  });
+
+  it('requires remarks', async () => {
+    const user = await openSheet();
+    await user.type(screen.getByTestId('odometer-reading'), '12000');
+    await user.press(screen.getByText('Save Reading'));
+
+    expect(await screen.findByText('Remarks is required')).toBeTruthy();
+    expect(jobCardService.updateJobCard).not.toHaveBeenCalled();
+  });
+
+  it('refuses a blank reading rather than sending 0', async () => {
+    const user = await openSheet();
+    await user.type(screen.getByTestId('odometer-remarks'), 'x');
+    await user.press(screen.getByText('Save Reading'));
+
+    expect(await screen.findByText('Enter the reading as a whole number')).toBeTruthy();
+    expect(jobCardService.updateJobCard).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unchanged reading, which the API would not record', async () => {
+    const user = await openSheet();
+    await user.type(screen.getByTestId('odometer-reading'), '42500');
+    await user.type(screen.getByTestId('odometer-remarks'), 'x');
+    await user.press(screen.getByText('Save Reading'));
+
+    expect(await screen.findByText('Enter a different reading')).toBeTruthy();
+    expect(jobCardService.updateJobCard).not.toHaveBeenCalled();
+  });
+
+  it('is not offered to roles other than owner and admin', async () => {
+    // A service advisor: may assign work, may not correct the reading.
+    mockHasRole.mockImplementation(((...roles: string[]) => roles.includes('service_advisor')) as () => boolean);
+    await renderScreen();
+
+    expect(screen.getByText('42,500 km')).toBeTruthy();
+    expect(screen.queryByTestId('odometer-edit')).toBeNull();
+  });
+});
