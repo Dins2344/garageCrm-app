@@ -27,12 +27,14 @@ export interface StatusStepperProps {
   onStatusChange: (newStatus: string) => void;
   updating?: boolean;
   hasInvoice?: boolean;
+  /** False for staff, who raise a cancellation request instead. Defaults to true. */
+  canCancel?: boolean;
 }
 
 /**
  * Visual pipeline stepper for job card status.
  */
-export default function StatusStepper({ currentStatus, onStatusChange, updating, hasInvoice }: StatusStepperProps) {
+export default function StatusStepper({ currentStatus, onStatusChange, updating, hasInvoice, canCancel = true }: StatusStepperProps) {
   const currentIndex = STATUS_FLOW.findIndex(s => s.value === currentStatus);
   const isCancelled = currentStatus === 'cancelled';
 
@@ -136,7 +138,7 @@ export default function StatusStepper({ currentStatus, onStatusChange, updating,
             </View>
           )}
 
-          {currentStatus !== 'delivered' && (
+          {currentStatus !== 'delivered' && canCancel && (
             <TouchableOpacity
               style={styles.cancelBtn}
               onPress={() => onStatusChange('cancelled')}

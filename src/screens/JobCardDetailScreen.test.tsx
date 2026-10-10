@@ -1,10 +1,11 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { render, screen, waitFor, userEvent, within, act } from '@testing-library/react-native';
+import { render, screen, waitFor, userEvent, within, act, fireEvent } from '@testing-library/react-native';
 import JobCardDetailScreen from './JobCardDetailScreen';
 import * as jobCardService from '../api/jobCardService';
 import * as userService from '../api/userService';
 import * as invoiceService from '../api/invoiceService';
+import * as changeRequestService from '../api/changeRequestService';
 import { GlobalLoaderProvider } from '../context/GlobalLoaderContext';
 import type { JobCard, User } from '../types/models';
 import type { RootStackScreenProps } from '../types/navigation';
@@ -36,6 +37,11 @@ jest.mock('../api/userService', () => ({
 
 jest.mock('../api/invoiceService', () => ({
   createInvoice: jest.fn(),
+}));
+
+jest.mock('../api/changeRequestService', () => ({
+  getChangeRequests: jest.fn(),
+  raiseChangeRequest: jest.fn(),
 }));
 
 const mockHasRole = jest.fn(() => true);
@@ -88,6 +94,7 @@ describe('JobCardDetailScreen — details parity with the web page', () => {
     jest.clearAllMocks();
     mockHasRole.mockReturnValue(true);
     jest.mocked(userService.getMechanics).mockResolvedValue(MECHANICS);
+    jest.mocked(changeRequestService.getChangeRequests).mockResolvedValue({ success: true, count: 0, total: 0, pages: 0, currentPage: 1, data: [] });
   });
 
   it('shows the service type, advisor and odometer', async () => {
@@ -125,6 +132,7 @@ describe('JobCardDetailScreen — mechanic assignment', () => {
     jest.clearAllMocks();
     mockHasRole.mockReturnValue(true);
     jest.mocked(userService.getMechanics).mockResolvedValue(MECHANICS);
+    jest.mocked(changeRequestService.getChangeRequests).mockResolvedValue({ success: true, count: 0, total: 0, pages: 0, currentPage: 1, data: [] });
   });
 
   it('shows the current mechanic and offers the others', async () => {
@@ -206,6 +214,7 @@ describe('JobCardDetailScreen — actions launched from an Alert show the app-wi
     jest.clearAllMocks();
     mockHasRole.mockReturnValue(true);
     jest.mocked(userService.getMechanics).mockResolvedValue(MECHANICS);
+    jest.mocked(changeRequestService.getChangeRequests).mockResolvedValue({ success: true, count: 0, total: 0, pages: 0, currentPage: 1, data: [] });
     alertSpy.mockImplementation(() => {});
   });
 
@@ -253,6 +262,7 @@ describe('JobCardDetailScreen — odometer correction', () => {
     jest.clearAllMocks();
     mockHasRole.mockReturnValue(true);
     jest.mocked(userService.getMechanics).mockResolvedValue(MECHANICS);
+    jest.mocked(changeRequestService.getChangeRequests).mockResolvedValue({ success: true, count: 0, total: 0, pages: 0, currentPage: 1, data: [] });
     jest.mocked(jobCardService.updateJobCard).mockResolvedValue({ success: true, data: baseJobCard });
   });
 
@@ -311,5 +321,76 @@ describe('JobCardDetailScreen — odometer correction', () => {
 
     expect(screen.getByText('42,500 km')).toBeTruthy();
     expect(screen.queryByTestId('odometer-edit')).toBeNull();
+  });
+});
+
+describe('JobCardDetailScreen — staff ask instead of doing', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHasRole.mockImplementation(((...roles: string[]) => roles.includes('mechanic')) as () => boolean);
+    jest.mocked(userService.getMechanics).mockResolvedValue(MECHANICS);
+    jest.mocked(changeRequestService.getChangeRequests).mockResolvedValue({ success: true, count: 0, total: 0, pages: 0, currentPage: 1, data: [] });
+    jest.mocked(changeRequestService.raiseChangeRequest).mockResolvedValue({ success: true, data: {} as never });
+  });
+
+  it('offers Request Cancellation instead of Cancel Job and sends the reason', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+    expect(screen.queryByText('Cancel Job')).toBeNull();
+
+    await user.press(screen.getByTestId('request-cancel'));
+    await user.type(screen.getByTestId('request-reason-input'), 'Customer declined');
+    await user.press(screen.getByText('Send Request'));
+
+    await waitFor(() => expect(changeRequestService.raiseChangeRequest).toHaveBeenCalledWith({
+      type: 'job_card_cancellation', targetId: 'jc1', payload: { reason: 'Customer declined' },
+    }));
+    expect(await screen.findByTestId('cancel-requested')).toBeTruthy();
+  });
+
+  it('shows a cancellation already awaiting approval', async () => {
+    jest.mocked(changeRequestService.getChangeRequests).mockResolvedValue({
+      success: true, count: 1, total: 1, pages: 1, currentPage: 1, data: [{ type: 'job_card_cancellation' } as never],
+    });
+    await renderScreen();
+    expect(await screen.findByTestId('cancel-requested')).toBeTruthy();
+    expect(screen.queryByTestId('request-cancel')).toBeNull();
+  });
+
+  it('asks for an odometer correction rather than making one', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await user.press(screen.getByTestId('odometer-request'));
+    await user.clear(screen.getByTestId('odometer-reading'));
+    await user.type(screen.getByTestId('odometer-reading'), '12000');
+    await user.type(screen.getByTestId('odometer-remarks'), 'Meter replaced');
+    await user.press(screen.getByText('Send Request'));
+
+    await waitFor(() => expect(changeRequestService.raiseChangeRequest).toHaveBeenCalledWith({
+      type: 'odometer_correction', targetId: 'jc1', payload: { odometerAtIntake: 12000, remarks: 'Meter replaced' },
+    }));
+    expect(jobCardService.updateJobCard).not.toHaveBeenCalled();
+  });
+
+  it('refuses request remarks over the 400 characters the API accepts', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await user.press(screen.getByTestId('odometer-request'));
+    await user.clear(screen.getByTestId('odometer-reading'));
+    await user.type(screen.getByTestId('odometer-reading'), '12000');
+    await fireEvent.changeText(screen.getByTestId('odometer-remarks'), 'x'.repeat(401));
+    await user.press(screen.getByText('Send Request'));
+
+    expect(await screen.findByText('Remarks cannot exceed 400 characters')).toBeTruthy();
+    expect(changeRequestService.raiseChangeRequest).not.toHaveBeenCalled();
+  });
+
+  it('never looks up requests for an owner', async () => {
+    mockHasRole.mockReturnValue(true);
+    await renderScreen();
+    expect(changeRequestService.getChangeRequests).not.toHaveBeenCalled();
+    expect(screen.getByText('Cancel Job')).toBeTruthy();
   });
 });

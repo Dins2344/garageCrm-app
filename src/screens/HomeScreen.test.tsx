@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, userEvent, within } from '@testing-library/react-native';
 import HomeScreen from './HomeScreen';
 import * as dashboardService from '../api/dashboardService';
+import * as notificationService from '../api/notificationService';
 import type { DashboardStats } from '../api/dashboardService';
 import type { MainTabScreenProps } from '../types/navigation';
 
@@ -17,6 +18,10 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('../api/dashboardService', () => ({
   getDashboardStats: jest.fn(),
+}));
+
+jest.mock('../api/notificationService', () => ({
+  getUnreadCount: jest.fn().mockResolvedValue(0),
 }));
 
 jest.mock('../components/WebAppBanner', () => {
@@ -200,5 +205,35 @@ describe('HomeScreen — layout and de-duplication', () => {
     // Ungated tiles stay.
     expect(actions.getByText('Invoices')).toBeTruthy();
     expect(actions.getByText('Job Cards')).toBeTruthy();
+  });
+});
+
+describe('HomeScreen — notifications', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHasRole.mockReturnValue(true);
+  });
+  afterEach(() => {
+    jest.mocked(notificationService.getUnreadCount).mockResolvedValue(0);
+  });
+
+  it('shows the unread count on the bell and opens Notifications', async () => {
+    jest.mocked(notificationService.getUnreadCount).mockResolvedValue(4);
+    const user = userEvent.setup();
+    await renderHome(calmStats);
+
+    await user.press(await screen.findByLabelText('Notifications, 4 unread'));
+
+    expect(navigate).toHaveBeenCalledWith('Notifications');
+  });
+
+  it('offers every role the Requests tile', async () => {
+    mockHasRole.mockImplementation(((...roles: string[]) => roles.includes('mechanic')) as () => boolean);
+    const user = userEvent.setup();
+    await renderHome(calmStats);
+
+    await user.press(screen.getByText('Requests'));
+
+    expect(navigate).toHaveBeenCalledWith('Requests');
   });
 });

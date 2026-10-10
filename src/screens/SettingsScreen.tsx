@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
+import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import { useGarage } from '../context/GarageContext';
 import { getGarage, updateGarage, getBranchStaff } from '../api/garageService';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
@@ -253,7 +254,8 @@ const deleteBranchStyles = StyleSheet.create({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen({ navigation }: Props) {
-  const { user, logout, hasRole } = useAuth();
+  const { user, signOut, hasRole } = useAuth();
+  const { withLoader } = useGlobalLoader();
   const { garages, activeGarageId, garagesLoading, switchGarage, addBranch, removeBranch, refreshGarage } = useGarage();
   const [deleteBranchTarget, setDeleteBranchTarget] = useState<Garage | null>(null);
   const canEditGarage = hasRole('owner', 'admin');
@@ -412,7 +414,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const handleLogout = () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Log Out', style: 'destructive', onPress: logout }
+      { text: 'Log Out', style: 'destructive', onPress: () => withLoader(signOut, 'Signing out...') }
     ]);
   };
 

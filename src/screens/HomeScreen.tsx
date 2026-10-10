@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getDashboardStats, DashboardStats } from '../api/dashboardService';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
+import { useUnreadNotifications } from '../hooks/useUnreadNotifications';
 import Toast from 'react-native-toast-message';
 import WebAppBanner from '../components/WebAppBanner';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
@@ -109,6 +110,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const { user, hasRole } = useAuth();
   const { activeGarageId, garages, switchGarage, locale } = useGarage();
+  const { count: unread, refresh: refreshUnread } = useUnreadNotifications();
 
   const fetchDashboard = async () => {
     try {
@@ -129,6 +131,7 @@ export default function HomeScreen({ navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       fetchDashboard();
+      refreshUnread();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeGarageId])
   );
@@ -165,6 +168,7 @@ export default function HomeScreen({ navigation }: Props) {
     { label: 'Vehicles', icon: 'car-sport', color: colors.success, bg: palette.green50, onPress: () => navigation.navigate('Vehicles') },
     { label: 'Customers', icon: 'people', color: colors.warning, bg: colors.warningSoft, onPress: () => navigation.navigate('Customers'), roles: ['owner', 'admin', 'service_advisor', 'receptionist'] },
     { label: 'Invoices', icon: 'document-text', color: palette.pink500, bg: palette.pink50, onPress: () => navigation.navigate('Invoices') },
+    { label: 'Requests', icon: 'file-tray-full', color: colors.warning, bg: colors.warningSoft, onPress: () => navigation.navigate('Requests') },
     { label: 'Dashboard', icon: 'bar-chart', color: palette.sky500, bg: palette.sky50, onPress: () => navigation.navigate('Dashboard') },
     { label: 'Staff', icon: 'people-circle', color: palette.cyan500, bg: palette.cyan50, onPress: () => navigation.navigate('Staff'), roles: ['owner', 'admin'] },
     { label: 'Settings', icon: 'settings', color: colors.textMuted, bg: colors.surfaceMuted, onPress: () => navigation.navigate('Settings') },
@@ -244,6 +248,20 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.greetingSmall}>{getGreeting()}, {user?.name?.split(' ')[0]}</Text>
           <Text style={styles.greetingBold} numberOfLines={1}>{activeGarageName || 'Your Garage'}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.bell}
+          onPress={() => navigation.navigate('Notifications')}
+          accessibilityRole="button"
+          accessibilityLabel={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+          testID="notifications-bell"
+        >
+          <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
+          {unread > 0 && (
+            <View style={styles.bellBadge}>
+              <Text style={styles.bellBadgeText}>{unread > 99 ? '99+' : unread}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
         <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('Settings')} activeOpacity={0.8}>
           <Text style={styles.avatarText}>{user?.name?.charAt(0)?.toUpperCase()}</Text>
         </TouchableOpacity>
@@ -451,6 +469,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 12,
   },
+  bell: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
+  bellBadge: { position: 'absolute', top: 2, right: 2, minWidth: 18, height: 18, paddingHorizontal: 4, borderRadius: 9, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center' },
+  bellBadgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
   avatarText: {
     color: colors.textOnPrimary,
     fontSize: 17,

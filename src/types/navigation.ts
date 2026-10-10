@@ -28,6 +28,9 @@ export type RootStackParamList = {
   Plans: undefined;
   DeleteAccount: undefined;
   Expenses: undefined;
+  Requests: undefined;
+  ChangeRequestDetail: { id: string };
+  Notifications: undefined;
   Walkthrough: undefined;
 };
 

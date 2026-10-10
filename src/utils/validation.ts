@@ -218,6 +218,15 @@ export const odometerCorrectionSchema = z.object({
 export type OdometerCorrectionFormValues = z.input<typeof odometerCorrectionSchema>;
 export type OdometerCorrectionFormOutput = z.output<typeof odometerCorrectionSchema>;
 
+/** A staff member's odometer correction request: the API keeps 100 characters for "(requested by <name>)". */
+export const odometerRequestSchema = odometerCorrectionSchema.extend({ odometerRemarks: requiredText('Remarks', 400) });
+
+/** Why a staff member is asking an owner or admin to cancel something. */
+export const requestReasonSchema = z.object({
+  reason: requiredText('Reason', 500),
+});
+export type RequestReasonFormValues = z.infer<typeof requestReasonSchema>;
+
 /**
  * The estimation line-item editor on `pages/JobCardDetail.tsx`.
  *

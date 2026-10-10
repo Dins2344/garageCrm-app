@@ -1,6 +1,7 @@
 import React, { ComponentProps } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import { Ionicons } from '@expo/vector-icons';
 import { openWebApp } from '../utils/webApp';
 import ResponsiveScreen from '../components/ResponsiveScreen';
@@ -25,7 +26,8 @@ interface MenuItem {
 }
 
 export default function MoreScreen({ navigation }: Props) {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
+  const { withLoader } = useGlobalLoader();
 
   const handleLogout = () => {
     Alert.alert(
@@ -33,7 +35,7 @@ export default function MoreScreen({ navigation }: Props) {
       'Are you sure you want to log out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Log Out', style: 'destructive', onPress: logout }
+        { text: 'Log Out', style: 'destructive', onPress: () => withLoader(signOut, 'Signing out...') }
       ]
     );
   };

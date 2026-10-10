@@ -12,6 +12,8 @@ jest.mock('../api/authService', () => ({
   getMe: jest.fn(),
 }));
 
+jest.mock('../api/notificationService', () => ({ unregisterPushToken: jest.fn() }));
+
 const MIN = 60 * 1000;
 const mockUser = { _id: 'u1', name: 'Owner', email: 'owner@example.com', phone: '9000000001', role: 'owner', garage: 'g1', isActive: true };
 

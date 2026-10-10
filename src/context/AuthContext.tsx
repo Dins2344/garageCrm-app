@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { login as authLogin, register as authRegister, getMe, RegisterFormData } from '../api/authService';
+import { unregisterPushToken } from '../api/notificationService';
 import IdleTimer from '../components/IdleTimer';
-import { TOKEN_KEY, USER_KEY, LAST_ACTIVITY_KEY, IDLE_TIMEOUT_MS, SESSION_STORAGE_KEYS } from '../utils/constants';
+import { TOKEN_KEY, USER_KEY, LAST_ACTIVITY_KEY, IDLE_TIMEOUT_MS, SESSION_STORAGE_KEYS, PUSH_TOKEN_KEY } from '../utils/constants';
 import type { User } from '../types/models';
 
 export interface AuthContextValue {
@@ -11,6 +12,7 @@ export interface AuthContextValue {
   login: (email: string, password: string) => Promise<User>;
   register: (formData: RegisterFormData) => Promise<User>;
   logout: () => Promise<void>;
+  signOut: () => Promise<void>;
   hasRole: (...roles: string[]) => boolean;
   refreshUser: () => Promise<void>;
 }
@@ -34,6 +36,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // walkthrough several times a day.
     await AsyncStorage.multiRemove([...SESSION_STORAGE_KEYS]);
     setUser(null);
+  };
+
+  /**
+   * The Log Out button. `logout()` is also what IdleTimer and the 401 handler
+   * call, and those must leave the device registered — an owner would
+   * otherwise stop getting pushes ten minutes after putting the phone down.
+   * Only someone choosing to leave unregisters it.
+   */
+  const signOut = async () => {
+    try {
+      const token = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+      if (token) await unregisterPushToken(token);
+    } catch {
+      // Best effort: the next person to sign in on this phone takes the token over anyway.
+    }
+    await logout();
   };
 
   const checkToken = async () => {
@@ -102,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, hasRole, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, signOut, hasRole, refreshUser }}>
       <IdleTimer>
         {children}
       </IdleTimer>

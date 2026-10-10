@@ -43,4 +43,15 @@ describe('StatusStepper', () => {
     expect(screen.getByText('Job completed & delivered')).toBeTruthy();
     expect(screen.queryByText('Cancel Job')).toBeNull();
   });
+
+  it('offers Cancel Job by default', async () => {
+    await render(<StatusStepper currentStatus="new" onStatusChange={() => {}} />);
+    expect(screen.getByText('Cancel Job')).toBeTruthy();
+  });
+
+  it('hides Cancel Job when the user may not cancel', async () => {
+    await render(<StatusStepper currentStatus="new" onStatusChange={() => {}} canCancel={false} />);
+    expect(screen.queryByText('Cancel Job')).toBeNull();
+    expect(screen.getByText(/Move to: Estimation Sent/i)).toBeTruthy();
+  });
 });
