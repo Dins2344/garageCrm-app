@@ -372,3 +372,57 @@ export interface MonthlyMetrics extends MonthFigures {
   previous: MonthFigures;
   expensesByCategory: { category: ExpenseCategory; total: number; count: number }[];
 }
+
+// ── Change requests and notifications ─────────────────────────
+// MIRROR: identical block in frontend/src/types/models.ts; values match
+// backend/types/domain.ts.
+
+export type ChangeRequestType = 'odometer_correction' | 'job_card_cancellation' | 'invoice_cancellation';
+export type ChangeRequestStatus = 'pending' | 'approved' | 'rejected' | 'withdrawn';
+export type NotificationType = 'request_raised' | 'request_approved' | 'request_rejected';
+
+export interface ChangeRequestPerson {
+  _id: string;
+  name: string;
+  role?: Role;
+}
+
+/**
+ * GET /api/change-requests. `type` can be a value this build has never heard
+ * of — the server adds types without a client release — so render unknown
+ * ones generically rather than switching exhaustively.
+ */
+export interface ChangeRequest {
+  _id: string;
+  garage: string;
+  type: ChangeRequestType | string;
+  status: ChangeRequestStatus;
+  targetType: 'job_card' | 'invoice' | string;
+  /** Job card or invoice id. An approved invoice cancellation deletes the invoice. */
+  target: string;
+  /** Job card or invoice number at the time of the request. */
+  targetLabel: string;
+  payload: { odometerAtIntake?: number; previousOdometer?: number; remarks?: string; reason?: string };
+  requestedBy: ChangeRequestPerson | null;
+  decidedBy: ChangeRequestPerson | null;
+  decisionNote: string;
+  decidedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** GET /api/notifications — the caller's, across every branch they can see. */
+export interface AppNotification {
+  _id: string;
+  user: string;
+  /** The branch it belongs to; an owner switches to it before opening `entity`. */
+  garage: string;
+  type: NotificationType | string;
+  title: string;
+  body: string;
+  entityType: 'change_request' | string;
+  /** Id of what it is about — a change request today. */
+  entity: string;
+  readAt: string | null;
+  createdAt: string;
+}

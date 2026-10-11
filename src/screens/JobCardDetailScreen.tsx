@@ -7,21 +7,23 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getJobCard, updateJobCard, approveJobCardEstimation } from '../api/jobCardService';
 import { createInvoice } from '../api/invoiceService';
 import { getMechanics } from '../api/userService';
+import { getChangeRequests, raiseChangeRequest } from '../api/changeRequestService';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import StatusStepper from '../components/StatusStepper';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import BottomSheet, { SheetActions } from '../components/BottomSheet';
+import RequestReasonSheet from '../components/RequestReasonSheet';
 import { ControlledField } from '../components/FormControls';
 import {
-  odometerCorrectionSchema, type OdometerCorrectionFormValues, type OdometerCorrectionFormOutput,
+  odometerCorrectionSchema, odometerRequestSchema, type OdometerCorrectionFormValues, type OdometerCorrectionFormOutput,
 } from '../utils/validation';
 import { useAuth } from '../context/AuthContext';
 import { useGarage } from '../context/GarageContext';
 import { useGlobalLoader } from '../context/GlobalLoaderContext';
 import ResponsiveScreen from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
-import type { JobCard, User, AssignedStaff } from '../types/models';
+import type { JobCard, User, AssignedStaff, ChangeRequestType } from '../types/models';
 import { getErrorMessage } from '../utils/errors';
 import { colors, palette, radius } from '../theme';
 
@@ -34,19 +36,24 @@ const humanize = (value?: string | null) =>
 interface OdometerSheetProps {
   visible: boolean;
   current: number;
+  title: string;
+  confirmLabel: string;
   onClose: () => void;
   onSave: (values: OdometerCorrectionFormOutput) => Promise<void>;
+  /** The staff request path passes the stricter remarks cap. */
+  schema?: typeof odometerCorrectionSchema;
 }
 
 /**
- * Owner/admin correction of the recorded reading. New job cards cannot go
- * below the last visit, so this is how a replaced meter or a mistyped visit
- * gets fixed; the API records the remarks on the timeline.
+ * Owner/admin correction of the recorded reading, or a staff member's request
+ * for one. New job cards cannot go below the last visit, so this is how a
+ * replaced meter or a mistyped visit gets fixed; the API records the remarks
+ * on the timeline.
  */
-function OdometerSheet({ visible, current, onClose, onSave }: OdometerSheetProps) {
+function OdometerSheet({ visible, current, title, confirmLabel, onClose, onSave, schema = odometerCorrectionSchema }: OdometerSheetProps) {
   const { control, handleSubmit, reset, setError, formState: { isSubmitting } } =
     useForm<OdometerCorrectionFormValues, unknown, OdometerCorrectionFormOutput>({
-      resolver: zodResolver(odometerCorrectionSchema),
+      resolver: zodResolver(schema),
       defaultValues: { odometerAtIntake: '', odometerRemarks: '' },
     });
 
@@ -72,13 +79,13 @@ function OdometerSheet({ visible, current, onClose, onSave }: OdometerSheetProps
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      title="Correct Odometer"
+      title={title}
       testID="odometer-sheet"
       footer={
         <SheetActions
           onCancel={onClose}
           onConfirm={handleSubmit(handleSave)}
-          confirmLabel="Save Reading"
+          confirmLabel={confirmLabel}
           loading={isSubmitting}
           testID="odometer-save"
         />
@@ -101,11 +108,19 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
   const [updating, setUpdating] = useState(false);
   const [assigningMechanic, setAssigningMechanic] = useState(false);
   const [odometerSheetOpen, setOdometerSheetOpen] = useState(false);
+  const [pendingTypes, setPendingTypes] = useState<string[]>([]);
+  const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
 
   const fetchData = async () => {
     try {
       const { data } = await getJobCard(id);
       setJobCard(data);
+      // Staff see their own pending requests, so the action becomes a status line.
+      if (!hasRole('owner', 'admin')) {
+        getChangeRequests({ targetId: id, status: 'pending' })
+          .then(res => setPendingTypes(res.data.map(r => r.type)))
+          .catch(() => setPendingTypes([]));
+      }
     } catch {
       Toast.show({ type: 'error', text1: 'Failed to load details' });
       navigation.goBack();
@@ -138,6 +153,13 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
     // Re-fetch (see assignMechanic) — the timeline gains the correction entry.
     await fetchData();
     Toast.show({ type: 'success', text1: 'Odometer updated' });
+  };
+
+  // Errors are left to the sheet, which shows them and stays open.
+  const requestChange = async (type: ChangeRequestType, payload: Record<string, unknown>) => {
+    await raiseChangeRequest({ type, targetId: id, payload });
+    setPendingTypes(prev => [...prev, type]);
+    Toast.show({ type: 'success', text1: 'Request sent to the owner' });
   };
 
   const assignMechanic = async (mechanicId: string) => {
@@ -280,6 +302,8 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
   const canAssignMechanic = hasRole('owner', 'admin', 'service_advisor');
   // The API refuses every other role.
   const canCorrectOdometer = hasRole('owner', 'admin');
+  const isApprover = canCorrectOdometer;
+  const isOpen = jobCard?.status !== 'cancelled' && jobCard?.status !== 'delivered';
   const odometer = jobCard?.odometerAtIntake ?? 0;
   const timeline = (jobCard?.statusHistory || []).slice().reverse();
 
@@ -304,7 +328,21 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
             onStatusChange={handleStatusChange}
             updating={updating}
             hasInvoice={hasInvoice}
+            canCancel={isApprover}
           />
+          {!isApprover && isOpen && (
+            pendingTypes.includes('job_card_cancellation') ? (
+              <View style={styles.requestedChip} testID="cancel-requested">
+                <Ionicons name="time-outline" size={14} color={colors.warning} />
+                <Text style={styles.requestedChipText}>Cancellation requested · awaiting approval</Text>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.requestCancelBtn} onPress={() => setCancelSheetOpen(true)} activeOpacity={0.7} testID="request-cancel">
+                <Ionicons name="close-circle-outline" size={16} color={colors.danger} />
+                <Text style={styles.requestCancelText}>Request Cancellation</Text>
+              </TouchableOpacity>
+            )
+          )}
         </View>
 
         {/* Customer & Vehicle info */}
@@ -351,19 +389,21 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
                 </View>
               )}
               {/* Shown at 0 too for owner/admin, so an unrecorded reading can be filled in. */}
-              {(odometer > 0 || canCorrectOdometer) && (
+              {(odometer > 0 || canCorrectOdometer || !isApprover) && (
                 <View style={styles.detailItem}>
                   <Text style={styles.detailLabel}>Odometer</Text>
                   <Text style={styles.detailValue}>{odometer > 0 ? `${formatNumber(odometer, locale)} km` : 'Not recorded'}</Text>
-                  {canCorrectOdometer && (
-                    <TouchableOpacity
-                      onPress={() => setOdometerSheetOpen(true)}
-                      style={styles.odometerEdit}
-                      accessibilityLabel="Correct odometer reading"
-                      testID="odometer-edit"
-                    >
+                  {canCorrectOdometer ? (
+                    <TouchableOpacity onPress={() => setOdometerSheetOpen(true)} style={styles.odometerEdit} accessibilityLabel="Correct odometer reading" testID="odometer-edit">
                       <Ionicons name="create-outline" size={14} color={colors.primary} />
                       <Text style={styles.odometerEditText}>Correct</Text>
+                    </TouchableOpacity>
+                  ) : pendingTypes.includes('odometer_correction') ? (
+                    <Text style={styles.requestedInline} testID="odometer-requested">Correction requested</Text>
+                  ) : (
+                    <TouchableOpacity onPress={() => setOdometerSheetOpen(true)} style={styles.odometerEdit} accessibilityLabel="Request odometer correction" testID="odometer-request">
+                      <Ionicons name="create-outline" size={14} color={colors.primary} />
+                      <Text style={styles.odometerEditText}>Request correction</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -633,14 +673,24 @@ export default function JobCardDetailScreen({ route, navigation }: Props) {
 
       </ScrollView>
 
-      {canCorrectOdometer && (
-        <OdometerSheet
-          visible={odometerSheetOpen}
-          current={odometer}
-          onClose={() => setOdometerSheetOpen(false)}
-          onSave={saveOdometer}
-        />
-      )}
+      <OdometerSheet
+        visible={odometerSheetOpen}
+        current={odometer}
+        title={isApprover ? 'Correct Odometer' : 'Request Odometer Correction'}
+        confirmLabel={isApprover ? 'Save Reading' : 'Send Request'}
+        onClose={() => setOdometerSheetOpen(false)}
+        schema={isApprover ? odometerCorrectionSchema : odometerRequestSchema}
+        onSave={isApprover
+          ? saveOdometer
+          : values => requestChange('odometer_correction', { odometerAtIntake: values.odometerAtIntake, remarks: values.odometerRemarks })}
+      />
+      <RequestReasonSheet
+        visible={cancelSheetOpen}
+        title="Request Cancellation"
+        description="The owner or an admin will be asked to cancel this job card. You will be notified when they decide."
+        onClose={() => setCancelSheetOpen(false)}
+        onSubmit={reason => requestChange('job_card_cancellation', { reason })}
+      />
     </View>
     </ResponsiveScreen>
   );
@@ -683,6 +733,11 @@ const styles = StyleSheet.create({
   detailValue: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   odometerEdit: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, alignSelf: 'flex-start', paddingVertical: 2 },
   odometerEditText: { fontSize: 12, fontWeight: '700', color: colors.primary },
+  requestCancelBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, paddingVertical: 10, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.danger },
+  requestCancelText: { fontSize: 13, fontWeight: '600', color: colors.danger },
+  requestedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.lg, backgroundColor: colors.warningSoft },
+  requestedChipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  requestedInline: { marginTop: 4, fontSize: 12, fontWeight: '700', color: colors.warning },
   emptyText: { fontSize: 14, color: colors.textFaint, fontStyle: 'italic' },
   notesBox: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
   notesTitle: { fontSize: 12, fontWeight: 'bold', color: colors.textMuted, marginBottom: 4 },

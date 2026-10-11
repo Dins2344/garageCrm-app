@@ -126,8 +126,10 @@ Every key goes in exactly one of two lists, and which one is a product decision:
 - **`SESSION_STORAGE_KEYS`** — cleared on sign-out, by both
   `AuthContext.logout()` and the 401 handler in `api/apiInterceptor.ts`.
   **This is the default.**
-- **`DEVICE_STORAGE_KEYS`** — never cleared. The two walkthrough flags and the
-  update snooze. They are device-scoped because `IdleTimer` signs people out
+- **`DEVICE_STORAGE_KEYS`** — never cleared. The two walkthrough flags, the
+  update snooze and the push token (`PUSH_TOKEN_KEY` — kept across sign-outs so
+  an idle auto-logout does not stop pushes; only the Log Out button unregisters
+  it). They are device-scoped because `IdleTimer` signs people out
   after `IDLE_TIMEOUT_MS` (30 minutes) of inactivity; a workshop phone does that
   several times a day, so a session-scoped "already seen" flag would replay the
   first-run tour constantly.
@@ -316,6 +318,8 @@ matching PR there.
 | `src/utils/format.ts` | `src/utils/format.ts` |
 | `src/utils/locale.ts` | `src/utils/locale.ts` |
 | `src/utils/format.test.ts` | `src/utils/format.test.ts` |
+| `src/utils/changeRequests.ts` | `src/utils/changeRequests.ts` |
+| `src/utils/changeRequests.test.ts` | `src/utils/changeRequests.test.ts` |
 | `src/utils/validation.ts` | `src/utils/validation.ts` |
 | `src/utils/validation.test.ts` | `src/utils/validation.test.ts` |
 | `src/hooks/useCountries.ts` | `src/hooks/useCountries.ts` |

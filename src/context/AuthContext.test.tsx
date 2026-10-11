@@ -5,6 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from './AuthContext';
 import * as authService from '../api/authService';
 import type { User } from '../types/models';
+import { unregisterPushToken } from '../api/notificationService';
+import { PUSH_TOKEN_KEY } from '../utils/constants';
 
 // Explicit factory — a bare `jest.mock('../api/authService')` automock would
 // still require the real module (and its `apiInterceptor.ts` -> `axios.create()`
@@ -13,6 +15,10 @@ jest.mock('../api/authService', () => ({
   login: jest.fn(),
   register: jest.fn(),
   getMe: jest.fn(),
+}));
+
+jest.mock('../api/notificationService', () => ({
+  unregisterPushToken: jest.fn().mockResolvedValue(undefined),
 }));
 
 const mockUser: User = {
@@ -26,7 +32,7 @@ const mockUser: User = {
 };
 
 function Consumer() {
-  const { user, loading, login, logout, hasRole } = useAuth();
+  const { user, loading, login, logout, signOut, hasRole } = useAuth();
   return (
     <View>
       <Text testID="loading">{String(loading)}</Text>
@@ -37,6 +43,9 @@ function Consumer() {
       </TouchableOpacity>
       <TouchableOpacity testID="logout-btn" onPress={() => logout()}>
         <Text>logout</Text>
+      </TouchableOpacity>
+      <TouchableOpacity testID="signout-btn" onPress={() => signOut()}>
+        <Text>sign out</Text>
       </TouchableOpacity>
     </View>
   );
@@ -198,5 +207,51 @@ describe('AuthContext', () => {
     expect(await AsyncStorage.getItem('garagepulse_tour_seen_users')).toBe('["u1"]');
     // ...while the session keys are gone, as before.
     expect(await AsyncStorage.getItem('garagepulse_token')).toBeNull();
+  });
+});
+
+describe('AuthContext — Log Out vs. being signed out', () => {
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    await AsyncStorage.clear();
+    await seedStoredSession();
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, 'ExponentPushToken[abc]');
+    jest.mocked(authService.getMe).mockResolvedValue({ success: true, data: mockUser });
+  });
+
+  const renderSignedIn = async () => {
+    await render(<AuthProvider><Consumer /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('owner@example.com'));
+  };
+
+  it('Log Out unregisters this device from push', async () => {
+    const user = userEvent.setup();
+    await renderSignedIn();
+
+    await user.press(screen.getByTestId('signout-btn'));
+
+    await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
+    expect(unregisterPushToken).toHaveBeenCalledWith('ExponentPushToken[abc]');
+  });
+
+  it('an idle sign-out leaves the device registered, so pushes keep coming', async () => {
+    const user = userEvent.setup();
+    await renderSignedIn();
+
+    await user.press(screen.getByTestId('logout-btn'));
+
+    await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
+    expect(unregisterPushToken).not.toHaveBeenCalled();
+    expect(await AsyncStorage.getItem(PUSH_TOKEN_KEY)).toBe('ExponentPushToken[abc]');
+  });
+
+  it('Log Out still signs out when the server cannot be reached', async () => {
+    jest.mocked(unregisterPushToken).mockRejectedValueOnce(new Error('offline'));
+    const user = userEvent.setup();
+    await renderSignedIn();
+
+    await user.press(screen.getByTestId('signout-btn'));
+
+    await waitFor(() => expect(screen.getByTestId('user').props.children).toBe('none'));
   });
 });

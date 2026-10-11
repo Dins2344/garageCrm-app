@@ -8,6 +8,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import { getInvoice, updateInvoicePayment, deleteInvoice, getInvoicePdfUrl } from '../api/invoiceService';
+import { getChangeRequests, raiseChangeRequest } from '../api/changeRequestService';
 import { useAuth } from '../context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY, ACTIVE_GARAGE_KEY } from '../utils/constants';
@@ -15,6 +16,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import BottomSheetPicker from '../components/BottomSheetPicker';
 import BottomSheet, { SheetActions } from '../components/BottomSheet';
+import RequestReasonSheet from '../components/RequestReasonSheet';
 import ResponsiveScreen, { SHEET_MAX_WIDTH } from '../components/ResponsiveScreen';
 import type { RootStackScreenProps } from '../types/navigation';
 import type { Invoice, PaymentMethod } from '../types/models';
@@ -29,17 +31,25 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
   const money = (n?: number) => formatMoney(n, locale);
   const { invoiceId } = route.params;
   const { hasRole } = useAuth();
+  const isApprover = hasRole('owner', 'admin');
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [cancelRequested, setCancelRequested] = useState(false);
+  const [cancelSheetOpen, setCancelSheetOpen] = useState(false);
 
   const fetchInvoice = async () => {
     try {
       const { data } = await getInvoice(invoiceId);
       setInvoice(data);
+      if (!isApprover) {
+        getChangeRequests({ targetId: invoiceId, status: 'pending', type: 'invoice_cancellation' })
+          .then(res => setCancelRequested(res.data.length > 0))
+          .catch(() => setCancelRequested(false));
+      }
     } catch {
       Toast.show({ type: 'error', text1: 'Failed to load invoice' });
       navigation.goBack();
@@ -91,6 +101,13 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
         }
       ]
     );
+  };
+
+  // Errors are left to the sheet, which shows them and stays open.
+  const requestCancel = async (reason: string) => {
+    await raiseChangeRequest({ type: 'invoice_cancellation', targetId: invoiceId, payload: { reason } });
+    setCancelRequested(true);
+    Toast.show({ type: 'success', text1: 'Request sent to the owner' });
   };
 
   const handleDownload = async () => {
@@ -373,7 +390,7 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
           </TouchableOpacity>
 
           {/* Cancel Invoice */}
-          {hasRole('owner', 'admin') && (
+          {isApprover && (
             <TouchableOpacity
               style={s.cancelBtn}
               onPress={handleCancel}
@@ -383,6 +400,17 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
               <Text style={s.cancelBtnText}>Cancel Invoice</Text>
             </TouchableOpacity>
           )}
+          {!isApprover && (cancelRequested ? (
+            <View style={s.cancelBtn}>
+              <Ionicons name="time-outline" size={16} color={colors.warning} />
+              <Text style={s.requestedText}>Cancellation requested</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={s.cancelBtn} onPress={() => setCancelSheetOpen(true)} activeOpacity={0.7}>
+              <Ionicons name="trash-outline" size={16} color={colors.danger} />
+              <Text style={s.cancelBtnText}>Request Cancellation</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <Text style={s.footer}>Thank you for your business!</Text>
@@ -422,6 +450,14 @@ export default function InvoiceViewerScreen({ route, navigation }: Props) {
           onValueChange={v => setPaymentMethod(v as PaymentMethod)}
         />
       </BottomSheet>
+
+      <RequestReasonSheet
+        visible={cancelSheetOpen}
+        title="Request Cancellation"
+        description="The owner or an admin will be asked to cancel this invoice. Cancelling reopens the job card."
+        onClose={() => setCancelSheetOpen(false)}
+        onSubmit={requestCancel}
+      />
     </>
   );
 }
@@ -531,6 +567,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: palette.red200, backgroundColor: palette.redTintSoft,
   },
   cancelBtnText: { fontSize: 13, fontWeight: '600', color: colors.danger },
+  requestedText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
 
   footer: {
     textAlign: 'center', color: colors.textFaint, fontSize: 13, fontWeight: '500',

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "2550929019",
+    "project_id": "garagepulse-9ca9f",
+    "storage_bucket": "garagepulse-9ca9f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:2550929019:android:1add2a801da9d11bc7f4de",
+        "android_client_info": {
+          "package_name": "com.dctechs.garagepulse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQnHYHPPsxlPLe8nRQYeCQ5NPfKEIn7sU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

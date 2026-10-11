@@ -45,6 +45,14 @@ export const TOUR_SEEN_USERS_KEY = 'garagepulse_tour_seen_users';
 export const UPDATE_SNOOZE_KEY = 'garagepulse_update_snooze';
 
 /**
+ * Install-scoped: this device's Expo push token, so the Log Out button can
+ * unregister it. Deliberately not a SESSION key: IdleTimer's automatic
+ * sign-out must leave the device registered, or an owner would stop getting
+ * pushes ten minutes after putting the phone down.
+ */
+export const PUSH_TOKEN_KEY = 'garagepulse_push_token';
+
+/**
  * Cleared on sign-out — by AuthContext.logout() *and* by the 401 handler in
  * api/apiInterceptor.ts. Both paths clear this same list; naming keys by hand
  * in either one is what let them drift (the 401 path never cleared the banner).
@@ -72,6 +80,7 @@ export const DEVICE_STORAGE_KEYS = [
   WALKTHROUGH_SEEN_KEY,
   TOUR_SEEN_USERS_KEY,
   UPDATE_SNOOZE_KEY,
+  PUSH_TOKEN_KEY,
 ] as const;
 
 // ALL_STORAGE_KEYS was removed rather than redefined as the union of the two
@@ -143,6 +152,17 @@ export const UPDATE_GATE_HOLD_MS = 1200;
 export const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 /** How long "Later" suppresses the prompt, for the same latestVersion. */
 export const UPDATE_SNOOZE_MS = 24 * 60 * 60 * 1000;
+
+// ── Notifications ─────────────────────────────────────────────
+/** How often the unread count is re-read while the app is in the foreground. */
+export const NOTIFICATION_POLL_MS = 60 * 1000;
+/** Emitted on DeviceEventEmitter when something moved the unread count. */
+export const NOTIFICATIONS_CHANGED_EVENT = 'garagepulse:notifications-changed';
+/** Android channel; the backend names it (PUSH_CHANNEL_ID in services/pushService.ts). */
+export const NOTIFICATION_CHANNEL_ID = 'requests';
+/** Newest requests the Requests screen loads; it does not page. */
+export const REQUESTS_FETCH_LIMIT = 50;
+export const NOTIFICATIONS_FETCH_LIMIT = 50;
 
 // ── App Branding ──────────────────────────────────────────────
 export const APP_NAME = 'GaragePulse';

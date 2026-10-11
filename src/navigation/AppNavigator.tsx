@@ -45,9 +45,14 @@ import ContactVerificationScreen from '../screens/ContactVerificationScreen';
 import PlansScreen from '../screens/PlansScreen';
 import DeleteAccountScreen from '../screens/DeleteAccountScreen';
 import ExpensesScreen from '../screens/ExpensesScreen';
+import RequestsScreen from '../screens/RequestsScreen';
+import ChangeRequestDetailScreen from '../screens/ChangeRequestDetailScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import WalkthroughScreen from '../screens/WalkthroughScreen';
 import WalkthroughGate from '../components/WalkthroughGate';
 import { colors } from '../theme';
+import { navigationRef, flushPendingNavigation } from './navigationRef';
+import { PushNotificationsBridge } from '../hooks/usePushNotifications';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -94,7 +99,8 @@ export default function AppNavigator() {
     // showing the walkthrough, NavigationContainer is never constructed, so
     // Login cannot flash behind it.
     <WalkthroughGate>
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer theme={navTheme} ref={navigationRef} onReady={flushPendingNavigation}>
+      {user && <PushNotificationsBridge />}
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           <>
@@ -157,6 +163,22 @@ export default function AppNavigator() {
               name="Expenses"
               component={ExpensesScreen}
               options={{ headerShown: true, title: 'Expenses', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="Requests"
+              component={RequestsScreen}
+              options={{ headerShown: true, title: 'Requests', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="ChangeRequestDetail"
+              component={ChangeRequestDetailScreen}
+              getId={({ params }) => params.id}
+              options={{ headerShown: true, title: 'Request', headerTitleStyle: { fontWeight: 'bold' } }}
+            />
+            <Stack.Screen
+              name="Notifications"
+              component={NotificationsScreen}
+              options={{ headerShown: true, title: 'Notifications', headerTitleStyle: { fontWeight: 'bold' } }}
             />
             {/* The replay route only — both first-run paths are handled by
                 WalkthroughGate below and never navigate here. */}
