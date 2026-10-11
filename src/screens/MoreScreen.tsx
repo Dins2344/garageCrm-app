@@ -59,6 +59,15 @@ export default function MoreScreen({ navigation }: Props) {
       onPress: () => navigation.navigate('Invoices'),
     },
     {
+      // No `roles`: same as the Home tile — the screen scopes itself to the viewer.
+      title: 'Requests',
+      subtitle: 'Approvals and change requests',
+      icon: 'file-tray-full-outline',
+      iconBg: colors.warningSoft,
+      iconColor: colors.warning,
+      onPress: () => navigation.navigate('Requests'),
+    },
+    {
       title: 'Expenses',
       subtitle: 'Track what the garage spends',
       icon: 'wallet-outline',
